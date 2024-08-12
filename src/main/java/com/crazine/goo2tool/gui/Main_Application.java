@@ -3,23 +3,21 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
-import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.function.Predicate;
 
 public class Main_Application extends Application {
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) {
 
         PropertiesLoader.init();
 
@@ -35,26 +33,30 @@ public class Main_Application extends Application {
         Scene scene = FX_Scene.getScene();
         stage.setTitle("World of Goo 2 Tool");
         stage.setScene(scene);
+        stage.setMinWidth(530);
+        stage.setMinHeight(300);
+        File codeLocation = new File(getClass().getProtectionDomain().getCodeSource().toString().substring(7));
+        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")) {
+            codeLocation = codeLocation.getParentFile();
+        }
+        String projectLocation = codeLocation.getPath();
+        Image image = new Image(projectLocation + "\\conduit.png");
+        stage.getIcons().add(image);
         stage.show();
 
-        File toSaveFile = new File("C:/Users/Crazydiamonde/AppData/Local/2DBoy/WorldOfGoo2/wog2_1.dat");
 
         try {
-            WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
-            for (WOG2SaveData.WOG2SaveFileLevel level : data[0].getSaveFile().getIslands()[0].getLevels())
-                FX_Profile.getLevelTableView().getItems().add(level);
 
             Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(new File(System.getenv("APPDATA") + "/Goo2Tool/addins/TestGoomod.goo2mod"));
-            Addin addin2 = new Addin();
-            addin2.setName(goo2mod.getId());
-            addin2.setLoaded(false);
-            if (Arrays.stream(PropertiesLoader.getProperties().getAddins()).noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
-                Addin[] addins2 = new Addin[PropertiesLoader.getProperties().getAddins().length + 1];
-                System.arraycopy(PropertiesLoader.getProperties().getAddins(), 0, addins2, 0, addins2.length - 1);
-                addins2[addins2.length - 1] = addin2;
-                PropertiesLoader.getProperties().setAddins(addins2);
+            if (goo2mod != null) {
+                Addin addin2 = new Addin();
+                addin2.setName(goo2mod.getId());
+                addin2.setLoaded(false);
+                if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
+                    PropertiesLoader.getProperties().getAddins().add(addin2);
+                }
+                FX_Mods.getModTableView().getItems().add(goo2mod);
             }
-            FX_Mods.getModTableView().getItems().add(goo2mod);
 
         } catch (IOException e) {
             e.printStackTrace();

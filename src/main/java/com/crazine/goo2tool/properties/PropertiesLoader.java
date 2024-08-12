@@ -1,8 +1,6 @@
 package com.crazine.goo2tool.properties;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import java.io.File;
@@ -46,8 +44,8 @@ public class PropertiesLoader {
         if (Files.exists(propertiesFile.toPath())) {
             try {
                 properties = loadProperties(propertiesFile);
-            } catch (IOException ignored) {
-                ignored.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
                 properties = new Properties();
             }
         } else {

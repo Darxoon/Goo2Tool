@@ -14,6 +14,8 @@ public class FX_Menu {
 
     public static void buildMenuBar(Stage stage) {
 
+        menuBar.prefWidthProperty().bind(stage.widthProperty());
+
         Menu fileMenu = new Menu("File");
 
         menuBar.getMenus().add(fileMenu);

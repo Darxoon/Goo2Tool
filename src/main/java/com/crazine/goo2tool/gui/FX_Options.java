@@ -1,7 +1,6 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import com.crazine.goo2tool.saveFile.WOG2SaveData;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -12,7 +11,6 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 public class FX_Options {
 
@@ -34,15 +32,14 @@ public class FX_Options {
         changeBaseWOG2DirectoryButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe"));
-            File baseWOG2File = fileChooser.showOpenDialog(stage);
+            File baseWOG2File = fileChooser.showOpenDialog(stage).getParentFile();
             if (baseWOG2File == null) return;
             PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(baseWOG2File.getAbsolutePath());
             baseWOG2Directory.setText(PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory());
-            System.out.println(baseWOG2File.getAbsolutePath());
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
-            } catch (IOException ignored) {
-                ignored.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
         HBox baseWOG2 = new HBox(baseWOG2Label, baseWOG2Directory, changeBaseWOG2DirectoryButton);
@@ -55,13 +52,13 @@ public class FX_Options {
         changeCustomWOG2DirectoryButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe"));
-            File customWOG2File = fileChooser.showOpenDialog(stage);
+            File customWOG2File = fileChooser.showOpenDialog(stage).getParentFile();
             PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(customWOG2File.getAbsolutePath());
             customWOG2Directory.setText(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory());
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
-            } catch (IOException ignored) {
-
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
         HBox customWOG2 = new HBox(customWOG2Label, customWOG2Directory, changeCustomWOG2DirectoryButton);
@@ -73,14 +70,14 @@ public class FX_Options {
         Button changeProfileDirectoryButton = new Button("...");
         changeProfileDirectoryButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe"));
-            File profileFile = fileChooser.showOpenDialog(stage);
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 save file", "wog2_1.dat"));
+            File profileFile = fileChooser.showOpenDialog(stage).getParentFile();
             PropertiesLoader.getProperties().setProfileDirectory(profileFile.getAbsolutePath());
             profileDirectory.setText(PropertiesLoader.getProperties().getProfileDirectory());
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
-            } catch (IOException ignored) {
-
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
         HBox profile = new HBox(profileLabel, profileDirectory, changeProfileDirectoryButton);

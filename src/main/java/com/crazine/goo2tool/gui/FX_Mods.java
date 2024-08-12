@@ -3,7 +3,6 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
@@ -12,9 +11,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.util.Callback;
-
-import java.util.Arrays;
 
 public class FX_Mods {
 
@@ -34,6 +30,39 @@ public class FX_Mods {
 
         modView.setPadding(new Insets(10, 10, 10, 10));
         modView.setSpacing(5);
+        modView.prefHeightProperty().bind(stage.heightProperty());
+
+        modTableView.prefHeightProperty().bind(modView.heightProperty().subtract(200));
+
+        Label modInfo = new Label("Addins higher on the list have priority and " +
+                "can override files from addins lower on the list.");
+        Label modInfo2 = new Label("New levels...   ...   ...   ...   ...What?");
+
+        VBox infoVBox = new VBox();
+        infoVBox.getChildren().addAll(modInfo, modInfo2);
+        infoVBox.setPadding(new Insets(10, 0, 0, 0));
+        infoVBox.setSpacing(15);
+
+
+        Button installNewAddinButton = new Button("Install new addin...");
+        installNewAddinButton.setPrefWidth(120);
+        Button checkForUpdatesButton = new Button("Check for Updates...");
+        checkForUpdatesButton.setPrefWidth(120);
+        Hyperlink findMoreAddinsLink = new Hyperlink("Find more addins");
+        findMoreAddinsLink.setPrefWidth(120);
+        findMoreAddinsLink.setAlignment(Pos.CENTER);
+        findMoreAddinsLink.setPadding(new Insets(-2, 0, -2, 0));
+        findMoreAddinsLink.setOnAction(event -> findMoreAddinsLink.setVisited(false));
+
+        VBox buttonsVBox = new VBox();
+        buttonsVBox.getChildren().addAll(installNewAddinButton, checkForUpdatesButton, findMoreAddinsLink);
+        buttonsVBox.setSpacing(5);
+
+        BorderPane headerPane = new BorderPane();
+        headerPane.setLeft(infoVBox);
+        headerPane.setRight(buttonsVBox);
+        modView.getChildren().add(headerPane);
+
 
         Button enable = new Button("Enable");
         Button disable = new Button("Disable");
@@ -60,8 +89,7 @@ public class FX_Mods {
             checkBox.setPrefSize(20, 20);
             checkBox.setOnAction(event -> {
                 cell.setItem(checkBox.isSelected());
-                for (int i = 0; i < PropertiesLoader.getProperties().getAddins().length; i++) {
-                    Addin addin = PropertiesLoader.getProperties().getAddins()[i];
+                for (Addin addin : PropertiesLoader.getProperties().getAddins()) {
                     if (addin.getName().equals(cell.getTableView().getItems().get(cell.getIndex()).getId())) {
                         addin.setLoaded(cell.getItem());
                     }
@@ -112,13 +140,15 @@ public class FX_Mods {
 
         TextArea descriptionArea = new TextArea();
         descriptionArea.setEditable(false);
+        descriptionArea.setPrefHeight(160);
+
+        modTableView.getSelectionModel().selectedItemProperty().addListener(
+                (observable, oldValue, newValue) -> descriptionArea.setText(newValue.getDescription()));
 
         Button propertiesButton = new Button("Properties");
-        HBox hBox = new HBox();
-        hBox.getChildren().add(propertiesButton);
-        hBox.setAlignment(Pos.CENTER_LEFT);
 
         HBox box = new HBox();
+        box.setSpacing(10);
         box.getChildren().addAll(enable, disable, uninstall);
         box.setAlignment(Pos.CENTER_RIGHT);
 

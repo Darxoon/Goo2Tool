@@ -1,16 +1,21 @@
 package com.crazine.goo2tool.gui;
 
+import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.islands.IslandFileLoader;
+import com.crazine.goo2tool.islands.Islands;
+import com.crazine.goo2tool.properties.Addin;
+import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueBase;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.util.Callback;
+
+import java.io.File;
+import java.io.IOException;
 
 public class FX_Profile {
 
@@ -26,77 +31,112 @@ public class FX_Profile {
     }
 
 
+    private static final ComboBox<String> profileSelectionBox = new ComboBox<>();
+    public static ComboBox<String> getProfileSelectionBox() {
+        return profileSelectionBox;
+    }
+
+
     public static void buildProfileView(Stage stage) {
 
         profileView.prefHeightProperty().bind(stage.heightProperty());
         profileView.setPadding(new Insets(10, 10, 10, 10));
         profileView.setSpacing(5);
 
+        levelTableView.prefHeightProperty().bind(profileView.heightProperty());
 
-        FlowPane profileHeaderPane = new FlowPane();
+        BorderPane profileHeaderPane = new BorderPane();
         profileHeaderPane.prefWidthProperty().bind(stage.widthProperty());
         profileHeaderPane.setPrefHeight(30);
 
-
         Label selectProfile = new Label("Select Profile:");
-        profileHeaderPane.getChildren().add(selectProfile);
-        ComboBox<String> profileSelectionBox = new ComboBox<>();
         for (int i = 0; i < 3; i++) {
             profileSelectionBox.getItems().add("Profile " + i);
         }
-        profileSelectionBox.getSelectionModel().select(0 );
-        profileHeaderPane.getChildren().add(profileSelectionBox);
+        profileSelectionBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "\\wog2_1.dat");
+            File islandFile = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory()
+                    + "\\game\\res\\islands\\islands.wog2");
+            try {
 
+                Islands islands = IslandFileLoader.loadIslands(islandFile);
+
+                WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
+                levelTableView.getItems().clear();
+                int j = 0;
+                for (WOG2SaveData.WOG2SaveFileIsland island : data[newValue.intValue()].getSaveFile().getIslands()) {
+                    int i = 0;
+                    for (WOG2SaveData.WOG2SaveFileLevel level : island.getLevels()) {
+                        if (!level.isValid()) continue;
+
+                        if (islands.getIslands()[j].getLevels().length <= i) continue;
+
+                        level.setName(islands.getIslands()[j].getLevels()[i].getLevel());
+
+                        levelTableView.getItems().add(level);
+
+                        i++;
+                    }
+                    j++;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        profileSelectionBox.getSelectionModel().select(0);
+
+        HBox profileBox = new HBox();
+        profileBox.getChildren().addAll(selectProfile, profileSelectionBox);
+        profileBox.setSpacing(5);
+
+        profileHeaderPane.setLeft(profileBox);
 
         Button refreshButton = new Button("Refresh");
-        profileHeaderPane.getChildren().add(refreshButton);
-
+        profileHeaderPane.setRight(refreshButton);
 
         profileView.getChildren().add(profileHeaderPane);
 
-
-
-        levelTableView.setRowFactory(param -> {
-            TableRow<WOG2SaveData.WOG2SaveFileLevel> row = new TableRow<>();
-            return row;
-        });
-
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, String> levelNameColumn = new TableColumn<>("Level");
-        levelNameColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<WOG2SaveData.WOG2SaveFileLevel, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<WOG2SaveData.WOG2SaveFileLevel, String> param) {
-
-                return new ObservableValueBase<String>() {
-                    @Override
-                    public String getValue() {
-                        return "Level";
-                    }
-                };
-
-            }
-        });
+        levelNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        levelNameColumn.setReorderable(false);
         levelTableView.getColumns().add(levelNameColumn);
+        levelNameColumn.setPrefWidth(400);
 
 
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, Integer> mostBallsColumn = new TableColumn<>("Most Balls");
         mostBallsColumn.setCellValueFactory(new PropertyValueFactory<>("bestBalls"));
+        mostBallsColumn.setReorderable(false);
         levelTableView.getColumns().add(mostBallsColumn);
+        mostBallsColumn.setPrefWidth(100);
 
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, Integer> leastMovesColumn = new TableColumn<>("Least Moves");
         leastMovesColumn.setCellValueFactory(new PropertyValueFactory<>("bestMoves"));
+        leastMovesColumn.setReorderable(false);
         levelTableView.getColumns().add(leastMovesColumn);
+        leastMovesColumn.setPrefWidth(100);
 
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, Integer> leastTimeColumn = new TableColumn<>("Least Time");
         leastTimeColumn.setCellValueFactory(new PropertyValueFactory<>("bestTime"));
+        leastTimeColumn.setReorderable(false);
         levelTableView.getColumns().add(leastTimeColumn);
+        leastTimeColumn.setPrefWidth(100);
 
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, Integer> totalTimeColumn = new TableColumn<>("Total Time");
         totalTimeColumn.setCellValueFactory(new PropertyValueFactory<>("totalTime"));
+        totalTimeColumn.setReorderable(false);
         levelTableView.getColumns().add(totalTimeColumn);
+        totalTimeColumn.setPrefWidth(100);
 
         TableColumn<WOG2SaveData.WOG2SaveFileLevel, Integer> attemptsColumn = new TableColumn<>("Attempts");
         attemptsColumn.setCellValueFactory(new PropertyValueFactory<>("attempts"));
+        attemptsColumn.setReorderable(false);
         levelTableView.getColumns().add(attemptsColumn);
+        attemptsColumn.setPrefWidth(100);
+
+        levelTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        levelNameColumn.setMaxWidth(10000);
 
         profileView.getChildren().add(levelTableView);
 

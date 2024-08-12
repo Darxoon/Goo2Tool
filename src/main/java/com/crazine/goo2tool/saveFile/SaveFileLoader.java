@@ -1,9 +1,12 @@
 package com.crazine.goo2tool.saveFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
@@ -62,20 +65,45 @@ public class SaveFileLoader {
         ArrayList<String> currentSaveFileValues = new ArrayList<>();
         for (String value : rootLevelValues) {
 
-            currentSaveFileValues.add(value);
-
             if (value.startsWith("{")) {
                 WOG2SaveData.WOG2SaveFile saveFile1 = saveDataMapper.readValue(value, WOG2SaveData.WOG2SaveFile.class);
                 WOG2SaveData saveData1 = new WOG2SaveData();
-                saveData1.setValues((ArrayList<String>) currentSaveFileValues.clone());
+                saveData1.setValues(new ArrayList<>(currentSaveFileValues.stream().toList()));
                 saveData1.setSaveFile(saveFile1);
                 saveData.add(saveData1);
                 currentSaveFileValues.clear();
+            } else {
+                currentSaveFileValues.add(value);
             }
 
         }
 
         return saveData.toArray(new WOG2SaveData[0]);
+
+    }
+
+
+    public static void writeSaveFile(File saveFile, WOG2SaveData[] saveData) throws IOException {
+
+        StringBuilder export = new StringBuilder();
+
+        for (WOG2SaveData wog2SaveData : saveData) {
+
+            for (String value : wog2SaveData.getValues()) {
+                export.append(value).append(",");
+            }
+
+            JsonMapper jsonMapper = new JsonMapper();
+
+            Writer writer = new StringWriter();
+            jsonMapper.writeValue(writer, wog2SaveData.getSaveFile());
+            export.append(writer);
+
+        }
+
+        export.append(",0.");
+
+        Files.writeString(saveFile.toPath(), export.toString());
 
     }
 

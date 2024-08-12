@@ -11,16 +11,16 @@ public class Properties {
     public String getBaseWorldOfGoo2Directory() {
         return baseWorldOfGoo2Directory;
     }
-    public void setBaseWorldOfGoo2Directory(String baseWorldOfGoo2Directory) {
-        this.baseWorldOfGoo2Directory = baseWorldOfGoo2Directory;
+    public void setBaseWorldOfGoo2Directory(String baseWoG2Dir) {
+        this.baseWorldOfGoo2Directory = baseWoG2Dir;
     }
 
     private String customWorldOfGoo2Directory = "";
     public String getCustomWorldOfGoo2Directory() {
         return customWorldOfGoo2Directory;
     }
-    public void setCustomWorldOfGoo2Directory(String customWorldOfGoo2Directory) {
-        this.customWorldOfGoo2Directory = customWorldOfGoo2Directory;
+    public void setCustomWorldOfGoo2Directory(String customWoG2Dir) {
+        this.customWorldOfGoo2Directory = customWoG2Dir;
     }
 
     private String profileDirectory = "";
@@ -33,11 +33,11 @@ public class Properties {
 
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
-    private Addin[] addins = new Addin[0];
-    public Addin[] getAddins() {
+    private ArrayList<Addin> addins;
+    @JacksonXmlProperty() public ArrayList<Addin> getAddins() {
         return addins;
     }
-    public void setAddins(Addin[] addins) {
+    @JacksonXmlProperty() public void setAddins(ArrayList<Addin> addins) {
         this.addins = addins;
     }
 
