@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class PropertiesLoader {
 
@@ -32,6 +33,7 @@ public class PropertiesLoader {
 
     public static void saveProperties(File propertiesFile, Properties properties) throws IOException {
 
+        if (!Files.exists(propertiesFile.toPath())) Files.createFile(propertiesFile.toPath());
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         xmlMapper.writeValue(new FileWriter(propertiesFile), properties);
@@ -40,6 +42,14 @@ public class PropertiesLoader {
 
 
     public static void init() {
+
+        if (!Files.exists(Path.of(propertiesFile.getPath()))) {
+            try {
+                Files.createDirectory(propertiesFile.getParentFile().toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         if (Files.exists(propertiesFile.toPath())) {
             try {

@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.gui;
 
+import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -10,7 +11,14 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 public class FX_Mods {
 
@@ -46,6 +54,36 @@ public class FX_Mods {
 
         Button installNewAddinButton = new Button("Install new addin...");
         installNewAddinButton.setPrefWidth(120);
+        installNewAddinButton.setOnAction(event -> {
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 mod file", "*.goo2mod"));
+            File goomodFile = fileChooser.showOpenDialog(stage);
+            if (goomodFile == null) return;
+            Goo2mod goo2mod;
+            try {
+                goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
+                if (goo2mod == null) return;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            Addin addin2 = new Addin();
+            addin2.setName(goo2mod.getId());
+            addin2.setLoaded(false);
+            if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
+                PropertiesLoader.getProperties().getAddins().add(addin2);
+            }
+            FX_Mods.getModTableView().getItems().add(goo2mod);
+
+            try {
+                Files.copy(goomodFile.toPath(), Path.of(System.getenv("APPDATA") +
+                        "\\Goo2Tool\\addins\\" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        });
         Button checkForUpdatesButton = new Button("Check for Updates...");
         checkForUpdatesButton.setPrefWidth(120);
         Hyperlink findMoreAddinsLink = new Hyperlink("Find more addins");

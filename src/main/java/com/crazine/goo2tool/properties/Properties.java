@@ -33,7 +33,7 @@ public class Properties {
 
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
-    private ArrayList<Addin> addins;
+    private ArrayList<Addin> addins = new ArrayList<>();
     @JacksonXmlProperty() public ArrayList<Addin> getAddins() {
         return addins;
     }

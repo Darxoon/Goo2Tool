@@ -3,6 +3,7 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
@@ -13,13 +14,12 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 public class Main_Application extends Application {
 
     @Override
     public void start(Stage stage) {
-
-        PropertiesLoader.init();
 
         FX_Scene.buildScene(stage);
         FX_Menu.buildMenuBar(stage);
@@ -47,15 +47,22 @@ public class Main_Application extends Application {
 
         try {
 
-            Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(new File(System.getenv("APPDATA") + "/Goo2Tool/addins/TestGoomod.goo2mod"));
-            if (goo2mod != null) {
-                Addin addin2 = new Addin();
-                addin2.setName(goo2mod.getId());
-                addin2.setLoaded(false);
-                if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
-                    PropertiesLoader.getProperties().getAddins().add(addin2);
+            File goomodsFile = new File(System.getenv("APPDATA") + "/Goo2Tool/addins");
+            if (!Files.exists(goomodsFile.toPath())) Files.createDirectory(goomodsFile.toPath());
+            File[] children = goomodsFile.listFiles();
+            if (children != null) for (File goomodFile : children) {
+
+                Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
+                if (goo2mod != null) {
+                    Addin addin2 = new Addin();
+                    addin2.setName(goo2mod.getId());
+                    addin2.setLoaded(false);
+                    if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
+                        PropertiesLoader.getProperties().getAddins().add(addin2);
+                    }
+                    FX_Mods.getModTableView().getItems().add(goo2mod);
                 }
-                FX_Mods.getModTableView().getItems().add(goo2mod);
+
             }
 
         } catch (IOException e) {

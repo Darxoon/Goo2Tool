@@ -98,7 +98,7 @@ public class Save {
 
                     boolean shouldReplace = !Files.exists(customPath);
                     if (!shouldReplace) {
-                        if (file.isDirectory()) continue;
+                        if (file.isDirectory() || !file.getPath().contains("game\\res\\")) continue;
                         try {
                             if (Files.mismatch(customPath, file.toPath()) != -1L) {
                                 shouldReplace = true;
