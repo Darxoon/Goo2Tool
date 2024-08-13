@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.properties;
 
+import com.crazine.goo2tool.gui.FX_Alarm;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
@@ -8,7 +9,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 
 public class PropertiesLoader {
 
@@ -18,7 +18,7 @@ public class PropertiesLoader {
     }
 
 
-    private static final File propertiesFile = new File(getGoo2ToolPath() + "\\properties.xml");
+    private static final File propertiesFile = new File(getGoo2ToolPath() + "/properties.xml");
     public static File getPropertiesFile() {
         return propertiesFile;
     }
@@ -48,7 +48,7 @@ public class PropertiesLoader {
             try {
                 Files.createDirectory(propertiesFile.getParentFile().toPath());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
         }
 
@@ -56,7 +56,7 @@ public class PropertiesLoader {
             try {
                 properties = loadProperties(propertiesFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
                 properties = new Properties();
             }
         } else {
@@ -71,11 +71,11 @@ public class PropertiesLoader {
         String os = System.getProperty("os.name").toLowerCase();
 
         if (os.contains("win")) {
-            return System.getenv("APPDATA") + "\\Goo2Tool";
+            return System.getenv("APPDATA").replaceAll("\\\\", "/") + "/Goo2Tool";
         } else if (os.contains("mac")) {
-            return System.getProperty("user.home") + "\\Library\\Goo2Tool";
+            return System.getProperty("user.home").replaceAll("\\\\", "/") + "/Library/Goo2Tool";
         } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
-            return System.getProperty("user.home") + "\\.config\\Goo2Tool";
+            return System.getProperty("user.home").replaceAll("\\\\", "/") + "/.config/Goo2Tool";
         } else {
             throw new RuntimeException("Unsupported OS: " + os);
         }

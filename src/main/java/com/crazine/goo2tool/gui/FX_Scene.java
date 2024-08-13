@@ -60,7 +60,7 @@ public class FX_Scene {
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    FX_Alarm.error(e);
                 }
             });
         });

@@ -3,6 +3,7 @@ package com.crazine.goo2tool.functional;
 import com.crazine.goo2tool.Main;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.FX_Profile;
 import com.crazine.goo2tool.islands.IslandFileLoader;
 import com.crazine.goo2tool.islands.Islands;
@@ -55,7 +56,7 @@ public class Save {
                 try {
                     PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    FX_Alarm.error(e);
                 }
 
                 // Merge original res folder
@@ -71,7 +72,7 @@ public class Save {
                             .filter(p -> !p.toFile().isDirectory())
                             .count();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    FX_Alarm.error(e);
                     fileCount = 0;
                 }
 
@@ -98,13 +99,13 @@ public class Save {
 
                     boolean shouldReplace = !Files.exists(customPath);
                     if (!shouldReplace) {
-                        if (file.isDirectory() || !file.getPath().contains("game\\res\\")) continue;
+                        if (file.isDirectory() || !file.getPath().contains("game/res/") &&  !file.getPath().contains("game\\res\\")) continue;
                         try {
                             if (Files.mismatch(customPath, file.toPath()) != -1L) {
                                 shouldReplace = true;
                             }
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            FX_Alarm.error(e);
                         }
                     }
 
@@ -113,20 +114,20 @@ public class Save {
                         try {
                             Files.copy(file.toPath(), customPath, StandardCopyOption.REPLACE_EXISTING);
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            FX_Alarm.error(e);
                         }
                     }
 
                 }
 
                 ArrayList<Goo2mod> goo2mods = new ArrayList<>();
-                File goo2modsDirectory = new File(PropertiesLoader.getGoo2ToolPath() + "\\addins");
+                File goo2modsDirectory = new File(PropertiesLoader.getGoo2ToolPath() + "/addins");
                 File[] files = goo2modsDirectory.listFiles();
                 if (files != null) for (File file : files) {
                     try {
                         goo2mods.add(AddinFileLoader.loadGoo2mod(file));
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        FX_Alarm.error(e);
                     }
                 }
 
@@ -164,7 +165,7 @@ public class Save {
 
                             String uniquePath = zipEntry.getName().substring(zipEntry.getName()
                                     .indexOf("/", zipEntry.getName().indexOf("/") + 1));
-                            Path customPath = Path.of(customWOG2 + "\\game" + uniquePath);
+                            Path customPath = Path.of(customWOG2 + "/game" + uniquePath);
 
 
                             if (uniquePath.length() > 1) updateMessage(uniquePath.substring(1));
@@ -174,7 +175,7 @@ public class Save {
                                 try {
                                     Files.createFile(customPath);
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                    FX_Alarm.error(e);
                                 }
                             }
 
@@ -183,19 +184,19 @@ public class Save {
                                     Files.copy(addinFile.getInputStream(zipEntry), customPath, StandardCopyOption.REPLACE_EXISTING);
                                 }
                             } catch (IOException e) {
-                                e.printStackTrace();
+                                FX_Alarm.error(e);
                             }
 
                         });
 
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        FX_Alarm.error(e);
                     }
 
                 }
 
                 // Update save file
-                File islandFile = new File(customWOG2 + "\\game\\res\\islands\\islands.wog2");
+                File islandFile = new File(customWOG2 + "/game/res/islands/islands.wog2");
                 try {
 
                     updateTitle("Updating save file ");
@@ -203,7 +204,7 @@ public class Save {
 
                     Islands islands = IslandFileLoader.loadIslands(islandFile);
 
-                    File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "\\wog2_1.dat");
+                    File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
 
                     try {
 
@@ -228,11 +229,11 @@ public class Save {
                         SaveFileLoader.writeSaveFile(toSaveFile, data);
 
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        FX_Alarm.error(e);
                     }
 
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    FX_Alarm.error(e);
                 }
 
                 return null;
@@ -245,13 +246,12 @@ public class Save {
 
         stage.setTitle("Building your World of Goo 2");
 
-        File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().toString().substring(7));
-        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")
-                && !codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool-master")) {
+        File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getFile());
+        while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
             codeLocation = codeLocation.getParentFile();
         }
-        String projectLocation = codeLocation.getPath();
-        Image image = new Image(projectLocation + "\\terrain.png");
+        String projectLocation = codeLocation.getPath().replaceAll("\\\\", "/");
+        Image image = new Image(projectLocation + "/terrain.png");
         stage.getIcons().add(image);
 
         stage.setAlwaysOnTop(true);

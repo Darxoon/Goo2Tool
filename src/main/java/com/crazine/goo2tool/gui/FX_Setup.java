@@ -38,7 +38,7 @@ public class FX_Setup extends Application {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
             if (!PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory().isEmpty() &&
                     !PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty() &&
@@ -63,7 +63,7 @@ public class FX_Setup extends Application {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
             if (!PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory().isEmpty() &&
                     !PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty() &&
@@ -88,7 +88,7 @@ public class FX_Setup extends Application {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
             if (!PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory().isEmpty() &&
                     !PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty() &&

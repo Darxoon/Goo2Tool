@@ -39,7 +39,7 @@ public class FX_Options {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
         });
         HBox baseWOG2 = new HBox(baseWOG2Label, baseWOG2Directory, changeBaseWOG2DirectoryButton);
@@ -58,7 +58,7 @@ public class FX_Options {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
         });
         HBox customWOG2 = new HBox(customWOG2Label, customWOG2Directory, changeCustomWOG2DirectoryButton);
@@ -77,7 +77,7 @@ public class FX_Options {
             try {
                 PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
         });
         HBox profile = new HBox(profileLabel, profileDirectory, changeProfileDirectoryButton);

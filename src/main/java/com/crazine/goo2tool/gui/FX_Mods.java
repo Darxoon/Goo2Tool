@@ -65,7 +65,7 @@ public class FX_Mods {
                 goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
                 if (goo2mod == null) return;
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
                 return;
             }
             Addin addin2 = new Addin();
@@ -78,9 +78,9 @@ public class FX_Mods {
 
             try {
                 Files.copy(goomodFile.toPath(), Path.of(PropertiesLoader.getGoo2ToolPath() +
-                        "\\addins\\" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
+                        "/addins/" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
 
         });

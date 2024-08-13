@@ -14,6 +14,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 
 public class Main_Application extends Application {
@@ -35,20 +36,19 @@ public class Main_Application extends Application {
         stage.setScene(scene);
         stage.setMinWidth(530);
         stage.setMinHeight(300);
-        File codeLocation = new File(getClass().getProtectionDomain().getCodeSource().toString().substring(7));
-        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")
-        && !codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool-master")) {
+        File codeLocation = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getFile());
+        while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
             codeLocation = codeLocation.getParentFile();
         }
-        String projectLocation = codeLocation.getPath();
-        Image image = new Image(projectLocation + "\\conduit.png");
+        String projectLocation = codeLocation.getPath().replaceAll("\\\\", "/");
+        Image image = new Image(projectLocation + "/conduit.png");
         stage.getIcons().add(image);
         stage.show();
 
 
         try {
 
-            File goomodsFile = new File(PropertiesLoader.getGoo2ToolPath() + "\\addins");
+            File goomodsFile = new File(PropertiesLoader.getGoo2ToolPath() + "/addins");
             if (!Files.exists(goomodsFile.toPath())) Files.createDirectory(goomodsFile.toPath());
             File[] children = goomodsFile.listFiles();
             if (children != null) for (File goomodFile : children) {
@@ -67,7 +67,7 @@ public class Main_Application extends Application {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            FX_Alarm.error(e);
         }
 
     }

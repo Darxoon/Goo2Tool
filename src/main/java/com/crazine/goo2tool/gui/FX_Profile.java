@@ -54,9 +54,9 @@ public class FX_Profile {
             profileSelectionBox.getItems().add("Profile " + i);
         }
         profileSelectionBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
-            File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "\\wog2_1.dat");
+            File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
             File islandFile = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory()
-                    + "\\game\\res\\islands\\islands.wog2");
+                    + "/game/res/islands/islands.wog2");
             try {
 
                 Islands islands = IslandFileLoader.loadIslands(islandFile);
@@ -81,7 +81,7 @@ public class FX_Profile {
                 }
 
             } catch (IOException e) {
-                e.printStackTrace();
+                FX_Alarm.error(e);
             }
         });
         profileSelectionBox.getSelectionModel().select(0);
