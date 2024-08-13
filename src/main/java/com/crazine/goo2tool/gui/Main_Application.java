@@ -36,7 +36,8 @@ public class Main_Application extends Application {
         stage.setMinWidth(530);
         stage.setMinHeight(300);
         File codeLocation = new File(getClass().getProtectionDomain().getCodeSource().toString().substring(7));
-        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")) {
+        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")
+        && !codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool-master")) {
             codeLocation = codeLocation.getParentFile();
         }
         String projectLocation = codeLocation.getPath();

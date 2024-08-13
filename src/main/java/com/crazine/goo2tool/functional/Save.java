@@ -246,7 +246,8 @@ public class Save {
         stage.setTitle("Building your World of Goo 2");
 
         File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().toString().substring(7));
-        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")) {
+        while (!codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool")
+                && !codeLocation.getPath().substring(codeLocation.getPath().lastIndexOf("\\") + 1).equals("Goo2Tool-master")) {
             codeLocation = codeLocation.getParentFile();
         }
         String projectLocation = codeLocation.getPath();
