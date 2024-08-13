@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 public class PropertiesLoader {
 
@@ -17,7 +18,7 @@ public class PropertiesLoader {
     }
 
 
-    private static final File propertiesFile = new File(System.getenv("APPDATA") + "/Goo2Tool/properties.xml");
+    private static final File propertiesFile = new File(getGoo2ToolPath() + "\\properties.xml");
     public static File getPropertiesFile() {
         return propertiesFile;
     }
@@ -60,6 +61,23 @@ public class PropertiesLoader {
             }
         } else {
             properties = new Properties();
+        }
+
+    }
+
+
+    public static String getGoo2ToolPath() {
+
+        String os = System.getProperty("os.name").toLowerCase();
+
+        if (os.contains("win")) {
+            return System.getenv("APPDATA") + "\\Goo2Tool";
+        } else if (os.contains("mac")) {
+            return System.getProperty("user.home") + "\\Library\\Goo2Tool";
+        } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
+            return System.getProperty("user.home") + "\\.config\\Goo2Tool";
+        } else {
+            throw new RuntimeException("Unsupported OS: " + os);
         }
 
     }

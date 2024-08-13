@@ -48,7 +48,7 @@ public class Main_Application extends Application {
 
         try {
 
-            File goomodsFile = new File(System.getenv("APPDATA") + "/Goo2Tool/addins");
+            File goomodsFile = new File(PropertiesLoader.getGoo2ToolPath() + "\\addins");
             if (!Files.exists(goomodsFile.toPath())) Files.createDirectory(goomodsFile.toPath());
             File[] children = goomodsFile.listFiles();
             if (children != null) for (File goomodFile : children) {

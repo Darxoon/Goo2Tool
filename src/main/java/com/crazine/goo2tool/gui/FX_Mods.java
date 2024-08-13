@@ -77,8 +77,8 @@ public class FX_Mods {
             FX_Mods.getModTableView().getItems().add(goo2mod);
 
             try {
-                Files.copy(goomodFile.toPath(), Path.of(System.getenv("APPDATA") +
-                        "\\Goo2Tool\\addins\\" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(goomodFile.toPath(), Path.of(PropertiesLoader.getGoo2ToolPath() +
+                        "\\addins\\" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 e.printStackTrace();
             }

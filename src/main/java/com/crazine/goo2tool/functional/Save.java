@@ -120,7 +120,7 @@ public class Save {
                 }
 
                 ArrayList<Goo2mod> goo2mods = new ArrayList<>();
-                File goo2modsDirectory = new File(System.getenv("APPDATA") + "\\Goo2Tool\\addins");
+                File goo2modsDirectory = new File(PropertiesLoader.getGoo2ToolPath() + "\\addins");
                 File[] files = goo2modsDirectory.listFiles();
                 if (files != null) for (File file : files) {
                     try {
