@@ -3,10 +3,7 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
-import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import com.crazine.goo2tool.saveFile.SaveFileLoader;
-import com.crazine.goo2tool.saveFile.WOG2SaveData;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -14,7 +11,6 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 
 public class Main_Application extends Application {

@@ -1,13 +1,10 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.islands.IslandFileLoader;
 import com.crazine.goo2tool.islands.Islands;
-import com.crazine.goo2tool.properties.Addin;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
-import javafx.beans.value.ObservableValueBase;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;

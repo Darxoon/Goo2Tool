@@ -4,8 +4,6 @@ import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;

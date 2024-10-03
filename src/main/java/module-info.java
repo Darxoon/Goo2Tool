@@ -1,6 +1,6 @@
 module com.crazine.goo2tool {
 
-    requires javafx.controls;
+    requires transitive javafx.controls;
     requires javafx.fxml;
     requires org.controlsfx.controls;
     requires com.fasterxml.jackson.databind;
