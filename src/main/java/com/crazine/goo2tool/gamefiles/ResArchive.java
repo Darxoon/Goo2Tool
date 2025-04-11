@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.res;
+package com.crazine.goo2tool.gamefiles;
 
 import java.io.Closeable;
 import java.io.File;
@@ -6,7 +6,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -19,9 +23,16 @@ import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
 
 public class ResArchive implements Closeable {
+    
+    public static record ResFile(String path, byte[] content) {
+        public static ResFile fromZipEntry(ZipFile file, ZipEntry entry) throws IOException {
+            return new ResFile(entry.getName(), file.getInputStream(entry).readAllBytes());
+        }
+    }
+    
     private ZipFile zipFile;
     
-    public static ResArchive loadVanilla(Stage stage) throws IOException {
+    public static ResArchive loadOrSetupVanilla(Stage stage) throws IOException {
         String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
 
         File resGooFile;
@@ -66,6 +77,34 @@ public class ResArchive implements Closeable {
         return Optional.empty();
     }
 
+    public Iterable<ResFile> getAllFiles() {
+        return new Iterable<>() {
+            
+            @Override
+            public Iterator<ResFile> iterator() {
+                // potential speed up: https://stackoverflow.com/questions/20717897/multithreaded-unzipping-in-java
+                Enumeration<? extends ZipEntry> entries = ResArchive.this.zipFile.entries();
+                Spliterator<? extends ZipEntry> spliterator = Spliterators.spliteratorUnknownSize(entries.asIterator(), 0);
+                
+                return StreamSupport.stream(spliterator, false)
+                    .parallel()
+                    .filter(entry -> !entry.isDirectory())
+                    .map(entry -> {
+                        try {
+                            return ResArchive.ResFile.fromZipEntry(ResArchive.this.zipFile, entry);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).iterator();
+            }
+            
+        };
+    }
+    
+    public int fileCount() {
+        return zipFile.size();
+    }
+    
     @Override
     public void close() throws IOException {
         zipFile.close();

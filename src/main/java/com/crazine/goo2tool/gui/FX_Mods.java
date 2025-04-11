@@ -2,7 +2,7 @@ package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
-import com.crazine.goo2tool.properties.Addin;
+import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -66,7 +66,7 @@ public class FX_Mods {
                 FX_Alarm.error(e);
                 return;
             }
-            Addin addin2 = new Addin();
+            AddinConfigEntry addin2 = new AddinConfigEntry();
             addin2.setName(goo2mod.getId());
             addin2.setLoaded(false);
             if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
@@ -113,7 +113,7 @@ public class FX_Mods {
                 @Override
                 protected void updateItem(Boolean item, boolean empty) {
                     super.updateItem(item, empty);
-                    for (Addin addin : PropertiesLoader.getProperties().getAddins()) {
+                    for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
                         if (getTableRow().getItem() != null && addin.getName().equals(getTableRow().getItem().getId())) {
                             checkBox.setSelected(addin.isLoaded());
                             enable.setDisable(!addin.isLoaded());
@@ -125,7 +125,7 @@ public class FX_Mods {
             checkBox.setPrefSize(20, 20);
             checkBox.setOnAction(event -> {
                 cell.setItem(checkBox.isSelected());
-                for (Addin addin : PropertiesLoader.getProperties().getAddins()) {
+                for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
                     if (addin.getName().equals(cell.getTableView().getItems().get(cell.getIndex()).getId())) {
                         addin.setLoaded(cell.getItem());
                     }

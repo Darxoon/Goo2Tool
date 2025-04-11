@@ -1,6 +1,6 @@
 package com.crazine.goo2tool.properties;
 
-public class Addin {
+public class AddinConfigEntry {
 
     private String name;
     public String getName() {

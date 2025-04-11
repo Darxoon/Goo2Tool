@@ -1,7 +1,8 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.islands.IslandFileLoader;
-import com.crazine.goo2tool.islands.Islands;
+import com.crazine.goo2tool.gamefiles.ResArchive;
+import com.crazine.goo2tool.gamefiles.islands.IslandFileLoader;
+import com.crazine.goo2tool.gamefiles.islands.Islands;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
@@ -52,9 +53,8 @@ public class FX_Profile {
         }
         profileSelectionBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
-            try {
-
-                Islands islands = IslandFileLoader.loadIslands(stage);
+            try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
+                Islands islands = IslandFileLoader.loadIslands(res);
 
                 WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
                 levelTableView.getItems().clear();
@@ -74,7 +74,6 @@ public class FX_Profile {
                     }
                     j++;
                 }
-
             } catch (IOException e) {
                 FX_Alarm.error(e);
             }

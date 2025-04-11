@@ -3,7 +3,7 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.Main;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
-import com.crazine.goo2tool.properties.Addin;
+import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -48,7 +48,7 @@ public class Main_Application extends Application {
 
                 Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
                 if (goo2mod != null) {
-                    Addin addin2 = new Addin();
+                    AddinConfigEntry addin2 = new AddinConfigEntry();
                     addin2.setName(goo2mod.getId());
                     addin2.setLoaded(false);
                     if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {

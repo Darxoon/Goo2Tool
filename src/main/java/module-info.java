@@ -12,6 +12,7 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.addinFile;
     exports com.crazine.goo2tool.properties;
     exports com.crazine.goo2tool.functional;
-    exports com.crazine.goo2tool.islands;
+    exports com.crazine.goo2tool.gamefiles;
+    exports com.crazine.goo2tool.gamefiles.islands;
 
 }

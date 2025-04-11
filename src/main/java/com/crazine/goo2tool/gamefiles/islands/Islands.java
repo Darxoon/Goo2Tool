@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.islands;
+package com.crazine.goo2tool.gamefiles.islands;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonSetter;

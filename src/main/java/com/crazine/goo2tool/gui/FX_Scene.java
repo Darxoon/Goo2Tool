@@ -1,7 +1,9 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.functional.Save;
+import com.crazine.goo2tool.functional.SaveGui;
+import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -16,6 +18,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Optional;
 
 public class FX_Scene {
 
@@ -46,11 +49,33 @@ public class FX_Scene {
         tabPane.getTabs().add(optionsTab);
 
         Button saveButton = new Button("Save");
-        saveButton.setOnAction(event -> Save.save(stage));
+        saveButton.setOnAction(event -> {
+            ResArchive res;
+            try {
+                res = ResArchive.loadOrSetupVanilla(stage);
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+                return;
+            }
+            
+            SaveGui.save(stage, res);
+        });
+        
         Button saveAndPlayButton = new Button("Save and Launch World of Goo 2!");
         saveAndPlayButton.setOnAction(event -> {
-            BooleanProperty finished = Save.save(stage);
-            finished.addListener((observable, oldValue, newValue) -> {
+            ResArchive res;
+            try {
+                res = ResArchive.loadOrSetupVanilla(stage);
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+                return;
+            }
+            
+            Optional<BooleanProperty> finished = SaveGui.save(stage, res);
+            if (finished.isEmpty())
+                return;
+            
+            finished.get().addListener((observable, oldValue, newValue) -> {
                 try {
                     File customWOG2Dir = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory());
                     File[] children = customWOG2Dir.listFiles();

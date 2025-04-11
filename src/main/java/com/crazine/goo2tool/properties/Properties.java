@@ -33,11 +33,11 @@ public class Properties {
 
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
-    private ArrayList<Addin> addins = new ArrayList<>();
-    @JacksonXmlProperty() public ArrayList<Addin> getAddins() {
+    private ArrayList<AddinConfigEntry> addins = new ArrayList<>();
+    @JacksonXmlProperty() public ArrayList<AddinConfigEntry> getAddins() {
         return addins;
     }
-    @JacksonXmlProperty() public void setAddins(ArrayList<Addin> addins) {
+    @JacksonXmlProperty() public void setAddins(ArrayList<AddinConfigEntry> addins) {
         this.addins = addins;
     }
 
