@@ -258,13 +258,12 @@ public class Save {
                 }
 
                 // Update save file
-                File islandFile = new File(customWOG2 + "/game/res/islands/islands.wog2");
                 try {
 
                     updateTitle("Updating save file ");
                     updateMessage("");
 
-                    Islands islands = IslandFileLoader.loadIslands(islandFile);
+                    Islands islands = IslandFileLoader.loadIslands(originalStage);
 
                     File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
 

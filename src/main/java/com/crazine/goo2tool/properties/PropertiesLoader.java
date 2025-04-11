@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.properties;
 
+import com.crazine.goo2tool.Platform;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
@@ -70,18 +71,12 @@ public class PropertiesLoader {
 
 
     public static String getGoo2ToolPath() {
-
-        String os = System.getProperty("os.name").toLowerCase();
-
-        if (os.contains("win")) {
-            return System.getenv("APPDATA").replaceAll("\\\\", "/") + "/Goo2Tool";
-        } else if (os.contains("mac")) {
-            return System.getProperty("user.home").replaceAll("\\\\", "/") + "/Library/Goo2Tool";
-        } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
-            return System.getProperty("user.home").replaceAll("\\\\", "/") + "/.config/Goo2Tool";
-        } else {
-            throw new RuntimeException("Unsupported OS: " + os);
-        }
+        
+        return switch (Platform.getCurrent()) {
+            case WINDOWS -> System.getenv("APPDATA").replaceAll("\\\\", "/") + "/Goo2Tool";
+            case MAC -> System.getProperty("user.home").replaceAll("\\\\", "/") + "/Library/Goo2Tool";
+            case LINUX -> System.getProperty("user.home").replaceAll("\\\\", "/") + "/.config/Goo2Tool";
+        };
 
     }
 
