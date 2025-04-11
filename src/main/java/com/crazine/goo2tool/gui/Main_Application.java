@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.gui;
 
+import com.crazine.goo2tool.Main;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.Addin;
@@ -11,13 +12,13 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 
 public class Main_Application extends Application {
 
     @Override
     public void start(Stage stage) {
-
         FX_Scene.buildScene(stage);
         FX_Menu.buildMenuBar(stage);
         FX_Profile.buildProfileView(stage);
@@ -32,11 +33,7 @@ public class Main_Application extends Application {
         stage.setScene(scene);
         stage.setMinWidth(530);
         stage.setMinHeight(300);
-        File codeLocation = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getFile());
-        while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
-            codeLocation = codeLocation.getParentFile();
-        }
-        String projectLocation = codeLocation.getPath().replaceAll("\\\\", "/");
+        String projectLocation = getProjectLocation();
         Image image = new Image(projectLocation + "/conduit.png");
         stage.getIcons().add(image);
         stage.show();
@@ -66,6 +63,19 @@ public class Main_Application extends Application {
             FX_Alarm.error(e);
         }
 
+    }
+    
+    public static String getProjectLocation() {
+        try {
+            File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
+                codeLocation = codeLocation.getParentFile();
+            }
+            return codeLocation.getPath().replaceAll("\\\\", "/");
+        } catch (URISyntaxException e) {
+            FX_Alarm.error(e);
+            return "";
+        }
     }
 
 }

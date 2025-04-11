@@ -32,14 +32,17 @@ public class FX_Scene {
 
         Tab profileTab = new Tab("Profile");
         profileTab.setContent(FX_Profile.getProfileView());
+        profileTab.setClosable(false);
         tabPane.getTabs().add(profileTab);
 
         Tab modsTab = new Tab("Mods");
         modsTab.setContent(FX_Mods.getModView());
+        modsTab.setClosable(false);
         tabPane.getTabs().add(modsTab);
 
         Tab optionsTab = new Tab("Options");
         optionsTab.setContent(FX_Options.getOptionsView());
+        optionsTab.setClosable(false);
         tabPane.getTabs().add(optionsTab);
 
         Button saveButton = new Button("Save");

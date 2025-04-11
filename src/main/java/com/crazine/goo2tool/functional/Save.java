@@ -1,16 +1,17 @@
 package com.crazine.goo2tool.functional;
 
-import com.crazine.goo2tool.Main;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.FX_Profile;
+import com.crazine.goo2tool.gui.Main_Application;
 import com.crazine.goo2tool.islands.IslandFileLoader;
 import com.crazine.goo2tool.islands.Islands;
 import com.crazine.goo2tool.properties.Addin;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.crazine.goo2tool.saveFile.SaveFileLoader;
 import com.crazine.goo2tool.saveFile.WOG2SaveData;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -18,31 +19,60 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser.ExtensionFilter;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class Save {
 
     public static BooleanProperty save(Stage originalStage) {
-
+        String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
+        
+        File resGooFile;
+        if (Files.exists(Path.of(baseWOG2 + "/game/res.goo"))) {
+            resGooFile = new File(baseWOG2 + "/game/res.goo");
+        } else {
+            Alert alert = new Alert(AlertType.CONFIRMATION);
+            alert.setContentText("Could not find res.goo file as it appears to have been renamed or moved.\n\n"
+                    + "Please pick the new location of the file instead.");
+            alert.showAndWait();
+            
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(new ExtensionFilter("res.goo Archive", "*.*"));
+            
+            File initialDirectory = new File(baseWOG2 + "/game");
+            if (initialDirectory.exists())
+                fileChooser.setInitialDirectory(initialDirectory);
+            
+            resGooFile = fileChooser.showOpenDialog(originalStage);
+        }
+        
         Stage stage = new Stage();
         stage.initOwner(originalStage);
         stage.initModality(Modality.APPLICATION_MODAL);
@@ -86,14 +116,18 @@ public class Save {
                     updateProgress(tracker, fileCount);
 
                     File file = baseFiles.pop();
+                    
+                    String uniquePath = file.getPath().substring(baseWOG2.length());
+                    Path customPath = Path.of(customWOG2 + uniquePath);
+                    
                     if (file.isDirectory()) {
                         File[] fileArray = file.listFiles();
                         assert fileArray != null;
-                        baseFiles.addAll(Arrays.asList(fileArray));
+                        
+                        if (!uniquePath.replaceAll("\\\\", "/").equals("/game")) {
+                            baseFiles.addAll(Arrays.asList(fileArray));
+                        }
                     }
-
-                    String uniquePath = file.getPath().substring(baseWOG2.length());
-                    Path customPath = Path.of(customWOG2 + uniquePath);
 
                     if (uniquePath.length() > 10) updateMessage(uniquePath.substring(10));
 
@@ -119,7 +153,40 @@ public class Save {
                     }
 
                 }
+                
+                // Extract res.goo as needed
+                try (ZipFile zipFile = new ZipFile(resGooFile)) {
+                    Enumeration<? extends ZipEntry> entries = zipFile.entries();
+                    int i = 0;
+                    while (entries.hasMoreElements()) {
+                        updateProgress(i++, zipFile.size());
+                        
+                        ZipEntry entry = entries.nextElement();
+                        if (entry.isDirectory())
+                            continue;
+                        
+                        byte[] content = zipFile.getInputStream(entry).readAllBytes();
+                        
+                        boolean shouldReplace = true;
+                        File customFile = new File(customWOG2 + "/game/" + entry.getName());
+                        
+                        if (customFile.exists()) {
+                            try (FileInputStream stream = new FileInputStream(customFile)) {
+                                byte[] newContent = stream.readAllBytes();
+                                shouldReplace = Arrays.equals(content, newContent);
+                            }
+                        }
+                        
+                        if (shouldReplace) {
+                            Files.createDirectories(customFile.toPath().getParent());
+                            Files.write(customFile.toPath(), content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                        }
+                    }
+                } catch (IOException e) {
+                    FX_Alarm.error(e);
+                }
 
+                // Install mods
                 ArrayList<Goo2mod> goo2mods = new ArrayList<>();
                 File goo2modsDirectory = new File(PropertiesLoader.getGoo2ToolPath() + "/addins");
                 File[] files = goo2modsDirectory.listFiles();
@@ -145,54 +212,49 @@ public class Save {
                 }
 
                 for (Goo2mod goo2mod : goo2modsSorted) {
-
                     updateTitle("Installing addin " + goo2mod.getId());
 
                     try (ZipFile addinFile = new ZipFile(goo2mod.getFile().getPath())) {
 
                         long count = addinFile.stream().count();
+                        long i = 0;
 
-                        AtomicLong i = new AtomicLong();
-
-                        addinFile.entries().asIterator().forEachRemaining(zipEntry -> {
-                            i.getAndIncrement();
-                            updateProgress(i.get(), count);
-
-                            if (!zipEntry.getName().contains("/") || zipEntry.getName().indexOf("/",
-                                    zipEntry.getName().indexOf("/") + 1) == -1) return;
-
-                            if (zipEntry.isDirectory()) return;
-
+                        Iterator<? extends ZipEntry> entries = addinFile.entries().asIterator();
+                        while (entries.hasNext()) {
+                            ZipEntry zipEntry = entries.next();
+                            i++;
+                            updateProgress(i, count);
+    
+                            if (zipEntry.isDirectory())
+                                continue;
+                            
+                            String name = zipEntry.getName();
+                            
+                            if (name.startsWith("compile/")) {
+                                String relativePath = name.substring("compile/".length());
+                                if (relativePath.indexOf("/") == -1) continue;
+                                return (Void)null;
+                            }
+    
                             String uniquePath = zipEntry.getName().substring(zipEntry.getName()
                                     .indexOf("/", zipEntry.getName().indexOf("/") + 1));
                             Path customPath = Path.of(customWOG2 + "/game" + uniquePath);
-
-
+    
+    
                             if (uniquePath.length() > 1) updateMessage(uniquePath.substring(1));
-
+    
                             // If the file doesn't exist in the new res folder, create it
                             if (!Files.exists(customPath)) {
-                                try {
-                                    Files.createFile(customPath);
-                                } catch (IOException e) {
-                                    FX_Alarm.error(e);
-                                }
+                                Files.createFile(customPath);
                             }
-
-                            try {
-                                if (Files.isWritable(customPath)) {
-                                    Files.copy(addinFile.getInputStream(zipEntry), customPath, StandardCopyOption.REPLACE_EXISTING);
-                                }
-                            } catch (IOException e) {
-                                FX_Alarm.error(e);
+                            
+                            if (Files.isWritable(customPath)) {
+                                Files.copy(addinFile.getInputStream(zipEntry), customPath, StandardCopyOption.REPLACE_EXISTING);
                             }
-
-                        });
-
+                        }
                     } catch (IOException e) {
                         FX_Alarm.error(e);
                     }
-
                 }
 
                 // Update save file
@@ -246,11 +308,7 @@ public class Save {
 
         stage.setTitle("Building your World of Goo 2");
 
-        File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getFile());
-        while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
-            codeLocation = codeLocation.getParentFile();
-        }
-        String projectLocation = codeLocation.getPath().replaceAll("\\\\", "/");
+        String projectLocation = Main_Application.getProjectLocation();
         Image image = new Image(projectLocation + "/terrain.png");
         stage.getIcons().add(image);
 

@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.properties;
 
-import com.crazine.goo2tool.gui.FX_Alarm;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
@@ -8,13 +7,18 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class PropertiesLoader {
 
     private static Properties properties;
     public static Properties getProperties() {
         return properties;
+    }
+    
+    public static boolean isAllInitialized() {
+        return !getProperties().getBaseWorldOfGoo2Directory().isEmpty()
+            && !getProperties().getCustomWorldOfGoo2Directory().isEmpty()
+            && !getProperties().getProfileDirectory().isEmpty();
     }
 
 
@@ -43,12 +47,11 @@ public class PropertiesLoader {
 
 
     public static void init() {
-
-        if (!Files.exists(Path.of(propertiesFile.getPath()))) {
+        if (!Files.exists(propertiesFile.getParentFile().toPath())) {
             try {
                 Files.createDirectory(propertiesFile.getParentFile().toPath());
             } catch (IOException e) {
-                FX_Alarm.error(e);
+                e.printStackTrace();
             }
         }
 
@@ -56,7 +59,7 @@ public class PropertiesLoader {
             try {
                 properties = loadProperties(propertiesFile);
             } catch (IOException e) {
-                FX_Alarm.error(e);
+                e.printStackTrace();
                 properties = new Properties();
             }
         } else {
