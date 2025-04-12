@@ -237,11 +237,26 @@ class SaveTask extends Task<Void> {
                 switch (resource.type()) {
                     case METADATA:
                         break;
-                    case COMPILE:
-                        throw new IllegalArgumentException("compile/ is not supported yet");
+                    case COMPILE: {
+                        if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
+                            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
+                        
+                        Path customPath = Paths.get(customWOG2, "game", resource.path());
+                        
+                        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
+                        
+                        table.addEntry(mod.getId(), resource.path());
+                        
+                        Files.write(customPath, resource.content(),
+                                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                        break;
+                    }
                     case MERGE:
                         throw new IllegalArgumentException("merge/ is not supported yet");
                     case OVERRIDE: {
+                        if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
+                            throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
+                        
                         Path customPath = Paths.get(customWOG2, "game", resource.path());
                         
                         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
@@ -254,8 +269,10 @@ class SaveTask extends Task<Void> {
                     }
                 }
             }
-        } catch (IOException e) {
-            FX_Alarm.error(new RuntimeException("Failed loading the mod " + mod.getName() + ": " + e.getMessage(), e));
+        } catch (Exception e) {
+            Platform.runLater(() -> {
+                FX_Alarm.error(new RuntimeException("Failed loading the mod \"" + mod.getName() + "\": " + e.getMessage(), e));
+            });
         }
     }
     

@@ -65,7 +65,7 @@ public class FX_Mods {
                     try {
                         PropertiesLoader.loadGoo2mod(file);
                     } catch (IOException e) {
-                        FX_Alarm.error(new RuntimeException("Failed loading mod " + file.getName() + ": " + e.getMessage(), e));
+                        FX_Alarm.error(new RuntimeException("Failed loading mod \"" + file.getName() + "\": " + e.getMessage(), e));
                     }
                 }
                 
