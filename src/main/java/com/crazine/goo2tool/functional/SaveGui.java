@@ -1,7 +1,10 @@
 package com.crazine.goo2tool.functional;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 import com.crazine.goo2tool.gamefiles.ResArchive;
@@ -32,7 +35,14 @@ public class SaveGui {
     public static Optional<BooleanProperty> save(Stage originalStage, ResArchive res) {
         if (PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty()) {
             String projectLocation = Main_Application.getProjectLocation();
-            Image icon = new Image(projectLocation + "/conduit.png");
+            InputStream iconStream;
+            try {
+                iconStream = new FileInputStream(projectLocation + "/conduit.png");
+            } catch (FileNotFoundException e) {
+                FX_Alarm.error(e);
+                return Optional.empty();
+            }
+            Image icon = new Image(iconStream);
             
             Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
@@ -62,7 +72,14 @@ public class SaveGui {
         stage.setTitle("Building your World of Goo 2");
 
         String projectLocation = Main_Application.getProjectLocation();
-        Image image = new Image(projectLocation + "/terrain.png");
+        InputStream iconStream;
+        try {
+            iconStream = new FileInputStream(projectLocation + "/terrain.png");
+        } catch (FileNotFoundException e) {
+            FX_Alarm.error(e);
+            return Optional.empty();
+        }
+        Image image = new Image(iconStream);
         stage.getIcons().add(image);
 
         stage.setAlwaysOnTop(true);

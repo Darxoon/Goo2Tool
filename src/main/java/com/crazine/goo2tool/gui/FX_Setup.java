@@ -1,6 +1,10 @@
 package com.crazine.goo2tool.gui;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 import com.crazine.goo2tool.Platform;
@@ -24,17 +28,36 @@ public class FX_Setup extends Application {
         stage.setTitle("Goo2Tool Setup");
         
         String projectLocation = Main_Application.getProjectLocation();
-        Image icon = new Image(projectLocation + "/conduit.png");
+        InputStream iconStream;
+        try {
+            iconStream = new FileInputStream(projectLocation + "/conduit.png");
+        } catch (FileNotFoundException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        Image icon = new Image(iconStream);
         
         Properties properties = PropertiesLoader.getProperties();
         
         // setup wizard
         if (properties.getBaseWorldOfGoo2Directory().isEmpty()) {
             properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, icon));
+            
+            try {
+                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
         }
         
         if (properties.getProfileDirectory().isEmpty()) {
             properties.setProfileDirectory(getProfileDirectory(stage, icon));
+            
+            try {
+                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
         }
         
         // continue to application
@@ -84,24 +107,29 @@ public class FX_Setup extends Application {
             }
             case LINUX -> {
                 FileChooser fileChooser = new FileChooser();
-                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.AppImage");
+                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.exe", "*.AppImage");
                 fileChooser.getExtensionFilters().add(exeFilter);
                 
                 File file = fileChooser.showOpenDialog(stage);
-                yield file.getAbsolutePath();
+                
+                if (file.getAbsolutePath().endsWith(".exe")) {
+                    yield file.getParentFile().getAbsolutePath();
+                } else {
+                    yield file.getAbsolutePath();
+                }
             }
         };
     }
     
     private String getProfileDirectory(Stage stage, Image icon) {
         // try auto detecting
-        File profileDir = new File(switch (Platform.getCurrent()) {
-            case WINDOWS -> System.getenv("LocalAppData") + "/2DBoy/WorldOfGoo2";
-            case MAC -> System.getProperty("user.home") + "/Library/Application Support/WorldOfGoo2";
+        File profileDir = switch (Platform.getCurrent()) {
+            case WINDOWS -> new File(System.getenv("LocalAppData") + "/2DBoy/WorldOfGoo2");
+            case MAC -> new File(System.getProperty("user.home") + "/Library/Application Support/WorldOfGoo2");
             case LINUX -> null; // TODO: what is the correct directory?
-        });
+        };
         
-        if (profileDir.exists() && profileDir.isDirectory()) {
+        if (profileDir != null && profileDir.exists() && profileDir.isDirectory()) {
             return profileDir.getAbsolutePath();
         }
         

@@ -11,7 +11,10 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 
@@ -34,8 +37,15 @@ public class Main_Application extends Application {
         stage.setMinWidth(530);
         stage.setMinHeight(300);
         String projectLocation = getProjectLocation();
-        Image image = new Image(projectLocation + "/conduit.png");
-        stage.getIcons().add(image);
+        InputStream iconStream;
+        try {
+            iconStream = new FileInputStream(projectLocation + "/conduit.png");
+        } catch (FileNotFoundException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        Image icon = new Image(iconStream);
+        stage.getIcons().add(icon);
         stage.show();
 
 
