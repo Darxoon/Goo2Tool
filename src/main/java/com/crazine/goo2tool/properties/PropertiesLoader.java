@@ -1,6 +1,9 @@
 package com.crazine.goo2tool.properties;
 
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.addinFile.AddinFileLoader;
+import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.gui.FX_Mods;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
@@ -8,6 +11,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 public class PropertiesLoader {
 
@@ -68,7 +74,25 @@ public class PropertiesLoader {
         }
 
     }
+    
+    public static void loadGoo2mod(File goo2modFile) throws IOException {
+        Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(goo2modFile);
+        
+        AddinConfigEntry addin = new AddinConfigEntry();
+        addin.setName(goo2mod.getId());
+        addin.setLoaded(false);
+        if (!PropertiesLoader.getProperties().hasAddin(addin.getName())) {
+            PropertiesLoader.getProperties().getAddins().add(addin);
+        }
+        FX_Mods.getModTableView().getItems().add(goo2mod);
 
+        Path newPath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins", goo2modFile.getName());
+        Files.copy(goo2modFile.toPath(), newPath, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    public static void uninstallGoo2mod(Goo2mod mod) {
+        FX_Mods.getModTableView().getItems().remove(mod);
+    }
 
     public static String getGoo2ToolPath() {
         

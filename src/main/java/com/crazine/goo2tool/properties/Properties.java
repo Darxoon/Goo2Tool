@@ -4,6 +4,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class Properties {
 
@@ -39,6 +40,24 @@ public class Properties {
     }
     @JacksonXmlProperty() public void setAddins(ArrayList<AddinConfigEntry> addins) {
         this.addins = addins;
+    }
+    
+    public boolean hasAddin(String name) {
+        for (AddinConfigEntry addin : addins) {
+            if (addin.getName().equals(name))
+                return true;
+        }
+        
+        return false;
+    }
+    
+    public Optional<AddinConfigEntry> getAddin(String id) {
+        for (AddinConfigEntry addin : addins) {
+            if (addin.getName().equals(id))
+                return Optional.of(addin);
+        }
+        
+        return Optional.empty();
     }
 
 }

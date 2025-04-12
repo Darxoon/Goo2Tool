@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -8,15 +7,16 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Optional;
 
 public class FX_Mods {
 
@@ -40,6 +40,35 @@ public class FX_Mods {
 
         modTableView.prefHeightProperty().bind(modView.heightProperty().subtract(200));
 
+        modView.setOnDragOver(event -> {
+            if (event.getGestureSource() != modView && event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            
+            event.consume();
+        });
+        
+        modView.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                List<File> files = db.getFiles();
+                
+                for (File file : files) {
+                    try {
+                        PropertiesLoader.loadGoo2mod(file);
+                    } catch (IOException e) {
+                        FX_Alarm.error(new RuntimeException("Failed loading mod " + file.getName() + ": " + e.getMessage(), e));
+                    }
+                }
+                
+                success = true;
+            }
+            
+            event.setDropCompleted(success);
+            event.consume();
+        });
+        
         Label modInfo = new Label("Addins higher on the list have priority and " +
                 "can override files from addins lower on the list.");
         Label modInfo2 = new Label("New levels...   ...   ...   ...   ...What?");
@@ -58,25 +87,9 @@ public class FX_Mods {
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 mod file", "*.goo2mod"));
             File goomodFile = fileChooser.showOpenDialog(stage);
             if (goomodFile == null) return;
-            Goo2mod goo2mod;
+            
             try {
-                goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
-                if (goo2mod == null) return;
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-                return;
-            }
-            AddinConfigEntry addin2 = new AddinConfigEntry();
-            addin2.setName(goo2mod.getId());
-            addin2.setLoaded(false);
-            if (PropertiesLoader.getProperties().getAddins().stream().noneMatch(addin -> addin.getName().equals(addin2.getName()))) {
-                PropertiesLoader.getProperties().getAddins().add(addin2);
-            }
-            FX_Mods.getModTableView().getItems().add(goo2mod);
-
-            try {
-                Files.copy(goomodFile.toPath(), Path.of(PropertiesLoader.getGoo2ToolPath() +
-                        "/addins/" + goomodFile.getName()), StandardCopyOption.REPLACE_EXISTING);
+                PropertiesLoader.loadGoo2mod(goomodFile);
             } catch (IOException e) {
                 FX_Alarm.error(e);
             }
@@ -100,40 +113,46 @@ public class FX_Mods {
         modView.getChildren().add(headerPane);
 
 
+        Button moveUp = new Button("Move Up");
+        Button moveDown = new Button("Move Down");
+        
         Button enable = new Button("Enable");
+        // enable.onActionProperty().addListener(observable -> {
+        //     System.out.println("Enabling");
+        // });
+        
         Button disable = new Button("Disable");
         Button uninstall = new Button("Uninstall");
 
         TableColumn<Goo2mod, Boolean> enabled = new TableColumn<>();
         enabled.setCellFactory(param -> {
 
-            CheckBox checkBox = new CheckBox();
             TableCell<Goo2mod, Boolean> cell = new TableCell<>() {
 
                 @Override
                 protected void updateItem(Boolean item, boolean empty) {
                     super.updateItem(item, empty);
-                    for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
-                        if (getTableRow().getItem() != null && addin.getName().equals(getTableRow().getItem().getId())) {
-                            checkBox.setSelected(addin.isLoaded());
-                            enable.setDisable(!addin.isLoaded());
-                            disable.setDisable(addin.isLoaded());
+                    
+                    CheckBox checkBox = new CheckBox();
+                    
+                    checkBox.setPrefSize(20, 20);
+                    checkBox.setOnAction(event -> {
+                        setItem(checkBox.isSelected());
+                    });
+                    checkBox.visibleProperty().bind(emptyProperty().not());
+
+                    setGraphic(checkBox);
+                    
+                    if (getTableRow().getItem() != null) {
+                        Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(getTableRow().getItem().getId());
+                        
+                        if (addin.isPresent()) {
+                            checkBox.selectedProperty().bindBidirectional(addin.get().loadedProperty());
                         }
                     }
                 }
+                
             };
-            checkBox.setPrefSize(20, 20);
-            checkBox.setOnAction(event -> {
-                cell.setItem(checkBox.isSelected());
-                for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
-                    if (addin.getName().equals(cell.getTableView().getItems().get(cell.getIndex()).getId())) {
-                        addin.setLoaded(cell.getItem());
-                    }
-                }
-            });
-            checkBox.visibleProperty().bind(cell.emptyProperty().not());
-
-            cell.setGraphic(checkBox);
 
             return cell;
 
@@ -178,14 +197,21 @@ public class FX_Mods {
         descriptionArea.setEditable(false);
         descriptionArea.setPrefHeight(160);
 
-        modTableView.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> descriptionArea.setText(newValue.getDescription()));
+        modTableView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            descriptionArea.setText(newValue.getDescription());
+            
+            Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(newValue.getId());
+            if (addin.isPresent()) {
+                enable.disableProperty().bind(addin.get().loadedProperty());
+                disable.disableProperty().bind(addin.get().loadedProperty().not());
+            }
+        });
 
         Button propertiesButton = new Button("Properties");
 
         HBox box = new HBox();
         box.setSpacing(10);
-        box.getChildren().addAll(enable, disable, uninstall);
+        box.getChildren().addAll(moveUp, moveDown, enable, disable, uninstall);
         box.setAlignment(Pos.CENTER_RIGHT);
 
         BorderPane stackPane = new BorderPane();

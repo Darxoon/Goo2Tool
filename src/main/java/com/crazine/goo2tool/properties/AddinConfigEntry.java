@@ -1,8 +1,13 @@
 package com.crazine.goo2tool.properties;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+
 public class AddinConfigEntry {
 
     private String name;
+    private BooleanProperty loaded = new SimpleBooleanProperty(false);
+    
     public String getName() {
         return name;
     }
@@ -10,12 +15,14 @@ public class AddinConfigEntry {
         this.name = name;
     }
 
-    private boolean loaded;
     public boolean isLoaded() {
-        return loaded;
+        return loaded.get();
     }
     public void setLoaded(boolean loaded) {
-        this.loaded = loaded;
+        this.loaded.set(loaded);
+    }
+    public BooleanProperty loadedProperty() {
+        return loaded;
     }
 
 }
