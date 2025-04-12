@@ -106,6 +106,7 @@ public class FX_Setup extends Application {
                 yield file.getAbsolutePath();
             }
             case LINUX -> {
+                // TODO: try figuring out how to use xdg_desktop_portal for this
                 FileChooser fileChooser = new FileChooser();
                 ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.exe", "*.AppImage");
                 fileChooser.getExtensionFilters().add(exeFilter);

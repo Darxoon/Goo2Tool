@@ -10,14 +10,12 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Stack;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
+import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.addinFile.AddinReader.Resource;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.islands.IslandFileLoader;
@@ -42,8 +40,8 @@ class SaveTask extends Task<Void> {
 
     @Override
     protected Void call() {
-        try {
-            save(ResArchive.loadOrSetupVanilla(stage));
+        try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
+            save(res);
         } catch (Exception e) {
             Platform.runLater(() -> {
                 FX_Alarm.error(e);
@@ -224,46 +222,35 @@ class SaveTask extends Task<Void> {
     private void installGoo2mod(Goo2mod mod) {
         String customWOG2 = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
         
-        try (ZipFile addinFile = new ZipFile(mod.getFile().getPath())) {
+        try (AddinReader addinFile = new AddinReader(mod)) {
 
-            long count = addinFile.stream().count();
+            long count = addinFile.getFileCount();
             long i = 0;
 
-            Iterator<? extends ZipEntry> entries = addinFile.entries().asIterator();
-            while (entries.hasNext()) {
-                ZipEntry zipEntry = entries.next();
+            for (Resource resource : addinFile.getAllFiles()) {
                 i++;
                 updateProgress(i, count);
-
-                if (zipEntry.isDirectory())
-                    continue;
                 
-                String name = zipEntry.getName();
-                
-                if (name.startsWith("compile/")) {
-                    String relativePath = name.substring("compile/".length());
-                    if (relativePath.indexOf("/") == -1) continue;
-                    return;
-                }
-
-                String uniquePath = zipEntry.getName().substring(zipEntry.getName()
-                        .indexOf("/", zipEntry.getName().indexOf("/") + 1));
-                Path customPath = Path.of(customWOG2 + "/game" + uniquePath);
-
-
-                if (uniquePath.length() > 1) updateMessage(uniquePath.substring(1));
-
-                // If the file doesn't exist in the new res folder, create it
-                if (!Files.exists(customPath)) {
-                    Files.createFile(customPath);
-                }
-                
-                if (Files.isWritable(customPath)) {
-                    Files.copy(addinFile.getInputStream(zipEntry), customPath, StandardCopyOption.REPLACE_EXISTING);
+                switch (resource.type()) {
+                    case METADATA:
+                        break;
+                    case COMPILE:
+                        throw new IllegalArgumentException("compile/ is not supported yet");
+                    case MERGE:
+                        throw new IllegalArgumentException("merge/ is not supported yet");
+                    case OVERRIDE: {
+                        Path customPath = Paths.get(customWOG2, "game", resource.path());
+                        
+                        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
+                        
+                        Files.write(customPath, resource.content(),
+                                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                        break;
+                    }
                 }
             }
         } catch (IOException e) {
-            FX_Alarm.error(e);
+            FX_Alarm.error(new RuntimeException("Failed loading the mod " + mod.getName() + ": " + e.getMessage(), e));
         }
     }
     

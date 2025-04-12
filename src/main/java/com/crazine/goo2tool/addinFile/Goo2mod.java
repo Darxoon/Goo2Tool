@@ -53,13 +53,13 @@ public class Goo2mod {
 
 
     @JacksonXmlElementWrapper(localName = "version")
-    private double version;
+    private String version;
     @JacksonXmlProperty(localName = "version")
-    public double getVersion() {
+    public String getVersion() {
         return version;
     }
     @JacksonXmlProperty(localName = "version")
-    public void setVersion(double version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
