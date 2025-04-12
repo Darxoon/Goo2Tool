@@ -1,12 +1,16 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
@@ -14,7 +18,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -114,15 +121,72 @@ public class FX_Mods {
 
 
         Button moveUp = new Button("Move Up");
+        moveUp.setOnAction(event -> {
+            ObservableList<Goo2mod> items = modTableView.getItems();
+            
+            Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
+            int index = items.indexOf(selected);
+            items.remove(index);
+            items.add(index - 1, selected);
+            modTableView.getSelectionModel().select(selected);
+        });
+        
         Button moveDown = new Button("Move Down");
+        moveDown.setOnAction(event -> {
+            ObservableList<Goo2mod> items = modTableView.getItems();
+            
+            Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
+            int index = items.indexOf(selected);
+            items.remove(index);
+            items.add(index + 1, selected);
+            modTableView.getSelectionModel().select(selected);
+        });
         
         Button enable = new Button("Enable");
-        // enable.onActionProperty().addListener(observable -> {
-        //     System.out.println("Enabling");
-        // });
+        enable.setOnAction(event -> {
+            Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
+            Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
+            
+            if (addin.isPresent()) {
+                addin.get().setLoaded(true);
+            }
+        });
         
         Button disable = new Button("Disable");
+        disable.setOnAction(event -> {
+            Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
+            Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
+            
+            if (addin.isPresent()) {
+                addin.get().setLoaded(false);
+            }
+        });
+        
         Button uninstall = new Button("Uninstall");
+        uninstall.setOnAction(event -> {
+            Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
+            
+            // TODO: abstract the icon loading away
+            String projectLocation = Main_Application.getProjectLocation();
+            InputStream iconStream;
+            try {
+                iconStream = new FileInputStream(projectLocation + "/conduit.png");
+            } catch (FileNotFoundException e) {
+                FX_Alarm.error(e);
+                return;
+            }
+            
+            Image icon = new Image(iconStream);
+            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", String.format("""
+                    You are trying to uninstall "%s".
+                    Uninstalling a mod cannot be undone.
+                    Do you want to continue?
+                    """, selected.getName()), icon, ButtonType.YES, ButtonType.NO);
+            
+            if (result.isPresent() && result.get() == ButtonType.YES) {
+                PropertiesLoader.uninstallGoo2mod(selected);
+            }
+        });
 
         TableColumn<Goo2mod, Boolean> enabled = new TableColumn<>();
         enabled.setCellFactory(param -> {
@@ -144,7 +208,7 @@ public class FX_Mods {
                     setGraphic(checkBox);
                     
                     if (getTableRow().getItem() != null) {
-                        Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(getTableRow().getItem().getId());
+                        Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(getTableRow().getItem());
                         
                         if (addin.isPresent()) {
                             checkBox.selectedProperty().bindBidirectional(addin.get().loadedProperty());
@@ -200,10 +264,14 @@ public class FX_Mods {
         modTableView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             descriptionArea.setText(newValue.getDescription());
             
-            Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(newValue.getId());
+            Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(newValue);
             if (addin.isPresent()) {
                 enable.disableProperty().bind(addin.get().loadedProperty());
                 disable.disableProperty().bind(addin.get().loadedProperty().not());
+                
+                int index = modTableView.getItems().indexOf(newValue);
+                moveUp.setDisable(index <= 0);
+                moveDown.setDisable(index >= modTableView.getItems().size() - 1);
             }
         });
 

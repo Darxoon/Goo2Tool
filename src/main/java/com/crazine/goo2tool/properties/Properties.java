@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.properties;
 
+import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
@@ -49,6 +50,10 @@ public class Properties {
         }
         
         return false;
+    }
+    
+    public Optional<AddinConfigEntry> getAddin(Goo2mod goo2mod) {
+        return getAddin(goo2mod.getId());
     }
     
     public Optional<AddinConfigEntry> getAddin(String id) {

@@ -43,7 +43,7 @@ public class SaveGui {
             }
             Image icon = new Image(iconStream);
             
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", """
+            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
                     Instead, it copies everything into its own directory first.
                     

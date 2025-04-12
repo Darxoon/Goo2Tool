@@ -3,6 +3,7 @@ package com.crazine.goo2tool.properties;
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.FX_Mods;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
@@ -14,6 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 public class PropertiesLoader {
 
@@ -85,13 +88,49 @@ public class PropertiesLoader {
             PropertiesLoader.getProperties().getAddins().add(addin);
         }
         FX_Mods.getModTableView().getItems().add(goo2mod);
+        FX_Mods.getModTableView().getSelectionModel().select(goo2mod);
 
         Path newPath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins", goo2modFile.getName());
         Files.copy(goo2modFile.toPath(), newPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        try {
+            saveProperties(getPropertiesFile(), getProperties());
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
     }
 
     public static void uninstallGoo2mod(Goo2mod mod) {
         FX_Mods.getModTableView().getItems().remove(mod);
+        
+        Optional<AddinConfigEntry> addin = getProperties().getAddin(mod);
+        if (addin.isPresent()) {
+            getProperties().getAddins().remove(addin.get());
+        }
+        
+        Path addinsDir = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins");
+        
+        try (Stream<Path> stream = Files.walk(addinsDir)) {
+            stream.filter(Files::isRegularFile).forEach(path -> {
+                try {
+                    Goo2mod currentMod = AddinFileLoader.loadGoo2mod(path.toFile());
+                    
+                    if (currentMod.getId().equals(mod.getId())) {
+                        Files.delete(path);
+                    }
+                } catch (IOException e) {
+                    FX_Alarm.error(e);
+                }
+            });
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
+        
+        try {
+            saveProperties(getPropertiesFile(), getProperties());
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
     }
 
     public static String getGoo2ToolPath() {
