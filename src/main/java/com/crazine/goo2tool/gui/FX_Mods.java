@@ -104,7 +104,9 @@ public class FX_Mods {
         });
         Button checkForUpdatesButton = new Button("Check for Updates...");
         checkForUpdatesButton.setPrefWidth(120);
+        checkForUpdatesButton.setDisable(true);
         Hyperlink findMoreAddinsLink = new Hyperlink("Find more addins");
+        findMoreAddinsLink.setDisable(true);
         findMoreAddinsLink.setPrefWidth(120);
         findMoreAddinsLink.setAlignment(Pos.CENTER);
         findMoreAddinsLink.setPadding(new Insets(-2, 0, -2, 0));
@@ -276,6 +278,7 @@ public class FX_Mods {
         });
 
         Button propertiesButton = new Button("Properties");
+        propertiesButton.setDisable(true);
 
         HBox box = new HBox();
         box.setSpacing(10);

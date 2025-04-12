@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Stack;
 import java.util.stream.Stream;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
@@ -18,6 +19,9 @@ import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.AddinReader.Resource;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
+import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
+import com.crazine.goo2tool.gamefiles.filetable.ResFileTableLoader;
+import com.crazine.goo2tool.gamefiles.filetable.ResFileTable.OverriddenFileEntry;
 import com.crazine.goo2tool.gamefiles.islands.IslandFileLoader;
 import com.crazine.goo2tool.gamefiles.islands.Islands;
 import com.crazine.goo2tool.gui.FX_Alarm;
@@ -55,34 +59,28 @@ class SaveTask extends Task<Void> {
         // Export properties
         PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
 
+        // Figure out which files are owned by mods that have been disabled
+        // so they can be overwritten with vanilla assets
+        List<String> disabledAddinIds = new ArrayList<>();
+        for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
+            if (!addin.isLoaded())
+                disabledAddinIds.add(addin.getName());
+        }
+        
+        Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
+        ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
+        
+        ResFileTable garbageFiles = new ResFileTable();
+        for (OverriddenFileEntry entry : table.getEntries()) {
+            if (disabledAddinIds.contains(entry.getModId())) {
+                garbageFiles.addEntry(entry);
+                table.removeEntry(entry.getPath());
+            }
+        }
+        
         // Merge original res folder
         updateTitle("Validating original WoG2");
-        copyMissingOriginalFiles(res);
-        
-        // TODO: make goo2tool restore files that were overwritten by addins
-        // try {
-        //     int i = 0;
-        //     for (ResArchive.ResFile file : res.getAllFiles()) {
-        //         updateProgress(i++, res.fileCount());
-                
-        //         boolean shouldReplace = true;
-        //         File customFile = new File(customWOG2 + "/game/" + file.path());
-                
-        //         if (customFile.exists()) {
-        //             try (FileInputStream stream = new FileInputStream(customFile)) {
-        //                 byte[] newContent = stream.readAllBytes();
-        //                 shouldReplace = Arrays.equals(content, newContent);
-        //             }
-        //         }
-                
-        //         if (shouldReplace) {
-        //             Files.createDirectories(customFile.toPath().getParent());
-        //             Files.write(customFile.toPath(), content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        //         }
-        //     }
-        // } catch (IOException e) {
-        //     FX_Alarm.error(e);
-        // }
+        copyMissingOriginalFiles(res, garbageFiles);
 
         // Retrieve mods
         ArrayList<Goo2mod> goo2mods = new ArrayList<>();
@@ -91,7 +89,6 @@ class SaveTask extends Task<Void> {
         if (files != null) for (File file : files) {
             goo2mods.add(AddinFileLoader.loadGoo2mod(file));
         }
-
 
         ArrayList<Goo2mod> goo2modsSorted = new ArrayList<>();
         for (int i = PropertiesLoader.getProperties().getAddins().size() - 1; i >= 0; i--) {
@@ -108,8 +105,10 @@ class SaveTask extends Task<Void> {
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {
             updateTitle("Installing addin " + goo2mod.getId());
-            installGoo2mod(goo2mod);
+            installGoo2mod(goo2mod, table);
         }
+        
+        ResFileTableLoader.save(table, fileTablePath.toFile());
 
         // Update save file
         updateTitle("Updating save file ");
@@ -140,7 +139,7 @@ class SaveTask extends Task<Void> {
         SaveFileLoader.writeSaveFile(toSaveFile, data);
     }
     
-    private void copyMissingOriginalFiles(ResArchive res) throws IOException {
+    private void copyMissingOriginalFiles(ResArchive res, ResFileTable garbageFiles) throws IOException {
         String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
         String customWOG2 = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
         File baseFile = new File(baseWOG2);
@@ -210,7 +209,11 @@ class SaveTask extends Task<Void> {
             
             Path customPath = Paths.get(customWOG2, "game", file.path());
             
-            if (!Files.exists(customPath)) {
+            if (garbageFiles.hasEntry(file.path())) {
+                Files.createDirectories(customPath.getParent());
+                Files.write(customPath, file.content(), StandardOpenOption.CREATE,
+                        StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            } else if (!Files.exists(customPath)) {
                 Files.createDirectories(customPath.getParent());
                 try {
                     Files.write(customPath, file.content(), StandardOpenOption.CREATE_NEW);
@@ -219,7 +222,7 @@ class SaveTask extends Task<Void> {
         }
     }
     
-    private void installGoo2mod(Goo2mod mod) {
+    private void installGoo2mod(Goo2mod mod, ResFileTable table) {
         String customWOG2 = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
         
         try (AddinReader addinFile = new AddinReader(mod)) {
@@ -242,6 +245,8 @@ class SaveTask extends Task<Void> {
                         Path customPath = Paths.get(customWOG2, "game", resource.path());
                         
                         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
+                        
+                        table.addEntry(mod.getId(), resource.path());
                         
                         Files.write(customPath, resource.content(),
                                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
