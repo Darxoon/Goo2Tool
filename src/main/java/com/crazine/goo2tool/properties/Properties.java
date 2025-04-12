@@ -4,6 +4,9 @@ import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -33,6 +36,17 @@ public class Properties {
         this.profileDirectory = profileDirectory;
     }
 
+    private StringProperty launchCommand = new SimpleStringProperty();
+    public String getLaunchCommand() {
+        return launchCommand.get();
+    }
+    public void setLaunchCommand(String launchCommand) {
+        this.launchCommand.set(launchCommand);
+    }
+    public StringProperty launchCommandProperty() {
+        return launchCommand;
+    }
+    
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
     private ArrayList<AddinConfigEntry> addins = new ArrayList<>();

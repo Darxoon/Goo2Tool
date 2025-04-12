@@ -9,8 +9,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -23,18 +25,29 @@ import java.util.function.Consumer;
 public class FileOptions {
     
     private Stage stage;
-    private VBox contents;
+    private GridPane contents;
     
-    public VBox getContents() {
+    public GridPane getContents() {
         return contents;
     }
     
     public FileOptions(Stage stage, boolean launchMainApplication) {
         this.stage = stage;
         
+        contents = new GridPane();
+        contents.setHgap(8);
+        ColumnConstraints column1 = new ColumnConstraints();
+        column1.setMinWidth(160);
+        ColumnConstraints column2 = new ColumnConstraints();
+        column2.setHgrow(Priority.ALWAYS);
+        ColumnConstraints column3 = new ColumnConstraints();
+        ColumnConstraints column4 = new ColumnConstraints();
+        contents.getColumnConstraints().addAll(column1, column2, column3, column4);
+        
+        
         ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
         String baseDir = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
-        HBox baseWOG2 = createSetting("Base WoG2 Installation", baseDir, exeFilter, true, path -> {
+        createSetting(contents, 0, "Base WoG2 Installation", baseDir, exeFilter, true, path -> {
             PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(path);
             
             try {
@@ -50,7 +63,7 @@ public class FileOptions {
         });
 
         String customDir = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
-        HBox customWOG2 = createSetting("Custom WoG2 Installation", customDir, null, false, path -> {
+        createSetting(contents, 1, "Custom WoG2 Installation", customDir, null, false, path -> {
             PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(path);
             
             try {
@@ -67,7 +80,7 @@ public class FileOptions {
 
         ExtensionFilter profileFilter = new ExtensionFilter("World of Goo 2 save file", "wog2_1.dat");
         String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
-        HBox profile = createSetting("Save Files", profileDir, profileFilter, false, path -> {
+        createSetting(contents, 2, "Save Files", profileDir, profileFilter, false, path -> {
             PropertiesLoader.getProperties().setProfileDirectory(path);
             
             try {
@@ -81,20 +94,20 @@ public class FileOptions {
                 new Main_Application().start(stage);
             }
         });
-
-        contents = new VBox(baseWOG2, customWOG2, profile);
     }
     
     // If filter is null, will open a directory picker
-    private HBox createSetting(String labelText, String initialValue, ExtensionFilter filter,
-            boolean useParent, Consumer<String> onChange) {
+    private void createSetting(GridPane grid, int rowIndex, String labelText, String initialValue,
+            ExtensionFilter filter, boolean useParent, Consumer<String> onChange) {
         Label label = new Label(labelText);
-        label.setPrefWidth(160);
+        // label.setPrefWidth(160);
         label.setPadding(new Insets(4, 0, 0, 0));
+        
+        Region empty = new Region();
         
         Label dirLabel = new Label(initialValue);
         dirLabel.setTooltip(new Tooltip(initialValue));
-        dirLabel.setPrefWidth(200);
+        // dirLabel.setPrefWidth(200);
         dirLabel.setPadding(new Insets(4, 0, 0, 0));
         dirLabel.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
         
@@ -123,7 +136,7 @@ public class FileOptions {
             onChange.accept(chosenFile.getAbsolutePath());
         });
         
-        return new HBox(label, dirLabel, changeDirButton);
+        grid.addRow(rowIndex, label, empty, dirLabel, changeDirButton);
     }
     
 }
