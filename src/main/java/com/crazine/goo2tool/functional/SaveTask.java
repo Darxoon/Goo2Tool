@@ -111,32 +111,32 @@ class SaveTask extends Task<Void> {
         ResFileTableLoader.save(table, fileTablePath.toFile());
 
         // Update save file
-        updateTitle("Updating save file ");
-        updateMessage("");
+        // updateTitle("Updating save file ");
+        // updateMessage("");
 
-        Islands islands = IslandFileLoader.loadIslands(res);
+        // Islands islands = IslandFileLoader.loadIslands(res);
 
-        File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
+        // File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
 
-        WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
-        WOG2SaveData wog2SaveData = data[FX_Profile.getProfileSelectionBox().getSelectionModel().getSelectedIndex()];
+        // WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
+        // WOG2SaveData wog2SaveData = data[FX_Profile.getProfileSelectionBox().getSelectionModel().getSelectedIndex()];
 
-        for (int i = 0; i < islands.getIslands().length; i++) {
+        // for (int i = 0; i < islands.getIslands().length; i++) {
 
-            int numLevels = islands.getIslands()[i].getLevels().length;
+        //     int numLevels = islands.getIslands()[i].getLevels().length;
 
-            for (int j = 0; j < numLevels; j++) {
-                wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setValid(true);
-                wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setLocked(false);
-            }
-            for (int j = numLevels; j < 20; j++) {
-                wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setValid(false);
-                wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setLocked(true);
-            }
+        //     for (int j = 0; j < numLevels; j++) {
+        //         wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setValid(true);
+        //         wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setLocked(false);
+        //     }
+        //     for (int j = numLevels; j < 20; j++) {
+        //         wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setValid(false);
+        //         wog2SaveData.getSaveFile().getIslands()[i].getLevels()[j].setLocked(true);
+        //     }
 
-        }
+        // }
 
-        SaveFileLoader.writeSaveFile(toSaveFile, data);
+        // SaveFileLoader.writeSaveFile(toSaveFile, data);
     }
     
     private void copyMissingOriginalFiles(ResArchive res, ResFileTable garbageFiles) throws IOException {
@@ -247,6 +247,7 @@ class SaveTask extends Task<Void> {
                         
                         table.addEntry(mod.getId(), resource.path());
                         
+                        Files.createDirectories(customPath.getParent());
                         Files.write(customPath, resource.content(),
                                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                         break;
