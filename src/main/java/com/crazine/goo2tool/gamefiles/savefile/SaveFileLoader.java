@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.saveFile;
+package com.crazine.goo2tool.gamefiles.savefile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;

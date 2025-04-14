@@ -5,15 +5,17 @@ import com.crazine.goo2tool.gui.util.LaunchOptions;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.geometry.Insets;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class FX_Options {
 
-    private static final VBox optionsView = new VBox();
-    public static VBox getOptionsView() {
+    private static final ScrollPane optionsView = new ScrollPane();
+    public static ScrollPane getOptionsView() {
         return optionsView;
     }
 
@@ -34,10 +36,11 @@ public class FX_Options {
         
         VBox optionsVBox = new VBox(fileLocationsPane, launchOptionsPane);
         optionsVBox.setSpacing(10);
+        optionsVBox.setPadding(new Insets(10, 10, 10, 10));
         
-        optionsView.getChildren().add(optionsVBox);
-
-        optionsView.setPadding(new Insets(10, 10, 10, 10));
+        optionsView.setContent(optionsVBox);
+        optionsView.setHbarPolicy(ScrollBarPolicy.NEVER);
+        optionsView.setFitToWidth(true);
 
     }
 

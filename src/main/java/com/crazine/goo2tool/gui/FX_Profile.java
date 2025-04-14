@@ -3,9 +3,10 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.islands.IslandFileLoader;
 import com.crazine.goo2tool.gamefiles.islands.Islands;
+import com.crazine.goo2tool.gamefiles.savefile.SaveFileLoader;
+import com.crazine.goo2tool.gamefiles.savefile.WOG2SaveData;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import com.crazine.goo2tool.saveFile.SaveFileLoader;
-import com.crazine.goo2tool.saveFile.WOG2SaveData;
+
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;

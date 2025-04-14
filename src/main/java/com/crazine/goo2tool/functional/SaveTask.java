@@ -22,17 +22,19 @@ import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable.OverriddenFileEntry;
-import com.crazine.goo2tool.gamefiles.islands.IslandFileLoader;
-import com.crazine.goo2tool.gamefiles.islands.Islands;
 import com.crazine.goo2tool.gui.FX_Alarm;
-import com.crazine.goo2tool.gui.FX_Profile;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import com.crazine.goo2tool.saveFile.SaveFileLoader;
-import com.crazine.goo2tool.saveFile.WOG2SaveData;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.stage.Stage;
 
 class SaveTask extends Task<Void> {
@@ -70,17 +72,9 @@ class SaveTask extends Task<Void> {
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
         ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
         
-        ResFileTable garbageFiles = new ResFileTable();
-        for (OverriddenFileEntry entry : table.getEntries()) {
-            if (disabledAddinIds.contains(entry.getModId())) {
-                garbageFiles.addEntry(entry);
-                table.removeEntry(entry.getPath());
-            }
-        }
-        
         // Merge original res folder
         updateTitle("Validating original WoG2");
-        copyMissingOriginalFiles(res, garbageFiles);
+        copyMissingOriginalFiles(res, table);
 
         // Retrieve mods
         ArrayList<Goo2mod> goo2mods = new ArrayList<>();
@@ -210,6 +204,7 @@ class SaveTask extends Task<Void> {
             Path customPath = Paths.get(customWOG2, "game", file.path());
             
             if (garbageFiles.hasEntry(file.path())) {
+                garbageFiles.removeEntry(file.path());
                 Files.createDirectories(customPath.getParent());
                 Files.write(customPath, file.content(), StandardOpenOption.CREATE,
                         StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -252,8 +247,54 @@ class SaveTask extends Task<Void> {
                                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                         break;
                     }
-                    case MERGE:
-                        throw new IllegalArgumentException("merge/ is not supported yet");
+                    case MERGE: {
+                        if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
+                            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
+                        
+                        // merging files that have been overriden by previous mods could
+                        // lead to weird conflicts, so it's not supported at all
+                        if (table.hasEntry(resource.path())) {
+                            OverriddenFileEntry entry = table.getEntry(resource.path()).get();
+                            
+                            if (!entry.getModId().equals("*")) {
+                                throw new IllegalArgumentException("Conflict: Trying to merge file "
+                                        + resource.path() + " even though it has been overridden by mod "
+                                        + entry.getModId() + "previously!");
+                            }
+                        }
+                        
+                        if (resource.path().endsWith(".xml"))
+                            break;
+                        
+                        Path customPath = Paths.get(customWOG2, "game", resource.path());
+                        
+                        JsonMapper mapper = new JsonMapper();
+                        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+                        JsonNode original = mapper.readTree(customPath.toFile());
+                        JsonNode patch = mapper.readTree(resource.content());
+                        
+                        if (!patch.isObject()) {
+                            throw new IllegalArgumentException("Json merge file has to be a json object! (at " +  resource.path() + ")");
+                        }
+                        
+                        JsonNode mergeTypeObj = patch.get("__type__");
+                        if (mergeTypeObj == null) {
+                            throw new IllegalArgumentException("Json merge file has to contain the property '__type__'! (at "
+                                    + resource.path() + ")");
+                        }
+                        
+                        if (!mergeTypeObj.isTextual() || !mergeTypeObj.textValue().equals("jsonMerge")) {
+                            throw new IllegalArgumentException("Property '__type__' has to be of value 'jsonMerge' (at "
+                                    + resource.path() + ")");
+                        }
+                        
+                        table.addEntry("*", resource.path());
+                        JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
+                        mapper.writeValue(customPath.toFile(), merged);
+                        
+                        break;
+                    }
                     case OVERRIDE: {
                         if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
                             throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
@@ -271,8 +312,12 @@ class SaveTask extends Task<Void> {
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
+            
             Platform.runLater(() -> {
-                FX_Alarm.error(new RuntimeException("Failed loading the mod \"" + mod.getName() + "\": " + e.getMessage(), e));
+                Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
+                dialog.setContentText("Failed loading the mod \"" + mod.getName() + "\":\n\n" + e.toString());
+                dialog.show();
             });
         }
     }

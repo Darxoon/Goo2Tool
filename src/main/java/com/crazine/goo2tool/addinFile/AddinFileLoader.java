@@ -17,6 +17,10 @@ public class AddinFileLoader {
             XmlMapper xmlMapper = new XmlMapper();
             Goo2mod goo2mod = xmlMapper.readValue(addinXmlFile.get(), Goo2mod.class);
             goo2mod.setFile(goo2modFile);
+        
+            if (goo2mod.getName().equals("*"))
+                throw new IOException("Invalid mod id '*'");
+            
             return goo2mod;
 
         }
