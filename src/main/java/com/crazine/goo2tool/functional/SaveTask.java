@@ -104,6 +104,17 @@ class SaveTask extends Task<Void> {
         
         ResFileTableLoader.save(table, fileTablePath.toFile());
 
+        // Backup save file just for good measure
+        Path saveFile = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1.dat");
+        Path saveFileBackup = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1_backup.dat");
+        Path saveFileBackup2 = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1_backup2.dat");
+        
+        if (Files.isRegularFile(saveFileBackup)) {
+            Files.copy(saveFileBackup, saveFileBackup2, StandardCopyOption.REPLACE_EXISTING);
+        }
+        
+        Files.copy(saveFile, saveFileBackup, StandardCopyOption.REPLACE_EXISTING);
+        
         // Update save file
         // updateTitle("Updating save file ");
         // updateMessage("");
