@@ -25,12 +25,16 @@ public class PropertiesLoader {
         return properties;
     }
     
-    public static boolean isAllInitialized() {
-        return !getProperties().getBaseWorldOfGoo2Directory().isEmpty()
-            && !getProperties().getCustomWorldOfGoo2Directory().isEmpty()
-            && !getProperties().getProfileDirectory().isEmpty();
+    public static boolean allImportantInitialized() {
+        return isValidDir(properties.getBaseWorldOfGoo2Directory())
+            && isValidDir(properties.getCustomWorldOfGoo2Directory());
     }
 
+    public static boolean isValidDir(String path) {
+        return path != null
+            && !path.isEmpty()
+            && Files.isDirectory(Paths.get(path));
+    }
 
     private static final File propertiesFile = new File(getGoo2ToolPath() + "/properties.xml");
     public static File getPropertiesFile() {

@@ -40,7 +40,7 @@ public class FX_Setup extends Application {
         Properties properties = PropertiesLoader.getProperties();
         
         // setup wizard
-        if (properties.getBaseWorldOfGoo2Directory().isEmpty()) {
+        if (!PropertiesLoader.isValidDir(properties.getBaseWorldOfGoo2Directory())) {
             properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, icon));
             
             try {
@@ -50,7 +50,7 @@ public class FX_Setup extends Application {
             }
         }
         
-        if (properties.getProfileDirectory().isEmpty()) {
+        if (!PropertiesLoader.isValidDir(properties.getProfileDirectory())) {
             properties.setProfileDirectory(getProfileDirectory(stage, icon));
             
             try {

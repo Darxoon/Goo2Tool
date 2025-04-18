@@ -11,7 +11,7 @@ public class Main {
 
         PropertiesLoader.init();
 
-        if (!PropertiesLoader.isAllInitialized()) {
+        if (!PropertiesLoader.allImportantInitialized()) {
             Application.launch(FX_Setup.class, args);
         } else {
             Application.launch(Main_Application.class, args);

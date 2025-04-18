@@ -56,7 +56,7 @@ public class FileOptions {
                 FX_Alarm.error(e);
             }
             
-            if (launchMainApplication && PropertiesLoader.isAllInitialized()) {
+            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
                 stage.hide();
                 new Main_Application().start(stage);
             }
@@ -72,7 +72,7 @@ public class FileOptions {
                 FX_Alarm.error(e);
             }
             
-            if (launchMainApplication && PropertiesLoader.isAllInitialized()) {
+            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
                 stage.hide();
                 new Main_Application().start(stage);
             }
@@ -89,7 +89,7 @@ public class FileOptions {
                 FX_Alarm.error(e);
             }
             
-            if (launchMainApplication && PropertiesLoader.isAllInitialized()) {
+            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
                 stage.hide();
                 new Main_Application().start(stage);
             }
