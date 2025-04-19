@@ -22,6 +22,8 @@ import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable.OverriddenFileEntry;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -259,9 +261,6 @@ class SaveTask extends Task<Void> {
                         break;
                     }
                     case MERGE: {
-                        if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
-                            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
-                        
                         // merging files that have been overriden by previous mods could
                         // lead to weird conflicts, so it's not supported at all
                         if (table.hasEntry(resource.path())) {
@@ -274,35 +273,47 @@ class SaveTask extends Task<Void> {
                             }
                         }
                         
-                        if (resource.path().endsWith(".xml"))
-                            break;
-                        
                         Path customPath = Paths.get(customWOG2, "game", resource.path());
                         
-                        JsonMapper mapper = new JsonMapper();
-                        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-
-                        JsonNode original = mapper.readTree(customPath.toFile());
-                        JsonNode patch = mapper.readTree(resource.content());
-                        
-                        if (!patch.isObject()) {
-                            throw new IllegalArgumentException("Json merge file has to be a json object! (at " +  resource.path() + ")");
+                        if (resource.path().endsWith(".wog2")) {
+                            
+                            JsonMapper mapper = new JsonMapper();
+                            mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+    
+                            JsonNode original = mapper.readTree(customPath.toFile());
+                            JsonNode patch = mapper.readTree(resource.content());
+                            
+                            if (!patch.isObject()) {
+                                throw new IllegalArgumentException("Json merge file has to be a json object! (at " +  resource.path() + ")");
+                            }
+                            
+                            JsonNode mergeTypeObj = patch.get("__type__");
+                            if (mergeTypeObj == null) {
+                                throw new IllegalArgumentException("Json merge file has to contain the property '__type__'! (at "
+                                        + resource.path() + ")");
+                            }
+                            
+                            if (!mergeTypeObj.isTextual() || !mergeTypeObj.textValue().equals("jsonMerge")) {
+                                throw new IllegalArgumentException("Property '__type__' has to be of value 'jsonMerge' (at "
+                                        + resource.path() + ")");
+                            }
+                            
+                            table.addEntry("*", resource.path());
+                            JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
+                            mapper.writeValue(customPath.toFile(), merged);
+                            
+                        } else if (resource.path().endsWith(".xml")) {
+                            
+                            ResrcManifest original = ResrcLoader.loadManifest(customPath);
+                            ResrcManifest patch = ResrcLoader.loadManifest(resource.content());
+                            
+                            table.addEntry("*", resource.path());
+                            ResrcManifest merged = ResourceXmlMerge.transformResources(original, patch);
+                            ResrcLoader.saveManifest(merged, customPath.toFile());
+                            
+                        } else {
+                            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
                         }
-                        
-                        JsonNode mergeTypeObj = patch.get("__type__");
-                        if (mergeTypeObj == null) {
-                            throw new IllegalArgumentException("Json merge file has to contain the property '__type__'! (at "
-                                    + resource.path() + ")");
-                        }
-                        
-                        if (!mergeTypeObj.isTextual() || !mergeTypeObj.textValue().equals("jsonMerge")) {
-                            throw new IllegalArgumentException("Property '__type__' has to be of value 'jsonMerge' (at "
-                                    + resource.path() + ")");
-                        }
-                        
-                        table.addEntry("*", resource.path());
-                        JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
-                        mapper.writeValue(customPath.toFile(), merged);
                         
                         break;
                     }

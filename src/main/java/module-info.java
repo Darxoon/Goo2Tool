@@ -5,6 +5,7 @@ module com.crazine.goo2tool {
     requires org.controlsfx.controls;
     requires transitive com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.dataformat.xml;
+    requires java.xml;
 
     exports com.crazine.goo2tool;
     exports com.crazine.goo2tool.gui;
@@ -15,5 +16,6 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles;
     exports com.crazine.goo2tool.gamefiles.filetable;
     exports com.crazine.goo2tool.gamefiles.islands;
+    exports com.crazine.goo2tool.gamefiles.resrc;
 
 }

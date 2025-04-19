@@ -2,7 +2,6 @@ package com.crazine.goo2tool.gamefiles.filetable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +26,7 @@ public class ResFileTableLoader {
         if (!Files.exists(outFile.toPath())) Files.createFile(outFile.toPath());
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-        xmlMapper.writeValue(new FileWriter(outFile), table);
+        xmlMapper.writeValue(outFile, table);
     }
     
 }
