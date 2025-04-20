@@ -11,6 +11,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Stream;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
@@ -24,6 +25,10 @@ import com.crazine.goo2tool.gamefiles.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable.OverriddenFileEntry;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
+import com.crazine.goo2tool.gamefiles.translation.GameString;
+import com.crazine.goo2tool.gamefiles.translation.TextDB;
+import com.crazine.goo2tool.gamefiles.translation.TextLoader;
+import com.crazine.goo2tool.gamefiles.translation.GameString.LocaleText;
 import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -243,8 +248,40 @@ class SaveTask extends Task<Void> {
                 updateProgress(i, count);
                 
                 switch (resource.type()) {
-                    case METADATA:
+                    case METADATA: {
+                        if (resource.path().equals("translation.xml")) {
+                            Path localPath = Paths.get(customWOG2, "game/res/properties/translation-local.xml");
+                            Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
+                            
+                            TextDB originalLocal = TextLoader.loadText(localPath);
+                            TextDB originalIntl = TextLoader.loadText(intlPath);
+                            
+                            TextDB patch = TextLoader.loadText(resource.content());
+                            
+                            for (GameString string : patch.getStrings()) {
+                                Optional<LocaleText> local = string.getLocal();
+                                
+                                if (local.isPresent()) {
+                                    originalLocal.putString(new GameString(string.getId(), local.get()));
+                                } else {
+                                    originalLocal.removeString(string.getId());
+                                }
+                                
+                                if (string.hasIntl()) {
+                                    originalIntl.putString(new GameString(string.getId(), string.getIntl()));
+                                } else {
+                                    originalIntl.removeString(string.getId());
+                                }
+                            }
+                            
+                            table.addEntry("*", "res/properties/translation-local.xml");
+                            table.addEntry("*", "res/properties/translation-tool-export.xml");
+                            TextLoader.saveText(originalLocal, localPath.toFile());
+                            TextLoader.saveText(originalIntl, intlPath.toFile());
+                        }
+                        
                         break;
+                    }
                     case COMPILE: {
                         if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
                             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
