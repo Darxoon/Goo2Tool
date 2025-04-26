@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 
@@ -40,6 +41,9 @@ public class GameString {
     }
     
     private String id;
+    
+    @JacksonXmlElementWrapper(localName = "texts")
+    @JacksonXmlProperty(localName = "text")
     private List<LocaleText> texts;
     
     public GameString() {

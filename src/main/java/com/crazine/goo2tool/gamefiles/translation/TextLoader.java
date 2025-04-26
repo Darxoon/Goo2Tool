@@ -23,6 +23,11 @@ public class TextLoader {
         return mapper.readValue(content, TextDB.class);
     }
     
+    public static TextDB loadText(String content) throws IOException {
+        XmlMapper mapper = new XmlMapper();
+        return mapper.readValue(content, TextDB.class);
+    }
+    
     public static void saveText(TextDB text, File outFile) throws IOException {
         XmlMapper mapper = new XmlMapper();
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);

@@ -2,6 +2,7 @@ package com.crazine.goo2tool.functional;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -253,8 +254,10 @@ class SaveTask extends Task<Void> {
                             Path localPath = Paths.get(customWOG2, "game/res/properties/translation-local.xml");
                             Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
                             
+                            String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
+                            .replaceAll("& ", "&amp; ");
+                            TextDB originalIntl = TextLoader.loadText(originalIntlContent);
                             TextDB originalLocal = TextLoader.loadText(localPath);
-                            TextDB originalIntl = TextLoader.loadText(intlPath);
                             
                             TextDB patch = TextLoader.loadText(resource.content());
                             
@@ -270,6 +273,8 @@ class SaveTask extends Task<Void> {
                                 if (string.hasIntl()) {
                                     originalIntl.putString(new GameString(string.getId(), string.getIntl()));
                                 } else {
+                                    // TODO: make this use the english text as a fallback
+                                    // for all languages that aren't specified by the mod author
                                     originalIntl.removeString(string.getId());
                                 }
                             }

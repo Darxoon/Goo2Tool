@@ -4,10 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 @JsonRootName("localized_text_db")
 public class TextDB {
     
+    @JacksonXmlElementWrapper(localName = "strings")
+    @JacksonXmlProperty(localName = "string")
     private List<GameString> strings;
     
     public TextDB() {
