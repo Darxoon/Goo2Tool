@@ -44,7 +44,7 @@ public class FileOptions {
         ColumnConstraints column4 = new ColumnConstraints();
         contents.getColumnConstraints().addAll(column1, column2, column3, column4);
         
-        
+        // TODO: make this more platform independent
         ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
         String baseDir = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
         createSetting(contents, 0, "Base WoG2 Installation", baseDir, exeFilter, true, path -> {

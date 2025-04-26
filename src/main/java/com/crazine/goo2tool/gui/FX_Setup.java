@@ -86,10 +86,22 @@ public class FX_Setup extends Application {
         
         // show manual prompt if that didn't work
         ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
-        CustomAlert.show("Goo2Tool Setup", """
-                Could not determine default World of Goo 2 installation.
-                Please pick one yourself.
-                """, icon, buttonType);
+        
+        if (Platform.getCurrent() == Platform.LINUX) {
+            CustomAlert.show("Goo2Tool Setup", """
+                    Could not determine default World of Goo 2 installation.
+                    Please pick one yourself.
+                    
+                    Note: The Linux .AppImage is not supported yet.
+                    Either use the Steam release or the Windows
+                    DRM-free version.
+                    """, icon, buttonType);
+        } else {
+            CustomAlert.show("Goo2Tool Setup", """
+                    Could not determine default World of Goo 2 installation.
+                    Please pick one yourself.
+                    """, icon, buttonType);
+        }
         
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
@@ -108,7 +120,7 @@ public class FX_Setup extends Application {
             case LINUX -> {
                 // TODO: try figuring out how to use xdg_desktop_portal for this
                 FileChooser fileChooser = new FileChooser();
-                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.exe", "*.AppImage");
+                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.exe", "WorldOfGoo2");
                 fileChooser.getExtensionFilters().add(exeFilter);
                 
                 File file = fileChooser.showOpenDialog(stage);
