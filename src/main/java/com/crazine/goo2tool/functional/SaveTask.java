@@ -19,6 +19,7 @@ import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.AddinReader.Resource;
+import com.crazine.goo2tool.addinFile.Goo2mod.Level;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
@@ -67,14 +68,14 @@ class SaveTask extends Task<Void> {
     private void save(ResArchive res) throws Exception {
         
         // Export properties
-        PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+        PropertiesLoader.saveProperties();
 
         // Figure out which files are owned by mods that have been disabled
         // so they can be overwritten with vanilla assets
         List<String> disabledAddinIds = new ArrayList<>();
         for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
             if (!addin.isLoaded())
-                disabledAddinIds.add(addin.getName());
+                disabledAddinIds.add(addin.getId());
         }
         
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
@@ -97,7 +98,7 @@ class SaveTask extends Task<Void> {
             AddinConfigEntry addin = PropertiesLoader.getProperties().getAddins().get(i);
             if (!addin.isLoaded()) continue;
             for (Goo2mod goo2mod : goo2mods) {
-                if (goo2mod.getId().equals(addin.getName())) {
+                if (goo2mod.getId().equals(addin.getId())) {
                     goo2modsSorted.add(goo2mod);
                     break;
                 }
@@ -241,6 +242,40 @@ class SaveTask extends Task<Void> {
         
         try (AddinReader addinFile = new AddinReader(mod)) {
 
+            for (Level level : mod.getLevels()) {
+                Path localPath = Paths.get(customWOG2, "game/res/properties/translation-local.xml");
+                Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
+                
+                String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
+                    .replaceAll("& ", "&amp; ");
+                TextDB originalIntl = TextLoader.loadText(originalIntlContent);
+                TextDB originalLocal = TextLoader.loadText(localPath);
+                
+                originalLocal.putString(new GameString("LEVEL_NAME_" + level.filename(),
+                        new LocaleText("en", level.name())));
+                        
+                originalIntl.putString(new GameString("LEVEL_NAME_" + level.filename(),
+                        new LocaleText("en", level.name()),
+                        new LocaleText("de", level.name()),
+                        new LocaleText("es-419", level.name()),
+                        new LocaleText("es-es", level.name()),
+                        new LocaleText("fr-fr", level.name()),
+                        new LocaleText("it", level.name()),
+                        new LocaleText("ja", level.name()),
+                        new LocaleText("ko", level.name()),
+                        new LocaleText("pl", level.name()),
+                        new LocaleText("pt-br", level.name()),
+                        new LocaleText("ru", level.name()),
+                        new LocaleText("uk", level.name()),
+                        new LocaleText("zh-hans", level.name()),
+                        new LocaleText("zh-hant", level.name())));
+                
+                table.addEntry("*", "res/properties/translation-local.xml");
+                table.addEntry("*", "res/properties/translation-tool-export.xml");
+                TextLoader.saveText(originalLocal, localPath.toFile());
+                TextLoader.saveText(originalIntl, intlPath.toFile());
+            }
+            
             long count = addinFile.getFileCount();
             long i = 0;
 
@@ -255,7 +290,7 @@ class SaveTask extends Task<Void> {
                             Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
                             
                             String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
-                            .replaceAll("& ", "&amp; ");
+                                .replaceAll("& ", "&amp; ");
                             TextDB originalIntl = TextLoader.loadText(originalIntlContent);
                             TextDB originalLocal = TextLoader.loadText(localPath);
                             
@@ -271,7 +306,7 @@ class SaveTask extends Task<Void> {
                                 }
                                 
                                 if (string.hasIntl()) {
-                                    originalIntl.putString(new GameString(string.getId(), string.getIntl()));
+                                    originalIntl.putString(new GameString(string.getId(), string.getTexts()));
                                 } else {
                                     // TODO: make this use the english text as a fallback
                                     // for all languages that aren't specified by the mod author
@@ -369,6 +404,7 @@ class SaveTask extends Task<Void> {
                         
                         table.addEntry(mod.getId(), resource.path());
                         
+                        Files.createDirectories(customPath.getParent());
                         Files.write(customPath, resource.content(),
                                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                         break;

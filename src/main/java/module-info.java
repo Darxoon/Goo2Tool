@@ -19,4 +19,7 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles.resrc;
     exports com.crazine.goo2tool.gamefiles.translation;
 
+    opens com.crazine.goo2tool.addinFile;
+    opens com.crazine.goo2tool.gamefiles.translation;
+    
 }

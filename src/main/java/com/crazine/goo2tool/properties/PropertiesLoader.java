@@ -50,7 +50,7 @@ public class PropertiesLoader {
     }
 
 
-    public static void saveProperties(File propertiesFile, Properties properties) throws IOException {
+    public static void saveProperties() throws IOException {
 
         if (!Files.exists(propertiesFile.toPath())) Files.createFile(propertiesFile.toPath());
         XmlMapper xmlMapper = new XmlMapper();
@@ -85,23 +85,35 @@ public class PropertiesLoader {
     public static void loadGoo2mod(File goo2modFile) throws IOException {
         Goo2mod goo2mod = AddinFileLoader.loadGoo2mod(goo2modFile);
         
-        AddinConfigEntry addin = new AddinConfigEntry();
-        addin.setName(goo2mod.getId());
-        addin.setLoaded(false);
-        if (!PropertiesLoader.getProperties().hasAddin(addin.getName())) {
-            PropertiesLoader.getProperties().getAddins().add(addin);
+        // delete all existing mods with the same id
+        Path addinsDir = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins");
+        for (File child : addinsDir.toFile().listFiles()) {
+            Goo2mod currentMod = AddinFileLoader.loadGoo2mod(child);
+            
+            if (currentMod.getId().equals(goo2mod.getId()))
+                child.delete();
         }
+        
+        // install new mod
+        if (!properties.hasAddin(goo2mod.getId())) {
+            AddinConfigEntry addin = new AddinConfigEntry();
+            addin.setId(goo2mod.getId());
+            addin.setLoaded(false);
+            properties.getAddins().add(addin);
+        }
+        
+        FX_Mods.getModTableView().getItems().removeAll(FX_Mods.getModTableView().getItems()
+                .stream()
+                .filter(item -> item.getId().equals(goo2mod.getId()))
+                .toList());
+        
         FX_Mods.getModTableView().getItems().add(goo2mod);
         FX_Mods.getModTableView().getSelectionModel().select(goo2mod);
 
-        Path newPath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins", goo2modFile.getName());
+        Path newPath = addinsDir.resolve(goo2modFile.getName());
         Files.copy(goo2modFile.toPath(), newPath, StandardCopyOption.REPLACE_EXISTING);
         
-        try {
-            saveProperties(getPropertiesFile(), getProperties());
-        } catch (IOException e) {
-            FX_Alarm.error(e);
-        }
+        saveProperties();
     }
 
     public static void uninstallGoo2mod(Goo2mod mod) {
@@ -131,7 +143,7 @@ public class PropertiesLoader {
         }
         
         try {
-            saveProperties(getPropertiesFile(), getProperties());
+            saveProperties();
         } catch (IOException e) {
             FX_Alarm.error(e);
         }

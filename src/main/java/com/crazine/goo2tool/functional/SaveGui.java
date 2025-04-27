@@ -1,14 +1,10 @@
 package com.crazine.goo2tool.functional;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.util.Optional;
 
+import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gamefiles.ResArchive;
-import com.crazine.goo2tool.gui.FX_Alarm;
-import com.crazine.goo2tool.gui.Main_Application;
 import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -21,7 +17,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
@@ -33,23 +28,13 @@ public class SaveGui {
 
     public static Optional<BooleanProperty> save(Stage originalStage, ResArchive res) {
         if (PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty()) {
-            String projectLocation = Main_Application.getProjectLocation();
-            InputStream iconStream;
-            try {
-                iconStream = new FileInputStream(projectLocation + "/conduit.png");
-            } catch (FileNotFoundException e) {
-                FX_Alarm.error(e);
-                return Optional.empty();
-            }
-            Image icon = new Image(iconStream);
-            
             Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
                     Instead, it copies everything into its own directory first.
                     
                     Please create a new, empty folder in the next dialog or select
                     an existing Goo2Tool directory if you have done this before.
-                    """, icon, ButtonType.OK, ButtonType.CANCEL);
+                    """, IconLoader.getConduit(), ButtonType.OK, ButtonType.CANCEL);
             
             if (result.isEmpty() || result.get() != ButtonType.OK)
                 return Optional.empty();
@@ -70,16 +55,7 @@ public class SaveGui {
 
         stage.setTitle("Building your World of Goo 2");
 
-        String projectLocation = Main_Application.getProjectLocation();
-        InputStream iconStream;
-        try {
-            iconStream = new FileInputStream(projectLocation + "/terrain.png");
-        } catch (FileNotFoundException e) {
-            FX_Alarm.error(e);
-            return Optional.empty();
-        }
-        Image image = new Image(iconStream);
-        stage.getIcons().add(image);
+        stage.getIcons().add(IconLoader.getTerrain());
 
         stage.setAlwaysOnTop(true);
 

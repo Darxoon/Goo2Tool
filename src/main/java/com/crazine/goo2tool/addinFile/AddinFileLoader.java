@@ -17,9 +17,30 @@ public class AddinFileLoader {
             XmlMapper xmlMapper = new XmlMapper();
             Goo2mod goo2mod = xmlMapper.readValue(addinXmlFile.get(), Goo2mod.class);
             goo2mod.setFile(goo2modFile);
-        
-            if (goo2mod.getName().equals("*"))
+            
+            if (!goo2mod.getSpecVersion().equals("2.2")) {
+                throw new IOException("Unsupported spec version '"
+                    + goo2mod.getSpecVersion() + "', supported versions are: 2.2");
+            }
+            
+            // "*" is reserved because it's being used as 'more than 1 mod' in the file table
+            if (goo2mod.getName().equals("*")) {
                 throw new IOException("Invalid mod id '*'");
+            }
+            
+            // validate levels property
+            switch (goo2mod.getType()) {
+                case LEVEL:
+                    if (goo2mod.getLevels().size() != 1) {
+                        throw new IOException("Goo2mods of type 'level' are required to have exactly 1 <level> entry.");
+                    }
+                    break;
+                case MOD:
+                    if (goo2mod.getLevels().size() != 0) {
+                        throw new IOException("Goo2mods of type 'mod' are not allowed to have any <level> entries.");
+                    }
+                    break;
+            }
             
             return goo2mod;
 

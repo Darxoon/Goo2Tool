@@ -45,10 +45,6 @@ public class GameString {
     @JacksonXmlElementWrapper(localName = "texts")
     @JacksonXmlProperty(localName = "text")
     private List<LocaleText> texts;
-    
-    public GameString() {
-        this.texts = new ArrayList<>();
-    }
 
     public GameString(String id, List<LocaleText> texts) {
         this.id = id;
@@ -58,6 +54,10 @@ public class GameString {
     public GameString(String id, LocaleText... texts) {
         this.id = id;
         this.texts = new ArrayList<>(List.of(texts));
+    }
+    
+    private GameString() {
+        this.texts = new ArrayList<>();
     }
 
     public String getId() {
@@ -94,19 +94,6 @@ public class GameString {
         }
         
         return false;
-    }
-    
-    @JsonIgnore
-    public List<LocaleText> getIntl() {
-        List<LocaleText> out = new ArrayList<>();
-        
-        for (LocaleText text : texts) {
-            if (!text.language.equals("en")) {
-                out.add(text);
-            }
-        }
-        
-        return out;
     }
     
 }

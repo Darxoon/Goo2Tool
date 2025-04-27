@@ -1,18 +1,22 @@
 package com.crazine.goo2tool.properties;
 
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 public class AddinConfigEntry {
 
-    private String name;
+    @JacksonXmlProperty(isAttribute = true)
+    private String id;
+    @JacksonXmlProperty(isAttribute = true)
     private BooleanProperty loaded = new SimpleBooleanProperty(false);
     
-    public String getName() {
-        return name;
+    public String getId() {
+        return id;
     }
-    public void setName(String name) {
-        this.name = name;
+    public void setId(String name) {
+        this.id = name;
     }
 
     public boolean isLoaded() {

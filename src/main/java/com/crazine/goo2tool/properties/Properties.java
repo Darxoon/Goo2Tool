@@ -59,7 +59,7 @@ public class Properties {
     
     public boolean hasAddin(String name) {
         for (AddinConfigEntry addin : addins) {
-            if (addin.getName().equals(name))
+            if (addin.getId().equals(name))
                 return true;
         }
         
@@ -72,7 +72,7 @@ public class Properties {
     
     public Optional<AddinConfigEntry> getAddin(String id) {
         for (AddinConfigEntry addin : addins) {
-            if (addin.getName().equals(id))
+            if (addin.getId().equals(id))
                 return Optional.of(addin);
         }
         

@@ -1,12 +1,10 @@
 package com.crazine.goo2tool.gui;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
 
+import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.Properties;
@@ -27,36 +25,28 @@ public class FX_Setup extends Application {
     public void start(Stage stage) {
         stage.setTitle("Goo2Tool Setup");
         
-        String projectLocation = Main_Application.getProjectLocation();
-        InputStream iconStream;
-        try {
-            iconStream = new FileInputStream(projectLocation + "/conduit.png");
-        } catch (FileNotFoundException e) {
-            FX_Alarm.error(e);
-            return;
-        }
-        Image icon = new Image(iconStream);
-        
         Properties properties = PropertiesLoader.getProperties();
         
         // setup wizard
         if (!PropertiesLoader.isValidDir(properties.getBaseWorldOfGoo2Directory())) {
-            properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, icon));
+            properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit()));
             
             try {
-                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+                PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
+                return;
             }
         }
         
         if (!PropertiesLoader.isValidDir(properties.getProfileDirectory())) {
-            properties.setProfileDirectory(getProfileDirectory(stage, icon));
+            properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit()));
             
             try {
-                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+                PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
+                return;
             }
         }
         

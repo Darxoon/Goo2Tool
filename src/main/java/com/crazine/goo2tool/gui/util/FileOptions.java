@@ -51,7 +51,7 @@ public class FileOptions {
             PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(path);
             
             try {
-                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+                PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
             }
@@ -67,7 +67,7 @@ public class FileOptions {
             PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(path);
             
             try {
-                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+                PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
             }
@@ -84,7 +84,7 @@ public class FileOptions {
             PropertiesLoader.getProperties().setProfileDirectory(path);
             
             try {
-                PropertiesLoader.saveProperties(PropertiesLoader.getPropertiesFile(), PropertiesLoader.getProperties());
+                PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
             }

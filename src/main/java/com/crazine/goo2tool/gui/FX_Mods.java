@@ -1,16 +1,18 @@
 package com.crazine.goo2tool.gui;
 
+import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
@@ -18,15 +20,14 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
 public class FX_Mods {
 
+    private static Stage stage;
+    
     private static final VBox modView = new VBox();
     public static VBox getModView() {
         return modView;
@@ -40,6 +41,8 @@ public class FX_Mods {
 
 
     public static void buildModView(Stage stage) {
+        
+        FX_Mods.stage = stage;
 
         modView.setPadding(new Insets(10, 10, 10, 10));
         modView.setSpacing(5);
@@ -65,7 +68,11 @@ public class FX_Mods {
                     try {
                         PropertiesLoader.loadGoo2mod(file);
                     } catch (IOException e) {
-                        FX_Alarm.error(new RuntimeException("Failed loading mod \"" + file.getName() + "\": " + e.getMessage(), e));
+                        e.printStackTrace();
+                        
+                        Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
+                        dialog.setContentText("Failed loading mod \"" + file.getName() + "\":\n\n" + e.getMessage());
+                        dialog.show();
                     }
                 }
                 
@@ -78,7 +85,7 @@ public class FX_Mods {
         
         Label modInfo = new Label("Addins higher on the list have priority and " +
                 "can override files from addins lower on the list.");
-        Label modInfo2 = new Label("New levels...   ...   ...   ...   ...What?");
+        Label modInfo2 = new Label("New levels will replace the level that the mod author specified.");
 
         VBox infoVBox = new VBox();
         infoVBox.getChildren().addAll(modInfo, modInfo2);
@@ -88,20 +95,7 @@ public class FX_Mods {
 
         Button installNewAddinButton = new Button("Install new addin...");
         installNewAddinButton.setPrefWidth(120);
-        installNewAddinButton.setOnAction(event -> {
-
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 mod file", "*.goo2mod"));
-            File goomodFile = fileChooser.showOpenDialog(stage);
-            if (goomodFile == null) return;
-            
-            try {
-                PropertiesLoader.loadGoo2mod(goomodFile);
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-            }
-
-        });
+        installNewAddinButton.setOnAction(event -> installAddin());
         Button checkForUpdatesButton = new Button("Check for Updates...");
         checkForUpdatesButton.setPrefWidth(120);
         checkForUpdatesButton.setDisable(true);
@@ -123,6 +117,7 @@ public class FX_Mods {
 
 
         Button moveUp = new Button("Move Up");
+        moveUp.setDisable(modTableView.getSelectionModel().isEmpty());
         moveUp.setOnAction(event -> {
             ObservableList<Goo2mod> items = modTableView.getItems();
             
@@ -134,6 +129,7 @@ public class FX_Mods {
         });
         
         Button moveDown = new Button("Move Down");
+        moveDown.setDisable(modTableView.getSelectionModel().isEmpty());
         moveDown.setOnAction(event -> {
             ObservableList<Goo2mod> items = modTableView.getItems();
             
@@ -145,6 +141,7 @@ public class FX_Mods {
         });
         
         Button enable = new Button("Enable");
+        enable.setDisable(modTableView.getSelectionModel().isEmpty());
         enable.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
@@ -155,6 +152,7 @@ public class FX_Mods {
         });
         
         Button disable = new Button("Disable");
+        disable.setDisable(modTableView.getSelectionModel().isEmpty());
         disable.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
@@ -165,25 +163,15 @@ public class FX_Mods {
         });
         
         Button uninstall = new Button("Uninstall");
+        uninstall.setDisable(modTableView.getSelectionModel().isEmpty());
         uninstall.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             
-            // TODO: abstract the icon loading away
-            String projectLocation = Main_Application.getProjectLocation();
-            InputStream iconStream;
-            try {
-                iconStream = new FileInputStream(projectLocation + "/conduit.png");
-            } catch (FileNotFoundException e) {
-                FX_Alarm.error(e);
-                return;
-            }
-            
-            Image icon = new Image(iconStream);
             Optional<ButtonType> result = CustomAlert.show("Goo2Tool", String.format("""
                     You are trying to uninstall "%s".
                     Uninstalling a mod cannot be undone.
                     Do you want to continue?
-                    """, selected.getName()), icon, ButtonType.YES, ButtonType.NO);
+                    """, selected.getName()), IconLoader.getConduit(), ButtonType.YES, ButtonType.NO);
             
             if (result.isPresent() && result.get() == ButtonType.YES) {
                 PropertiesLoader.uninstallGoo2mod(selected);
@@ -237,7 +225,10 @@ public class FX_Mods {
         addinName.setPrefWidth(300);
 
         TableColumn<Goo2mod, String> type = new TableColumn<>("Type");
-        type.setCellValueFactory(new PropertyValueFactory<>("type"));
+        type.setCellValueFactory(features -> {
+            ModType modType = features.getValue().getType();
+            return new ReadOnlyStringWrapper(modType.getName());
+        });
         type.setReorderable(false);
         type.setSortable(false);
         modTableView.getColumns().add(type);
@@ -264,10 +255,26 @@ public class FX_Mods {
         descriptionArea.setPrefHeight(160);
 
         modTableView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                descriptionArea.setText("");
+                
+                enable.disableProperty().unbind();
+                enable.setDisable(true);
+                disable.disableProperty().unbind();
+                disable.setDisable(true);
+                
+                moveUp.setDisable(true);
+                moveDown.setDisable(true);
+                uninstall.setDisable(true);
+                return;
+            }
+            
             descriptionArea.setText(newValue.getDescription());
             
             Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(newValue);
             if (addin.isPresent()) {
+                uninstall.setDisable(false);
+                
                 enable.disableProperty().bind(addin.get().loadedProperty());
                 disable.disableProperty().bind(addin.get().loadedProperty().not());
                 
@@ -293,4 +300,17 @@ public class FX_Mods {
 
     }
 
+    public static void installAddin() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 mod file", "*.goo2mod"));
+        File goomodFile = fileChooser.showOpenDialog(stage);
+        if (goomodFile == null) return;
+        
+        try {
+            PropertiesLoader.loadGoo2mod(goomodFile);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
+    }
+    
 }

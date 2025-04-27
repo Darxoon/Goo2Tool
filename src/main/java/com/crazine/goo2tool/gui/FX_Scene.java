@@ -23,6 +23,8 @@ import java.util.Optional;
 
 public class FX_Scene {
 
+    private static Stage stage;
+    
     private static Scene scene;
     public static Scene getScene() {
         return scene;
@@ -31,6 +33,8 @@ public class FX_Scene {
 
     public static void buildScene(Stage stage) {
 
+        FX_Scene.stage = stage;
+        
         TabPane tabPane = new TabPane();
         tabPane.prefHeightProperty().bind(stage.heightProperty());
 
@@ -51,38 +55,12 @@ public class FX_Scene {
 
         Button saveButton = new Button("Save");
         saveButton.setOnAction(event -> {
-            ResArchive res;
-            try {
-                res = ResArchive.loadOrSetupVanilla(stage);
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-                return;
-            }
-            
-            SaveGui.save(stage, res);
+            save();
         });
         
         Button saveAndPlayButton = new Button("Save and Launch World of Goo 2!");
         saveAndPlayButton.setOnAction(event -> {
-            ResArchive res;
-            try {
-                res = ResArchive.loadOrSetupVanilla(stage);
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-                return;
-            }
-            
-            Optional<BooleanProperty> finished = SaveGui.save(stage, res);
-            if (finished.isEmpty())
-                return;
-            
-            finished.get().addListener((observable, oldValue, newValue) -> {
-                try {
-                    launchGame();
-                } catch (IOException e) {
-                    FX_Alarm.error(e);
-                }
-            });
+            saveAndPlay();
         });
         HBox hBox = new HBox(saveButton, saveAndPlayButton);
         hBox.setPadding(new Insets(0, 10, 10, 10));
@@ -93,6 +71,40 @@ public class FX_Scene {
 
         scene = new Scene(vBox);
 
+    }
+    
+    public static void save() {
+        ResArchive res;
+        try {
+            res = ResArchive.loadOrSetupVanilla(stage);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        
+        SaveGui.save(stage, res);
+    }
+    
+    public static void saveAndPlay() {
+        ResArchive res;
+        try {
+            res = ResArchive.loadOrSetupVanilla(stage);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        
+        Optional<BooleanProperty> finished = SaveGui.save(stage, res);
+        if (finished.isEmpty())
+            return;
+        
+        finished.get().addListener((observable, oldValue, newValue) -> {
+            try {
+                launchGame();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
+        });
     }
     
     private static void launchGame() throws IOException {
