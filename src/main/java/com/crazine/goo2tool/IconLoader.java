@@ -1,10 +1,7 @@
 package com.crazine.goo2tool;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
-import com.crazine.goo2tool.gui.Main_Application;
 
 import javafx.scene.image.Image;
 
@@ -21,8 +18,7 @@ public class IconLoader {
     }
     
     private static Image loadImage(String name) throws IOException {
-        String projectLocation = Main_Application.getProjectLocation();
-        InputStream iconStream = new FileInputStream(projectLocation + "/" + name);
+        InputStream iconStream = IconLoader.class.getClassLoader().getResourceAsStream(name);
         return new Image(iconStream);
     }
     

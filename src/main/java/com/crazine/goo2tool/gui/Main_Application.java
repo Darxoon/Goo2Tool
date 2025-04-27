@@ -1,7 +1,6 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.Main;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
@@ -15,7 +14,6 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 
@@ -102,17 +100,4 @@ public class Main_Application extends Application {
         mainApplication.getHostServices().showDocument(url);
     }
     
-    public static String getProjectLocation() {
-        try {
-            File codeLocation = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-            while (!codeLocation.getName().equals("Goo2Tool") && !codeLocation.getName().equals("Goo2Tool-master")) {
-                codeLocation = codeLocation.getParentFile();
-            }
-            return codeLocation.getPath().replaceAll("\\\\", "/");
-        } catch (URISyntaxException e) {
-            FX_Alarm.error(e);
-            return "";
-        }
-    }
-
 }
