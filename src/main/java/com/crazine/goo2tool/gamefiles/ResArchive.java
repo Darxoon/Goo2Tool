@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Optional;
@@ -34,10 +35,17 @@ public class ResArchive implements Closeable {
     
     public static ResArchive loadOrSetupVanilla(Stage stage) throws IOException {
         String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
+        String resGooPath = PropertiesLoader.getProperties().getResGooPath();
 
         File resGooFile;
-        if (Files.exists(Path.of(baseWOG2 + "/game/res.goo"))) {
-            resGooFile = new File(baseWOG2 + "/game/res.goo");
+        if (!resGooPath.isEmpty() && Files.exists(Path.of(resGooPath))) {
+            resGooFile = new File(resGooPath);
+        } else if (Files.exists(Path.of(baseWOG2, "game/res.goo"))) {
+            Path baseFile = Path.of(baseWOG2, "game/res.goo");
+            Path newFile = Path.of(baseWOG2, "game/res.goo_backup");
+            Files.move(baseFile, newFile, StandardCopyOption.REPLACE_EXISTING);
+            PropertiesLoader.getProperties().setResGooPath(newFile.toString());
+            resGooFile = newFile.toFile();
         } else {
             Alert alert = new Alert(AlertType.CONFIRMATION);
             alert.setContentText("Could not find res.goo file as it appears to have been renamed or moved.\n\n"
@@ -51,9 +59,12 @@ public class ResArchive implements Closeable {
             if (initialDirectory.exists())
                 fileChooser.setInitialDirectory(initialDirectory);
             
-            resGooFile = fileChooser.showOpenDialog(stage);
+            File chosenFile = fileChooser.showOpenDialog(stage);
+            PropertiesLoader.getProperties().setResGooPath(chosenFile.toString());
+            resGooFile = chosenFile;
         }
         
+        PropertiesLoader.saveProperties();
         return new ResArchive(resGooFile);
     }
     

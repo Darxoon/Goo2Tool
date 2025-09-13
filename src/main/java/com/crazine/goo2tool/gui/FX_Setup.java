@@ -2,10 +2,14 @@ package com.crazine.goo2tool.gui;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.functional.LocateGooDir;
+import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
 import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -25,11 +29,20 @@ public class FX_Setup extends Application {
     public void start(Stage stage) {
         stage.setTitle("Goo2Tool Setup");
         
+        try {
+            IconLoader.init();
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
+        
         Properties properties = PropertiesLoader.getProperties();
+        
+        // try auto detecting wog2 dir
+        Optional<GooDir> located = LocateGooDir.locateWog2();
         
         // setup wizard
         if (!PropertiesLoader.isValidDir(properties.getBaseWorldOfGoo2Directory())) {
-            properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit()));
+            properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit(), located));
             
             try {
                 PropertiesLoader.saveProperties();
@@ -40,7 +53,7 @@ public class FX_Setup extends Application {
         }
         
         if (!PropertiesLoader.isValidDir(properties.getProfileDirectory())) {
-            properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit()));
+            properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit(), located));
             
             try {
                 PropertiesLoader.saveProperties();
@@ -54,44 +67,47 @@ public class FX_Setup extends Application {
         new Main_Application().start(stage);
     }
     
-    private String getBaseDirectory(Stage stage, Image icon) {
-        // try auto detecting
-        switch (Platform.getCurrent()) {
-            case WINDOWS:
-                File exeFile = new File(System.getenv("PROGRAMFILES") + "/World of Goo 2/World of Goo 2.exe");
-                
-                if (exeFile.exists() && exeFile.isFile())
-                    return exeFile.getParent();
-                break;
-            case MAC:
-                File appFile = new File("/Applications/World of Goo 2.app");
-                
-                if (appFile.exists() && appFile.isDirectory())
-                    return appFile.getParentFile().getAbsolutePath();
-                break;
-            case LINUX:
-                // Linux version is an AppImage, so it could be installed anywhere
-                break;
-        }
-        
-        // show manual prompt if that didn't work
-        ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
-        
-        if (Platform.getCurrent() == Platform.LINUX) {
-            CustomAlert.show("Goo2Tool Setup", """
-                    Could not determine default World of Goo 2 installation.
-                    Please pick one yourself.
-                    
-                    Note: The Linux .AppImage is not supported yet.
-                    Either use the Steam release or the Windows
-                    DRM-free version.
-                    """, icon, buttonType);
+    private String getBaseDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) {
+        if (gooDir.isPresent()) {
+            // ask if detected dir is okay
+            String path = gooDir.get().path().toString();
+            
+            ButtonType buttonNo = new ButtonType("Pick installation manually", ButtonData.NO);
+            ButtonType buttonYes = new ButtonType("Proceed", ButtonData.YES);
+            
+            Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", String.format("""
+                    Found World of Goo 2 installation at '%s'.
+                    Would you like to proceed?
+                    """, path),
+                    icon, buttonNo, buttonYes);
+            
+            if (result.isPresent() && result.get() == buttonYes) {
+                PropertiesLoader.getProperties().setSteam(gooDir.get().steamDir().isPresent());
+                return path;
+            }
         } else {
-            CustomAlert.show("Goo2Tool Setup", """
-                    Could not determine default World of Goo 2 installation.
-                    Please pick one yourself.
-                    """, icon, buttonType);
+            // show manual prompt if Wog2 dir could not be found
+            ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
+            
+            if (Platform.getCurrent() == Platform.LINUX) {
+                CustomAlert.show("Goo2Tool Setup", """
+                        Could not determine default World of Goo 2 installation.
+                        Please pick one yourself.
+                        
+                        Note: The Linux .AppImage is not supported yet.
+                        Either use the Steam release or the Windows
+                        DRM-free version.
+                        """, icon, buttonType);
+            } else {
+                CustomAlert.show("Goo2Tool Setup", """
+                        Could not determine default World of Goo 2 installation.
+                        Please pick one yourself.
+                        """, icon, buttonType);
+            }
         }
+        
+        // TODO: this might not be true
+        PropertiesLoader.getProperties().setSteam(false);
         
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
@@ -124,7 +140,19 @@ public class FX_Setup extends Application {
         };
     }
     
-    private String getProfileDirectory(Stage stage, Image icon) {
+    private String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) {
+        // try auto detecting Steam
+        if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
+            try {
+                Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
+                
+                if (steamProfile.isPresent())
+                    return steamProfile.get();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
+        }
+        
         // try auto detecting
         File profileDir = switch (Platform.getCurrent()) {
             case WINDOWS -> new File(System.getenv("LocalAppData") + "/2DBoy/WorldOfGoo2");
@@ -148,6 +176,27 @@ public class FX_Setup extends Application {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         File file = directoryChooser.showDialog(stage);
         return file.getAbsolutePath();
+    }
+    
+    private Optional<String> getSteamProfileDirectory(Optional<GooDir> gooDir) throws IOException {
+        Path steamDir = gooDir.get().steamDir().get();
+        Path steamUserdata = steamDir.resolve("userdata");
+        
+        if (!Files.isDirectory(steamUserdata))
+            return Optional.empty();
+        
+        Optional<Path> steamProfile = Files.list(steamUserdata).findFirst();
+        System.out.println(steamProfile);
+        
+        if (steamProfile.isEmpty())
+            return Optional.empty();
+        
+        Path savegame = steamProfile.get().resolve("3385670/remote/savegame.dat");
+        
+        if (Files.isRegularFile(savegame))
+            return Optional.of(savegame.toString());
+        else
+            return Optional.empty();
     }
     
 }

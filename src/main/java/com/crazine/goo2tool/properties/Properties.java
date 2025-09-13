@@ -13,43 +13,16 @@ import java.util.Optional;
 public class Properties {
 
     private String baseWorldOfGoo2Directory = "";
-    public String getBaseWorldOfGoo2Directory() {
-        return baseWorldOfGoo2Directory;
-    }
-    public void setBaseWorldOfGoo2Directory(String baseWoG2Dir) {
-        this.baseWorldOfGoo2Directory = baseWoG2Dir;
-    }
-
     private String customWorldOfGoo2Directory = "";
-    public String getCustomWorldOfGoo2Directory() {
-        return customWorldOfGoo2Directory;
-    }
-    public void setCustomWorldOfGoo2Directory(String customWoG2Dir) {
-        this.customWorldOfGoo2Directory = customWoG2Dir;
-    }
-
     private String profileDirectory = "";
-    public String getProfileDirectory() {
-        return profileDirectory;
-    }
-    public void setProfileDirectory(String profileDirectory) {
-        this.profileDirectory = profileDirectory;
-    }
-
+    private String resGooPath = "";
+    private boolean isSteam;
     private StringProperty launchCommand = new SimpleStringProperty();
-    public String getLaunchCommand() {
-        return launchCommand.get();
-    }
-    public void setLaunchCommand(String launchCommand) {
-        this.launchCommand.set(launchCommand);
-    }
-    public StringProperty launchCommandProperty() {
-        return launchCommand;
-    }
     
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
     private ArrayList<AddinConfigEntry> addins = new ArrayList<>();
+    
     @JacksonXmlProperty() public ArrayList<AddinConfigEntry> getAddins() {
         return addins;
     }
@@ -78,5 +51,57 @@ public class Properties {
         
         return Optional.empty();
     }
-
+    
+    public String getBaseWorldOfGoo2Directory() {
+        return baseWorldOfGoo2Directory;
+    }
+    
+    public void setBaseWorldOfGoo2Directory(String baseWorldOfGoo2Directory) {
+        this.baseWorldOfGoo2Directory = baseWorldOfGoo2Directory;
+    }
+    
+    public String getCustomWorldOfGoo2Directory() {
+        return customWorldOfGoo2Directory;
+    }
+    
+    public void setCustomWorldOfGoo2Directory(String customWorldOfGoo2Directory) {
+        this.customWorldOfGoo2Directory = customWorldOfGoo2Directory;
+    }
+    
+    public String getProfileDirectory() {
+        return profileDirectory;
+    }
+    
+    public void setProfileDirectory(String profileDirectory) {
+        this.profileDirectory = profileDirectory;
+    }
+    
+    public String getResGooPath() {
+        return resGooPath;
+    }
+    
+    public void setResGooPath(String resGooPath) {
+        this.resGooPath = resGooPath;
+    }
+    
+    public boolean isSteam() {
+        return isSteam;
+    }
+    
+    public void setSteam(boolean isSteam) {
+        this.isSteam = isSteam;
+    }
+    
+    public String getLaunchCommand() {
+        return launchCommand.get();
+    }
+    
+    public void setLaunchCommand(String launchCommand) {
+        this.launchCommand.set(launchCommand);
+    }
+    
+    public StringProperty launchCommandProperty() {
+        return launchCommand;
+    }
+    
 }
