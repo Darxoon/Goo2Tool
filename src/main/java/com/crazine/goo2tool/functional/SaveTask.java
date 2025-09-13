@@ -33,6 +33,7 @@ import com.crazine.goo2tool.gamefiles.translation.TextLoader;
 import com.crazine.goo2tool.gamefiles.translation.GameString.LocaleText;
 import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -67,13 +68,15 @@ class SaveTask extends Task<Void> {
     
     private void save(ResArchive res) throws Exception {
         
+        Properties properties = PropertiesLoader.getProperties();
+        
         // Export properties
         PropertiesLoader.saveProperties();
 
         // Figure out which files are owned by mods that have been disabled
         // so they can be overwritten with vanilla assets
         List<String> disabledAddinIds = new ArrayList<>();
-        for (AddinConfigEntry addin : PropertiesLoader.getProperties().getAddins()) {
+        for (AddinConfigEntry addin : properties.getAddins()) {
             if (!addin.isLoaded())
                 disabledAddinIds.add(addin.getId());
         }
@@ -83,7 +86,13 @@ class SaveTask extends Task<Void> {
         
         // Merge original res folder
         updateTitle("Validating original WoG2");
-        copyMissingOriginalFiles(res, table);
+        if (properties.isSteam()) {
+            // the Steam version doesn't use a dedicated custom directory
+            // so copying all of the meta files is unnecessary
+            extractRes(res, table, 0, res.fileCount());
+        } else {
+            copyMissingOriginalFiles(res, table);
+        }
 
         // Retrieve mods
         ArrayList<Goo2mod> goo2mods = new ArrayList<>();
@@ -94,8 +103,8 @@ class SaveTask extends Task<Void> {
         }
 
         ArrayList<Goo2mod> goo2modsSorted = new ArrayList<>();
-        for (int i = PropertiesLoader.getProperties().getAddins().size() - 1; i >= 0; i--) {
-            AddinConfigEntry addin = PropertiesLoader.getProperties().getAddins().get(i);
+        for (int i = properties.getAddins().size() - 1; i >= 0; i--) {
+            AddinConfigEntry addin = properties.getAddins().get(i);
             if (!addin.isLoaded()) continue;
             for (Goo2mod goo2mod : goo2mods) {
                 if (goo2mod.getId().equals(addin.getId())) {
@@ -114,9 +123,11 @@ class SaveTask extends Task<Void> {
         ResFileTableLoader.save(table, fileTablePath.toFile());
 
         // Backup save file just for good measure
-        Path saveFile = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1.dat");
-        Path saveFileBackup = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1_backup.dat");
-        Path saveFileBackup2 = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1_backup2.dat");
+        String saveFileName = properties.isSteam() ? "savegame" : "wog2_1";
+        
+        Path saveFile = Paths.get(properties.getProfileDirectory(), saveFileName + ".dat");
+        Path saveFileBackup = Paths.get(properties.getProfileDirectory(), saveFileName + "_backup.dat");
+        Path saveFileBackup2 = Paths.get(properties.getProfileDirectory(), saveFileName + "_backup2.dat");
         
         if (Files.isRegularFile(saveFileBackup)) {
             Files.copy(saveFileBackup, saveFileBackup2, StandardCopyOption.REPLACE_EXISTING);
@@ -130,7 +141,7 @@ class SaveTask extends Task<Void> {
 
         // Islands islands = IslandFileLoader.loadIslands(res);
 
-        // File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
+        // File toSaveFile = new File(properties.getProfileDirectory() + "/wog2_1.dat");
 
         // WOG2SaveData[] data = SaveFileLoader.readSaveFile(toSaveFile);
         // WOG2SaveData wog2SaveData = data[FX_Profile.getProfileSelectionBox().getSelectionModel().getSelectedIndex()];
@@ -216,6 +227,16 @@ class SaveTask extends Task<Void> {
         }
         
         // traverse res folder
+        extractRes(res, garbageFiles, tracker, fileCount);
+    }
+    
+    private void extractRes(ResArchive res, ResFileTable garbageFiles, long tracker, long fileCount) throws IOException {
+        Properties properties = PropertiesLoader.getProperties();
+        
+        String customWOG2 = properties.isSteam()
+            ? properties.getBaseWorldOfGoo2Directory()
+            : properties.getCustomWorldOfGoo2Directory();
+        
         for (ResFile file : res.getAllFiles()) {
             tracker++;
             updateProgress(tracker, fileCount);

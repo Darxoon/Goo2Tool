@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gui.util.CustomAlert;
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.beans.property.BooleanProperty;
@@ -27,7 +28,9 @@ import javafx.stage.Stage;
 public class SaveGui {
 
     public static Optional<BooleanProperty> save(Stage originalStage, ResArchive res) {
-        if (PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory().isEmpty()) {
+        Properties properties = PropertiesLoader.getProperties();
+        
+        if (!properties.isSteam() && properties.getCustomWorldOfGoo2Directory().isEmpty()) {
             Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
                     Instead, it copies everything into its own directory first.
@@ -43,7 +46,7 @@ public class SaveGui {
             File customDir = directoryChooser.showDialog(originalStage);
             if (customDir == null)
                 return Optional.empty();
-            PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(customDir.getAbsolutePath());
+            properties.setCustomWorldOfGoo2Directory(customDir.getAbsolutePath());
         }
         
         Stage stage = new Stage();

@@ -85,7 +85,7 @@ public class FX_Mods {
         
         Label modInfo = new Label("Addins higher on the list have priority and " +
                 "can override files from addins lower on the list.");
-        Label modInfo2 = new Label("New levels will replace the level that the mod author specified.");
+        Label modInfo2 = new Label("New levels will appear in the Editor Menu on the title screen.");
 
         VBox infoVBox = new VBox();
         infoVBox.getChildren().addAll(modInfo, modInfo2);

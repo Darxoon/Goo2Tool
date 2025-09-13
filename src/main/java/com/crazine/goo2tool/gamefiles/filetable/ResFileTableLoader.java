@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -18,6 +19,8 @@ public class ResFileTableLoader {
             XmlMapper xmlMapper = new XmlMapper();
             return xmlMapper.readValue(content, ResFileTable.class);
         } catch (FileNotFoundException e) {
+            return new ResFileTable();
+        } catch (NoSuchFileException e) {
             return new ResFileTable();
         }
     }
