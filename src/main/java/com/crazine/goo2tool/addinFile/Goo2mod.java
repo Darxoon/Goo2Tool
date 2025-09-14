@@ -8,6 +8,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class Goo2mod {
     
@@ -77,6 +78,15 @@ public class Goo2mod {
 
     public List<Level> getLevels() {
         return levels;
+    }
+    
+    public Optional<Level> getLevel(String filename) {
+        for (Level level : levels) {
+            if (level.filename.equals(filename))
+                return Optional.of(level);
+        }
+        
+        return Optional.empty();
     }
     
     public File getFile() {

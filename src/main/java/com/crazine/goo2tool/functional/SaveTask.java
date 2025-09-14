@@ -19,12 +19,13 @@ import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.AddinReader.Resource;
-import com.crazine.goo2tool.addinFile.Goo2mod.Level;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable.OverriddenFileEntry;
+import com.crazine.goo2tool.gamefiles.level.Level;
+import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gamefiles.translation.GameString;
@@ -257,43 +258,12 @@ class SaveTask extends Task<Void> {
     }
     
     private void installGoo2mod(Goo2mod mod, ResFileTable table) {
-        String customWOG2 = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
+        Properties properties = PropertiesLoader.getProperties();
+        Path customWOG2 = Paths.get(properties.isSteam()
+            ? properties.getBaseWorldOfGoo2Directory()
+            : properties.getCustomWorldOfGoo2Directory());
         
         try (AddinReader addinFile = new AddinReader(mod)) {
-
-            for (Level level : mod.getLevels()) {
-                Path localPath = Paths.get(customWOG2, "game/res/properties/translation-local.xml");
-                Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
-                
-                String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
-                    .replaceAll("& ", "&amp; ");
-                TextDB originalIntl = TextLoader.loadText(originalIntlContent);
-                TextDB originalLocal = TextLoader.loadText(localPath);
-                
-                originalLocal.putString(new GameString("LEVEL_NAME_" + level.filename(),
-                        new LocaleText("en", level.name())));
-                        
-                originalIntl.putString(new GameString("LEVEL_NAME_" + level.filename(),
-                        new LocaleText("en", level.name()),
-                        new LocaleText("de", level.name()),
-                        new LocaleText("es-419", level.name()),
-                        new LocaleText("es-es", level.name()),
-                        new LocaleText("fr-fr", level.name()),
-                        new LocaleText("it", level.name()),
-                        new LocaleText("ja", level.name()),
-                        new LocaleText("ko", level.name()),
-                        new LocaleText("pl", level.name()),
-                        new LocaleText("pt-br", level.name()),
-                        new LocaleText("ru", level.name()),
-                        new LocaleText("uk", level.name()),
-                        new LocaleText("zh-hans", level.name()),
-                        new LocaleText("zh-hant", level.name())));
-                
-                table.addEntry("*", "res/properties/translation-local.xml");
-                table.addEntry("*", "res/properties/translation-tool-export.xml");
-                TextLoader.saveText(originalLocal, localPath.toFile());
-                TextLoader.saveText(originalIntl, intlPath.toFile());
-            }
             
             long count = addinFile.getFileCount();
             long i = 0;
@@ -303,59 +273,18 @@ class SaveTask extends Task<Void> {
                 updateProgress(i, count);
                 
                 switch (resource.type()) {
-                    case METADATA: {
+                    case METADATA:
                         if (resource.path().equals("translation.xml")) {
-                            Path localPath = Paths.get(customWOG2, "game/res/properties/translation-local.xml");
-                            Path intlPath = Paths.get(customWOG2, "game/res/properties/translation-tool-export.xml");
-                            
-                            String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
-                                .replaceAll("& ", "&amp; ");
-                            TextDB originalIntl = TextLoader.loadText(originalIntlContent);
-                            TextDB originalLocal = TextLoader.loadText(localPath);
-                            
-                            TextDB patch = TextLoader.loadText(resource.content());
-                            
-                            for (GameString string : patch.getStrings()) {
-                                Optional<LocaleText> local = string.getLocal();
-                                
-                                if (local.isPresent()) {
-                                    originalLocal.putString(new GameString(string.getId(), local.get()));
-                                } else {
-                                    originalLocal.removeString(string.getId());
-                                }
-                                
-                                if (string.hasIntl()) {
-                                    originalIntl.putString(new GameString(string.getId(), string.getTexts()));
-                                } else {
-                                    // TODO: make this use the english text as a fallback
-                                    // for all languages that aren't specified by the mod author
-                                    originalIntl.removeString(string.getId());
-                                }
-                            }
-                            
-                            table.addEntry("*", "res/properties/translation-local.xml");
-                            table.addEntry("*", "res/properties/translation-tool-export.xml");
-                            TextLoader.saveText(originalLocal, localPath.toFile());
-                            TextLoader.saveText(originalIntl, intlPath.toFile());
+                            writeTranslation(customWOG2, table, resource);
                         }
                         
                         break;
-                    }
-                    case COMPILE: {
-                        if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
-                            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
-                        
-                        Path customPath = Paths.get(customWOG2, "game", resource.path());
-                        
-                        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
-                        
-                        table.addEntry(mod.getId(), resource.path());
-                        
-                        Files.createDirectories(customPath.getParent());
-                        Files.write(customPath, resource.content(),
-                                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                    case COMPILE:
+                        writeCompiledFile(customWOG2, table, mod, resource);
                         break;
-                    }
+                    case OVERRIDE:
+                        overrideFile(customWOG2, table, mod, resource);
+                        break;
                     case MERGE: {
                         // merging files that have been overriden by previous mods could
                         // lead to weird conflicts, so it's not supported at all
@@ -369,67 +298,21 @@ class SaveTask extends Task<Void> {
                             }
                         }
                         
-                        Path customPath = Paths.get(customWOG2, "game", resource.path());
+                        Path customPath = customWOG2.resolve("game", resource.path());
                         
                         if (resource.path().endsWith(".wog2")) {
-                            
-                            JsonMapper mapper = new JsonMapper();
-                            mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-    
-                            JsonNode original = mapper.readTree(customPath.toFile());
-                            JsonNode patch = mapper.readTree(resource.content());
-                            
-                            if (!patch.isObject()) {
-                                throw new IllegalArgumentException("Json merge file has to be a json object! (at " +  resource.path() + ")");
-                            }
-                            
-                            JsonNode mergeTypeObj = patch.get("__type__");
-                            if (mergeTypeObj == null) {
-                                throw new IllegalArgumentException("Json merge file has to contain the property '__type__'! (at "
-                                        + resource.path() + ")");
-                            }
-                            
-                            if (!mergeTypeObj.isTextual() || !mergeTypeObj.textValue().equals("jsonMerge")) {
-                                throw new IllegalArgumentException("Property '__type__' has to be of value 'jsonMerge' (at "
-                                        + resource.path() + ")");
-                            }
-                            
-                            table.addEntry("*", resource.path());
-                            JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
-                            mapper.writeValue(customPath.toFile(), merged);
-                            
+                            mergeWog2(table, resource, customPath);
                         } else if (resource.path().endsWith(".xml")) {
-                            
-                            ResrcManifest original = ResrcLoader.loadManifest(customPath);
-                            ResrcManifest patch = ResrcLoader.loadManifest(resource.content());
-                            
-                            table.addEntry("*", resource.path());
-                            ResrcManifest merged = ResourceXmlMerge.transformResources(original, patch);
-                            ResrcLoader.saveManifest(merged, customPath.toFile());
-                            
+                            mergeXml(table, resource, customPath);
                         } else {
                             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
                         }
                         
                         break;
                     }
-                    case OVERRIDE: {
-                        if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
-                            throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
-                        
-                        Path customPath = Paths.get(customWOG2, "game", resource.path());
-                        
-                        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
-                        
-                        table.addEntry(mod.getId(), resource.path());
-                        
-                        Files.createDirectories(customPath.getParent());
-                        Files.write(customPath, resource.content(),
-                                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-                        break;
-                    }
                 }
             }
+            
         } catch (Exception e) {
             e.printStackTrace();
             
@@ -439,6 +322,126 @@ class SaveTask extends Task<Void> {
                 dialog.show();
             });
         }
+    }
+    
+    private void writeTranslation(Path customWOG2, ResFileTable table, Resource resource) throws IOException {
+        Path localPath = customWOG2.resolve("game/res/properties/translation-local.xml");
+        Path intlPath = customWOG2.resolve("game/res/properties/translation-tool-export.xml");
+        
+        String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
+            .replaceAll("& ", "&amp; ");
+        TextDB originalIntl = TextLoader.loadText(originalIntlContent);
+        TextDB originalLocal = TextLoader.loadText(localPath);
+        
+        TextDB patch = TextLoader.loadText(resource.content());
+        
+        for (GameString string : patch.getStrings()) {
+            Optional<LocaleText> local = string.getLocal();
+            
+            if (local.isPresent()) {
+                originalLocal.putString(new GameString(string.getId(), local.get()));
+            } else {
+                originalLocal.removeString(string.getId());
+            }
+            
+            if (string.hasIntl()) {
+                originalIntl.putString(new GameString(string.getId(), string.getTexts()));
+            } else {
+                // TODO: make this use the english text as a fallback
+                // for all languages that aren't specified by the mod author
+                originalIntl.removeString(string.getId());
+            }
+        }
+        
+        table.addEntry("*", "res/properties/translation-local.xml");
+        table.addEntry("*", "res/properties/translation-tool-export.xml");
+        TextLoader.saveText(originalLocal, localPath.toFile());
+        TextLoader.saveText(originalIntl, intlPath.toFile());
+    }
+    
+    private void writeCompiledFile(Path customWOG2, ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
+        if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
+            throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
+        
+        if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
+            String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
+            
+            if (mod.getLevel(levelName).isPresent()) {
+                // do not copy to customPath/game/res/levels, instead copy into profile/levels
+                // so it appears in the level editor menu
+                Level level = LevelLoader.loadLevel(resource.contentText());
+                System.out.println("Level " + level.getUuid() + ": " + level.getTitle());
+                
+                Path profileDir = Paths.get(PropertiesLoader.getProperties().getProfileDirectory());
+                Path outLevelPath = profileDir.resolve("levels", level.getUuid() + ".wog2");
+                
+                Files.write(outLevelPath, resource.content(),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                return;
+            }
+        }
+            
+        Path customPath = customWOG2.resolve("game", resource.path());
+        
+        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
+        
+        table.addEntry(mod.getId(), resource.path());
+        
+        Files.createDirectories(customPath.getParent());
+        Files.write(customPath, resource.content(),
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+    
+    private void overrideFile(Path customWOG2, ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
+        if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
+            throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
+        
+        Path customPath = customWOG2.resolve("game", resource.path());
+        
+        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
+        
+        table.addEntry(mod.getId(), resource.path());
+        
+        Files.createDirectories(customPath.getParent());
+        Files.write(customPath, resource.content(),
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+    
+    private void mergeWog2(ResFileTable table, Resource resource, Path customPath) throws IOException {
+        JsonMapper mapper = new JsonMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+        JsonNode original = mapper.readTree(customPath.toFile());
+        JsonNode patch = mapper.readTree(resource.content());
+        
+        if (!patch.isObject()) {
+            throw new IllegalArgumentException("Json merge file has to be a json object! (at " +  resource.path() + ")");
+        }
+        
+        JsonNode mergeTypeObj = patch.get("__type__");
+        if (mergeTypeObj == null) {
+            throw new IllegalArgumentException("Json merge file has to contain the property '__type__'! (at "
+                    + resource.path() + ")");
+        }
+        
+        if (!mergeTypeObj.isTextual() || !mergeTypeObj.textValue().equals("jsonMerge")) {
+            throw new IllegalArgumentException("Property '__type__' has to be of value 'jsonMerge' (at "
+                    + resource.path() + ")");
+        }
+        
+        table.addEntry("*", resource.path());
+        JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
+        mapper.writeValue(customPath.toFile(), merged);
+        
+    }
+    
+    private void mergeXml(ResFileTable table, Resource resource, Path customPath) throws IOException {
+        ResrcManifest original = ResrcLoader.loadManifest(customPath);
+        ResrcManifest patch = ResrcLoader.loadManifest(resource.content());
+        
+        table.addEntry("*", resource.path());
+        ResrcManifest merged = ResourceXmlMerge.transformResources(original, patch);
+        ResrcLoader.saveManifest(merged, customPath.toFile());
     }
     
 }

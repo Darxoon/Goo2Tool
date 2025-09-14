@@ -40,6 +40,10 @@ public class AddinReader implements Closeable {
             return new Resource(realPath, type, content);
         }
         
+        public String contentText() {
+            return new String(content, StandardCharsets.UTF_8);
+        }
+        
     }
     
     private final ZipFile zipFile;
@@ -65,7 +69,7 @@ public class AddinReader implements Closeable {
     }
     
     public Optional<String> getFileText(String path) throws IOException {
-        return getFileContent(path).map(file -> new String(file.content(), StandardCharsets.UTF_8));
+        return getFileContent(path).map(Resource::contentText);
     }
     
     public Iterable<Resource> getAllFiles() {
