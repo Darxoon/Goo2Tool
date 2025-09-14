@@ -121,6 +121,31 @@ class SaveTask extends Task<Void> {
             installGoo2mod(goo2mod, table);
         }
         
+        // Delete unloaded levels from profile
+        Path profilePath = Paths.get(properties.getProfileDirectory());
+        
+        for (OverriddenFileEntry entry : table.getEntries()) {
+            if (entry.getPath().startsWith("$profile/")) {
+                String path = entry.getPath().substring("$profile/".length());
+                String modId = entry.getModId();
+                
+                // Check if the mod is loaded
+                boolean isLoaded = false;
+                for (Goo2mod mod : goo2modsSorted) {
+                    if (mod.getId().equals(modId)) {
+                        isLoaded = true;
+                        break;
+                    }
+                }
+                
+                if (!isLoaded) {
+                    // TODO: try not deleting if the file has been modified by the user
+                    Files.delete(profilePath.resolve(path));
+                    table.removeEntry(entry);
+                }
+            }
+        }
+        
         ResFileTableLoader.save(table, fileTablePath.toFile());
 
         // Backup save file just for good measure
@@ -232,16 +257,14 @@ class SaveTask extends Task<Void> {
     private void extractRes(ResArchive res, ResFileTable garbageFiles, long tracker, long fileCount) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         
-        String customWOG2 = properties.isSteam()
-            ? properties.getBaseWorldOfGoo2Directory()
-            : properties.getCustomWorldOfGoo2Directory();
+        String customWog2 = properties.getTargetWog2Directory();
         
         for (ResFile file : res.getAllFiles()) {
             tracker++;
             updateProgress(tracker, fileCount);
             updateMessage("game/" + file.path());
             
-            Path customPath = Paths.get(customWOG2, "game", file.path());
+            Path customPath = Paths.get(customWog2, "game", file.path());
             
             if (garbageFiles.hasEntry(file.path())) {
                 garbageFiles.removeEntry(file.path());
@@ -259,9 +282,7 @@ class SaveTask extends Task<Void> {
     
     private void installGoo2mod(Goo2mod mod, ResFileTable table) {
         Properties properties = PropertiesLoader.getProperties();
-        Path customWOG2 = Paths.get(properties.isSteam()
-            ? properties.getBaseWorldOfGoo2Directory()
-            : properties.getCustomWorldOfGoo2Directory());
+        Path customWog2 = Paths.get(properties.getTargetWog2Directory());
         
         try (AddinReader addinFile = new AddinReader(mod)) {
             
@@ -274,16 +295,15 @@ class SaveTask extends Task<Void> {
                 
                 switch (resource.type()) {
                     case METADATA:
-                        if (resource.path().equals("translation.xml")) {
-                            writeTranslation(customWOG2, table, resource);
-                        }
+                        if (resource.path().equals("translation.xml"))
+                            writeTranslation(table, resource);
                         
                         break;
                     case COMPILE:
-                        writeCompiledFile(customWOG2, table, mod, resource);
+                        writeCompiledFile(table, addinFile, mod, resource);
                         break;
                     case OVERRIDE:
-                        overrideFile(customWOG2, table, mod, resource);
+                        overrideFile(table, mod, resource);
                         break;
                     case MERGE: {
                         // merging files that have been overriden by previous mods could
@@ -298,7 +318,7 @@ class SaveTask extends Task<Void> {
                             }
                         }
                         
-                        Path customPath = customWOG2.resolve("game", resource.path());
+                        Path customPath = customWog2.resolve("game", resource.path());
                         
                         if (resource.path().endsWith(".wog2")) {
                             mergeWog2(table, resource, customPath);
@@ -324,9 +344,11 @@ class SaveTask extends Task<Void> {
         }
     }
     
-    private void writeTranslation(Path customWOG2, ResFileTable table, Resource resource) throws IOException {
-        Path localPath = customWOG2.resolve("game/res/properties/translation-local.xml");
-        Path intlPath = customWOG2.resolve("game/res/properties/translation-tool-export.xml");
+    private void writeTranslation(ResFileTable table, Resource resource) throws IOException {
+        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
+        
+        Path localPath = customWog2.resolve("game/res/properties/translation-local.xml");
+        Path intlPath = customWog2.resolve("game/res/properties/translation-tool-export.xml");
         
         String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
             .replaceAll("& ", "&amp; ");
@@ -359,14 +381,15 @@ class SaveTask extends Task<Void> {
         TextLoader.saveText(originalIntl, intlPath.toFile());
     }
     
-    private void writeCompiledFile(Path customWOG2, ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
+    private void writeCompiledFile(ResFileTable table, AddinReader addinFile, Goo2mod mod, Resource resource) throws IOException {
         if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
         
         if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
             String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
+            Optional<Goo2mod.Level> levelEntry = mod.getLevel(levelName);
             
-            if (mod.getLevel(levelName).isPresent()) {
+            if (levelEntry.isPresent()) {
                 // do not copy to customPath/game/res/levels, instead copy into profile/levels
                 // so it appears in the level editor menu
                 Level level = LevelLoader.loadLevel(resource.contentText());
@@ -377,11 +400,23 @@ class SaveTask extends Task<Void> {
                 
                 Files.write(outLevelPath, resource.content(),
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
+                
+                // write thumbnail if it doesn't yet exist
+                Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.get().thumbnail());
+                if (thumbnail.isPresent()) {
+                    Path thumbnailPath = profileDir.resolve("tmp/thumbs-cache", level.getUuid() + ".jpg");
+                    
+                    try {
+                        Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
+                    } catch (FileAlreadyExistsException e) {}
+                }
                 return;
             }
         }
-            
-        Path customPath = customWOG2.resolve("game", resource.path());
+        
+        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
+        Path customPath = customWog2.resolve("game", resource.path());
         
         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
         
@@ -392,11 +427,16 @@ class SaveTask extends Task<Void> {
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     }
     
-    private void overrideFile(Path customWOG2, ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
+    private void overrideFile(ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
         if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
             throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
         
-        Path customPath = customWOG2.resolve("game", resource.path());
+        if (mod.isThumbnail(resource.path())) {
+            return;
+        }
+        
+        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
+        Path customPath = customWog2.resolve("game", resource.path());
         
         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
         

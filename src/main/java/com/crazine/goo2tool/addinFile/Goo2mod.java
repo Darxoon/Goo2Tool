@@ -29,7 +29,7 @@ public class Goo2mod {
         }
     }
     
-    public static record Level(String filename, String name) {}
+    public static record Level(String filename, @JsonProperty(required = false) String thumbnail) {}
     
     @JacksonXmlProperty(isAttribute = true, localName = "spec-version")
     private String specVersion;
@@ -87,6 +87,15 @@ public class Goo2mod {
         }
         
         return Optional.empty();
+    }
+    
+    public boolean isThumbnail(String filename) {
+        for (Level level : levels) {
+            if (level.thumbnail.equals(filename))
+                return true;
+        }
+        
+        return false;
     }
     
     public File getFile() {

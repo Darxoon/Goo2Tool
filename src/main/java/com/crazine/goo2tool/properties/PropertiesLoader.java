@@ -27,7 +27,7 @@ public class PropertiesLoader {
     
     public static boolean allImportantInitialized() {
         return isValidDir(properties.getBaseWorldOfGoo2Directory())
-            && isValidDir(properties.getCustomWorldOfGoo2Directory());
+            && (properties.isSteam() || isValidDir(properties.getCustomWorldOfGoo2Directory()));
     }
 
     public static boolean isValidDir(String path) {

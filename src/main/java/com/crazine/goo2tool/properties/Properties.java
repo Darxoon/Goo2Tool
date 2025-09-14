@@ -1,6 +1,7 @@
 package com.crazine.goo2tool.properties;
 
 import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
@@ -68,6 +69,11 @@ public class Properties {
     
     public void setCustomWorldOfGoo2Directory(String customWorldOfGoo2Directory) {
         this.customWorldOfGoo2Directory = customWorldOfGoo2Directory;
+    }
+    
+    @JsonIgnore
+    public String getTargetWog2Directory() {
+        return isSteam ? baseWorldOfGoo2Directory : customWorldOfGoo2Directory;
     }
     
     public String getProfileDirectory() {
