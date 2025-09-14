@@ -15,8 +15,10 @@ public class Properties {
     private String baseWorldOfGoo2Directory = "";
     private String customWorldOfGoo2Directory = "";
     private String profileDirectory = "";
+    private String saveFilePath = "";
     private String resGooPath = "";
     private boolean isSteam;
+    private boolean steamWarningShown;
     private StringProperty launchCommand = new SimpleStringProperty();
     
     @JacksonXmlElementWrapper(localName = "Addins")
@@ -84,12 +86,28 @@ public class Properties {
         this.resGooPath = resGooPath;
     }
     
+    public String getSaveFilePath() {
+        return saveFilePath;
+    }
+    
+    public void setSaveFilePath(String saveFile) {
+        this.saveFilePath = saveFile;
+    }
+    
     public boolean isSteam() {
         return isSteam;
     }
     
     public void setSteam(boolean isSteam) {
         this.isSteam = isSteam;
+    }
+    
+    public boolean isSteamWarningShown() {
+        return steamWarningShown;
+    }
+    
+    public void setSteamWarningShown(boolean steamWarningShown) {
+        this.steamWarningShown = steamWarningShown;
     }
     
     public String getLaunchCommand() {

@@ -53,10 +53,10 @@ public class FX_Profile {
             profileSelectionBox.getItems().add("Profile " + i);
         }
         profileSelectionBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
-            if (PropertiesLoader.getProperties().getProfileDirectory() == null)
+            if (PropertiesLoader.getProperties().getSaveFilePath() == null)
                 return;
             
-            File toSaveFile = new File(PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat");
+            File toSaveFile = new File(PropertiesLoader.getProperties().getSaveFilePath());
             try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
                 Islands islands = IslandFileLoader.loadIslands(res);
 

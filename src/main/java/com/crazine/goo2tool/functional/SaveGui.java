@@ -1,10 +1,12 @@
 package com.crazine.goo2tool.functional;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gamefiles.ResArchive;
+import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -15,6 +17,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -47,6 +50,31 @@ public class SaveGui {
             if (customDir == null)
                 return Optional.empty();
             properties.setCustomWorldOfGoo2Directory(customDir.getAbsolutePath());
+        }
+        
+        if (properties.isSteam() && !properties.isSteamWarningShown()) {
+            ButtonType buttonConfirm = new ButtonType("Confirm", ButtonData.OK_DONE);
+            
+            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
+                    Since the Steam version does not allow being copied \
+                    to another location, Goo2Tool has to modify your \
+                    existing main installation.
+                    
+                    Please note that there is some risk of existing \
+                    modded content (custom assets in the res folder) \
+                    getting lost. Do you consent to the risk?
+                    """, IconLoader.getConduit(), buttonConfirm, ButtonType.CANCEL);
+            
+            if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
+                return Optional.empty();
+            
+            properties.setSteamWarningShown(true);
+            
+            try {
+                PropertiesLoader.saveProperties();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
         }
         
         Stage stage = new Stage();

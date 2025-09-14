@@ -20,11 +20,14 @@ import javafx.stage.FileChooser.ExtensionFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public class FileOptions {
     
     private Stage stage;
+    private boolean launchMainApplication;
     private GridPane contents;
     
     public GridPane getContents() {
@@ -33,6 +36,7 @@ public class FileOptions {
     
     public FileOptions(Stage stage, boolean launchMainApplication) {
         this.stage = stage;
+        this.launchMainApplication = launchMainApplication;
         
         contents = new GridPane();
         contents.setHgap(8);
@@ -49,50 +53,30 @@ public class FileOptions {
         String baseDir = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
         createSetting(contents, 0, "Base WoG2 Installation", baseDir, exeFilter, true, path -> {
             PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(path);
-            
-            try {
-                PropertiesLoader.saveProperties();
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-            }
-            
-            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
-                stage.hide();
-                new Main_Application().start(stage);
-            }
         });
 
-        String customDir = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
-        createSetting(contents, 1, "Custom WoG2 Installation", customDir, null, false, path -> {
-            PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(path);
-            
-            try {
-                PropertiesLoader.saveProperties();
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-            }
-            
-            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
-                stage.hide();
-                new Main_Application().start(stage);
-            }
-        });
+        if (!PropertiesLoader.getProperties().isSteam()) {
+            String customDir = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
+            createSetting(contents, 1, "Custom WoG2 Installation", customDir, null, false, path -> {
+                PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(path);
+            });
+        }
 
-        ExtensionFilter profileFilter = new ExtensionFilter("World of Goo 2 save file", "wog2_1.dat");
         String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
-        createSetting(contents, 2, "Save Files", profileDir, profileFilter, false, path -> {
+        createSetting(contents, 2, "Profile", profileDir, null, false, path -> {
             PropertiesLoader.getProperties().setProfileDirectory(path);
-            
-            try {
-                PropertiesLoader.saveProperties();
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-            }
-            
-            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
-                stage.hide();
-                new Main_Application().start(stage);
-            }
+        });
+        
+        ExtensionFilter saveFileFilter = new ExtensionFilter("World of Goo 2 save file", "wog2_1.dat", "savegame.dat");
+        String saveFileDir = PropertiesLoader.getProperties().getSaveFilePath();
+        createSetting(contents, 3, "Save Files", saveFileDir, saveFileFilter, false, path -> {
+            PropertiesLoader.getProperties().setSaveFilePath(path);
+        });
+        
+        ExtensionFilter resGooFilter = new ExtensionFilter("res.goo file", "res.goo", "*.*");
+        String resGooPath = PropertiesLoader.getProperties().getResGooPath();
+        createSetting(contents, 4, "res.goo file", resGooPath, resGooFilter, false, path -> {
+            PropertiesLoader.getProperties().setResGooPath(path);
         });
     }
     
@@ -115,11 +99,17 @@ public class FileOptions {
         changeDirButton.setOnAction(event -> {
             File chosenFile;
             if (filter != null) {
+                Path initialDir = Path.of(initialValue);
+                if (Files.isRegularFile(initialDir))
+                    initialDir = initialDir.getParent();
+                
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.getExtensionFilters().add(filter);
+                fileChooser.setInitialDirectory(initialDir.toFile());
                 chosenFile = fileChooser.showOpenDialog(stage);
             } else {
                 DirectoryChooser directoryChooser = new DirectoryChooser();
+                directoryChooser.setInitialDirectory(new File(initialValue));
                 chosenFile = directoryChooser.showDialog(stage);
             }
             
@@ -133,7 +123,18 @@ public class FileOptions {
             System.out.println(labelText + ": " + chosenFile.getAbsolutePath());
             dirLabel.setText(chosenFile.getAbsolutePath());
             dirLabel.getTooltip().setText(chosenFile.getAbsolutePath());
+            
             onChange.accept(chosenFile.getAbsolutePath());
+            try {
+                PropertiesLoader.saveProperties();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
+            
+            if (launchMainApplication && PropertiesLoader.allImportantInitialized()) {
+                stage.hide();
+                new Main_Application().start(stage);
+            }
         });
         
         grid.addRow(rowIndex, label, empty, dirLabel, changeDirButton);

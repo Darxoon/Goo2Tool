@@ -123,11 +123,9 @@ class SaveTask extends Task<Void> {
         ResFileTableLoader.save(table, fileTablePath.toFile());
 
         // Backup save file just for good measure
-        String saveFileName = properties.isSteam() ? "savegame" : "wog2_1";
-        
-        Path saveFile = Paths.get(properties.getProfileDirectory(), saveFileName + ".dat");
-        Path saveFileBackup = Paths.get(properties.getProfileDirectory(), saveFileName + "_backup.dat");
-        Path saveFileBackup2 = Paths.get(properties.getProfileDirectory(), saveFileName + "_backup2.dat");
+        Path saveFile = Paths.get(properties.getSaveFilePath());
+        Path saveFileBackup = Paths.get(properties.getSaveFilePath().replace(".dat", "_backup.dat"));
+        Path saveFileBackup2 = Paths.get(properties.getSaveFilePath().replace(".dat", "_backup2.dat"));
         
         if (Files.isRegularFile(saveFileBackup)) {
             Files.copy(saveFileBackup, saveFileBackup2, StandardCopyOption.REPLACE_EXISTING);

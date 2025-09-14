@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
@@ -53,9 +54,18 @@ public class FX_Setup extends Application {
         }
         
         if (!PropertiesLoader.isValidDir(properties.getProfileDirectory())) {
-            properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit(), located));
-            
             try {
+                properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit(), located));
+                PropertiesLoader.saveProperties();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+                return;
+            }
+        }
+        
+        if (!PropertiesLoader.isValidDir(properties.getSaveFilePath())) {
+            try {
+                properties.setSaveFilePath(getSaveFilePath(stage, IconLoader.getConduit(), located));
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
@@ -140,42 +150,84 @@ public class FX_Setup extends Application {
         };
     }
     
-    private String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) {
-        // try auto detecting Steam
-        if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
-            try {
-                Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
-                
-                if (steamProfile.isPresent())
-                    return steamProfile.get();
-            } catch (IOException e) {
-                FX_Alarm.error(e);
-            }
-        }
-        
+    private static final String STEAM_WINEPFX_PROFILE_DIR =
+        "steamapps/compatdata/3385670/pfx/drive_c/users/steamuser/AppData/Local/2DBoy/WorldOfGoo2";
+    
+    private String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
         // try auto detecting
-        File profileDir = switch (Platform.getCurrent()) {
-            case WINDOWS -> new File(System.getenv("LocalAppData") + "/2DBoy/WorldOfGoo2");
-            case MAC -> new File(System.getProperty("user.home") + "/Library/Application Support/WorldOfGoo2");
-            case LINUX -> null; // TODO: what is the correct directory?
+        Path profileDir = switch (Platform.getCurrent()) {
+            case WINDOWS -> Paths.get(System.getenv("LocalAppData"), "2DBoy/WorldOfGoo2");
+            case MAC -> Paths.get(System.getProperty("user.home"), "Library/Application Support/WorldOfGoo2");
+            case LINUX -> {
+                // try looking in wineprefix
+                if (gooDir.isPresent() && gooDir.get().steamDir().isPresent()) {
+                    Path steamDir = gooDir.get().steamDir().get();
+                    Path steamProfileDir = steamDir.resolve(STEAM_WINEPFX_PROFILE_DIR);
+                    
+                    if (Files.isDirectory(steamProfileDir))
+                        yield steamProfileDir;
+                }
+                
+                // TODO: what is the correct directory?
+                yield null;
+            }
         };
         
-        if (profileDir != null && profileDir.exists() && profileDir.isDirectory()) {
-            return profileDir.getAbsolutePath();
+        // show manual prompt if that didn't work
+        if (profileDir == null || !Files.isDirectory(profileDir)) {
+            Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", """
+                    Could not determine World of Goo 2 profile folder.
+                    If you have launched the game before, please pick it yourself.
+                    """, icon, ButtonType.OK, ButtonType.CANCEL);
+            
+            if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
+                return "";
+            
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            File file = directoryChooser.showDialog(stage);
+            return file.getAbsolutePath();
         }
         
-        // show manual prompt if that didn't work
-        Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", """
-                Could not determine World of Goo 2 profile folder.
-                If you have launched the game before, please pick it yourself.
-                """, icon, ButtonType.OK, ButtonType.CANCEL);
+        if (gooDir.isPresent() && gooDir.get().steamDir().isPresent()) {
+            // find steam user profile dir
+            Optional<Path> steamProfileDir = Files.list(profileDir)
+                .filter(FX_Setup::isSteamProfileDir)
+                .findFirst();
+            
+            if (steamProfileDir.isPresent())
+                return steamProfileDir.get().toString();
+            else
+                return profileDir.toString();
+        } else {
+            return profileDir.toString();
+        }
         
-        if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
-            return "";
+    }
+    
+    private static boolean isSteamProfileDir(Path child) {
+        if (!Files.isDirectory(child))
+            return false;
         
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        File file = directoryChooser.showDialog(stage);
-        return file.getAbsolutePath();
+        String fileName = child.getFileName().toString();
+        
+        return !fileName.equals("sentry")
+            && !fileName.equals("tmp")
+            && !fileName.equals("levels");
+    }
+    
+    private String getSaveFilePath(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+        if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
+            Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
+            
+            if (!steamProfile.isPresent()) {
+                Path steamDir = gooDir.get().steamDir().get();
+                throw new IOException("No Steam save file found in " + steamDir.resolve("userdata"));
+            }
+            
+            return steamProfile.get();
+        } else {
+            return PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat";
+        }
     }
     
     private Optional<String> getSteamProfileDirectory(Optional<GooDir> gooDir) throws IOException {
