@@ -54,6 +54,22 @@ public class Islands {
         @JsonSetter public void setSkippable(boolean skippable) {
             this.skippable = skippable;
         }
+        
+        private boolean unlockNextIsland;
+        @JsonGetter public boolean getUnlockNextIsland() {
+            return unlockNextIsland;
+        }
+        @JsonSetter public void setUnlockNextIsland(boolean unlockNextIsland) {
+            this.unlockNextIsland = unlockNextIsland;
+        }
+        
+        private int ocdCount;
+        @JsonGetter public int getOcdCount() {
+            return ocdCount;
+        }
+        @JsonSetter public void setOcdCount(int ocdCount) {
+            this.ocdCount = ocdCount;
+        }
     }
 
 
