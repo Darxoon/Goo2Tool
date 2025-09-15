@@ -56,6 +56,8 @@ public class GameString {
         this.texts = new ArrayList<>(List.of(texts));
     }
     
+    // used by Jackson
+    @SuppressWarnings("unused")
     private GameString() {
         this.texts = new ArrayList<>();
     }

@@ -20,7 +20,7 @@ public class Properties {
     private String resGooPath = "";
     private boolean isSteam;
     private boolean steamWarningShown;
-    private StringProperty launchCommand = new SimpleStringProperty();
+    private StringProperty launchCommand = new SimpleStringProperty("");
     
     @JacksonXmlElementWrapper(localName = "Addins")
     @JacksonXmlProperty(localName = "Addin")
