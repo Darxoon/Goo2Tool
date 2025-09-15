@@ -155,13 +155,18 @@ public class FX_Setup extends Application {
         "steamapps/compatdata/3385670/pfx/drive_c/users/steamuser/AppData/Local/2DBoy/WorldOfGoo2";
     
     private String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+        Properties properties = PropertiesLoader.getProperties();
+        
         // try auto detecting
         Path profileDir = switch (Platform.getCurrent()) {
             case WINDOWS -> Paths.get(System.getenv("LocalAppData"), "2DBoy/WorldOfGoo2");
             case MAC -> Paths.get(System.getProperty("user.home"), "Library/Application Support/WorldOfGoo2");
             case LINUX -> {
                 // try looking in wineprefix
-                if (gooDir.isPresent() && gooDir.get().steamDir().isPresent()) {
+                if (properties.isSteam() && gooDir.isPresent()) {
+                    if (gooDir.get().steamDir().isEmpty())
+                        throw new RuntimeException("Could not find Steam directory");
+                    
                     Path steamDir = gooDir.get().steamDir().get();
                     Path steamProfileDir = steamDir.resolve(STEAM_WINEPFX_PROFILE_DIR);
                     
@@ -189,7 +194,7 @@ public class FX_Setup extends Application {
             return file.getAbsolutePath();
         }
         
-        if (gooDir.isPresent() && gooDir.get().steamDir().isPresent()) {
+        if (properties.isSteam() && gooDir.isPresent()) {
             // find steam user profile dir
             Optional<Path> steamProfileDir = Files.list(profileDir)
                 .filter(FX_Setup::isSteamProfileDir)
@@ -227,7 +232,8 @@ public class FX_Setup extends Application {
             
             return steamProfile.get();
         } else {
-            return PropertiesLoader.getProperties().getProfileDirectory() + "/wog2_1.dat";
+            Path saveFilePath = Paths.get(PropertiesLoader.getProperties().getProfileDirectory(), "wog2_1.dat");
+            return saveFilePath.toString();
         }
     }
     

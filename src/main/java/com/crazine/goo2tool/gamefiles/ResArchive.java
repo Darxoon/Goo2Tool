@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.scene.control.Alert;
@@ -34,18 +35,24 @@ public class ResArchive implements Closeable {
     private ZipFile zipFile;
     
     public static ResArchive loadOrSetupVanilla(Stage stage) throws IOException {
-        String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
-        String resGooPath = PropertiesLoader.getProperties().getResGooPath();
+        Properties properties = PropertiesLoader.getProperties();
+        String baseWOG2 = properties.getBaseWorldOfGoo2Directory();
+        String resGooPath = properties.getResGooPath();
 
         File resGooFile;
         if (!resGooPath.isEmpty() && Files.exists(Path.of(resGooPath))) {
             resGooFile = new File(resGooPath);
         } else if (Files.exists(Path.of(baseWOG2, "game/res.goo"))) {
             Path baseFile = Path.of(baseWOG2, "game/res.goo");
-            Path newFile = Path.of(baseWOG2, "game/res.goo_backup");
-            Files.move(baseFile, newFile, StandardCopyOption.REPLACE_EXISTING);
-            PropertiesLoader.getProperties().setResGooPath(newFile.toString());
-            resGooFile = newFile.toFile();
+            
+            if (properties.isSteam()) {
+                Path newFile = Path.of(baseWOG2, "game/res.goo_backup");
+                Files.move(baseFile, newFile, StandardCopyOption.REPLACE_EXISTING);
+                properties.setResGooPath(newFile.toString());
+                resGooFile = newFile.toFile();
+            } else {
+                resGooFile = baseFile.toFile();
+            }
         } else {
             Alert alert = new Alert(AlertType.CONFIRMATION);
             alert.setContentText("Could not find res.goo file as it appears to have been renamed or moved.\n\n"

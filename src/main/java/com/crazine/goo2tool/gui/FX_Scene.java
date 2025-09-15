@@ -129,6 +129,7 @@ public class FX_Scene {
             Main_Application.openUrl("steam://rungameid/3385670");
         } else {
             // directly launch executable
+            // TODO: specify the path to the executable manually
             File customWOG2Dir = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory());
             File[] children = customWOG2Dir.listFiles();
             if (children == null) return;
