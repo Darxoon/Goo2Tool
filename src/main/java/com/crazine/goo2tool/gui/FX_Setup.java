@@ -42,7 +42,7 @@ public class FX_Setup extends Application {
         Optional<GooDir> located = LocateGooDir.locateWog2();
         
         // setup wizard
-        if (!PropertiesLoader.isValidDir(properties.getBaseWorldOfGoo2Directory())) {
+        if (!PropertiesLoader.isValidBaseWog2(properties.getBaseWorldOfGoo2Directory())) {
             properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit(), located));
             
             try {
@@ -147,7 +147,8 @@ public class FX_Setup extends Application {
             case LINUX -> {
                 // TODO: try figuring out how to use xdg_desktop_portal for this
                 FileChooser fileChooser = new FileChooser();
-                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "*.exe", "WorldOfGoo2");
+                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable",
+                        "*.exe", "WorldOfGoo2", "*.AppImage");
                 fileChooser.getExtensionFilters().add(exeFilter);
                 
                 File file = fileChooser.showOpenDialog(stage);

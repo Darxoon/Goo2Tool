@@ -26,10 +26,19 @@ public class PropertiesLoader {
     }
     
     public static boolean allImportantInitialized() {
-        return isValidDir(properties.getBaseWorldOfGoo2Directory())
+        return isValidBaseWog2(properties.getBaseWorldOfGoo2Directory())
             && (properties.isSteam() || isValidDir(properties.getCustomWorldOfGoo2Directory()));
     }
 
+    public static boolean isValidBaseWog2(String pathStr) {
+        if (pathStr == null || pathStr.isEmpty())
+            return false;
+        
+        Path path = Path.of(pathStr);
+        return Files.isDirectory(path)
+            || (pathStr.endsWith(".AppImage") && Files.isRegularFile(path));
+    }
+    
     public static boolean isValidDir(String path) {
         return path != null
             && !path.isEmpty()

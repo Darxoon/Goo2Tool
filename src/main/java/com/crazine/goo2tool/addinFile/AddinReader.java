@@ -3,6 +3,7 @@ package com.crazine.goo2tool.addinFile;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Optional;
@@ -72,7 +73,7 @@ public class AddinReader implements Closeable {
         return getFileContent(path).map(Resource::contentText);
     }
     
-    public Iterable<Resource> getAllFiles() {
+    public Iterable<Resource> getAllFiles() throws UncheckedIOException {
         return new Iterable<>() {
 
             @Override
@@ -83,7 +84,7 @@ public class AddinReader implements Closeable {
                         try {
                             return Resource.fromZipEntry(zipFile, entry);
                         } catch (IOException e) {
-                            throw new RuntimeException(e);
+                            throw new UncheckedIOException(e);
                         }
                     })
                     .iterator();

@@ -3,46 +3,58 @@ package com.crazine.goo2tool.gamefiles;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.Optional;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
+import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Stage;
 
-public class ResArchive implements Closeable {
+public interface ResArchive extends Closeable {
     
-    public static record ResFile(String path, byte[] content) {
-        
-        private static ResFile fromZipEntry(ZipFile file, ZipEntry entry) throws IOException {
-            return new ResFile(entry.getName(), file.getInputStream(entry).readAllBytes());
-        }
-        
+    public static record ResFile(String path, byte[] content) {}
+    
+    public Optional<byte[]> getFileContent(String path) throws IOException;
+    public Iterable<ResFile> getAllFiles() throws UncheckedIOException;
+    public int fileCount() throws IOException;
+    
+    public default Optional<String> getFileText(String path) throws IOException {
+        return getFileContent(path).map(content -> new String(content, StandardCharsets.UTF_8));
     }
     
-    private ZipFile zipFile;
-    
+    // ResArchive factory
     public static ResArchive loadOrSetupVanilla(Stage stage) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         String baseWOG2 = properties.getBaseWorldOfGoo2Directory();
+        
+        // Try mounting AppImage
+        if (Platform.getCurrent() == Platform.LINUX) {
+            Path baseWog2Path = Path.of(baseWOG2);
+            
+            if (baseWOG2.endsWith(".AppImage") && Files.isRegularFile(baseWog2Path)) {
+                return AppImageResArchive.open(baseWog2Path);
+            }
+        }
+        
+        // Find and open res.goo file
         String resGooPath = properties.getResGooPath();
-
         File resGooFile;
+        
         if (!resGooPath.isEmpty() && Files.exists(Path.of(resGooPath))) {
+            // Try resGooFile property if it exists
             resGooFile = new File(resGooPath);
         } else if (Files.exists(Path.of(baseWOG2, "game/res.goo"))) {
+            // Try base res.goo file if it exists
             Path baseFile = Path.of(baseWOG2, "game/res.goo");
             
             if (properties.isSteam()) {
@@ -54,6 +66,7 @@ public class ResArchive implements Closeable {
                 resGooFile = baseFile.toFile();
             }
         } else {
+            // Prompt the user to pick a custom res.goo file
             Alert alert = new Alert(AlertType.CONFIRMATION);
             alert.setContentText("Could not find res.goo file as it appears to have been renamed or moved.\n\n"
                     + "Please pick the new location of the file instead.");
@@ -72,60 +85,7 @@ public class ResArchive implements Closeable {
         }
         
         PropertiesLoader.saveProperties();
-        return new ResArchive(resGooFile);
+        return new ZipResArchive(resGooFile);
     }
     
-    public ResArchive(File inputFile) throws IOException {
-        zipFile = new ZipFile(inputFile);
-    }
-    
-    public Optional<byte[]> getFileContent(String path) throws IOException {
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            if (entry.isDirectory())
-                continue;
-            
-            if (entry.getName() != null && entry.getName().equals(path)) {
-                return Optional.of(zipFile.getInputStream(entry).readAllBytes());
-            }
-        }
-        
-        return Optional.empty();
-    }
-    
-    public Optional<String> getFileText(String path) throws IOException {
-        return getFileContent(path).map(content -> new String(content, StandardCharsets.UTF_8));
-    }
-
-    public Iterable<ResFile> getAllFiles() {
-        return new Iterable<>() {
-            
-            @Override
-            public Iterator<ResFile> iterator() {
-                // potential speed up: https://stackoverflow.com/questions/20717897/multithreaded-unzipping-in-java
-                return ResArchive.this.zipFile.stream()
-                    .parallel()
-                    .filter(entry -> !entry.isDirectory())
-                    .map(entry -> {
-                        try {
-                            return ResArchive.ResFile.fromZipEntry(ResArchive.this.zipFile, entry);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }).iterator();
-            }
-            
-        };
-    }
-    
-    public int fileCount() {
-        return zipFile.size();
-    }
-    
-    @Override
-    public void close() throws IOException {
-        zipFile.close();
-    }
 }

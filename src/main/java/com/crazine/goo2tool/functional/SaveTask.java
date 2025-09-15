@@ -2,6 +2,7 @@ package com.crazine.goo2tool.functional;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -15,10 +16,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Stream;
+
+import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.AddinReader.Resource;
+import com.crazine.goo2tool.gamefiles.AppImageResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
 import com.crazine.goo2tool.gamefiles.filetable.ResFileTable;
@@ -41,7 +45,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -65,7 +68,7 @@ class SaveTask extends Task<Void> {
         } catch (Exception e) {
             success = false;
             
-            Platform.runLater(() -> {
+            runLater(() -> {
                 FX_Alarm.error(e);
             });
         }
@@ -74,6 +77,10 @@ class SaveTask extends Task<Void> {
             throw new RuntimeException("SaveTask failed");
         
         return (Void) null;
+    }
+    
+    private static void runLater(Runnable runnable) {
+        javafx.application.Platform.runLater(runnable);
     }
     
     private void save(ResArchive res) throws Exception {
@@ -96,9 +103,23 @@ class SaveTask extends Task<Void> {
         
         // Merge original res folder
         updateTitle("Validating original WoG2");
+        String baseWog2 = properties.getBaseWorldOfGoo2Directory();
+        String customWog2 = properties.getTargetWog2Directory();
+        
         if (properties.isSteam()) {
             // the Steam version doesn't use a dedicated custom directory
             // so copying all of the meta files is unnecessary
+            extractRes(res, table, 0, res.fileCount());
+        } else if (Platform.getCurrent() == Platform.LINUX && baseWog2.endsWith(".AppImage")) {
+            // The only important file in the AppImage's root is the WorldOfGoo2 executable
+            // so this is the only file that will get extracted
+            AppImageResArchive appImage = (AppImageResArchive) res;
+            Path executablePath = appImage.getExecutable();
+            
+            try {
+                Files.copy(executablePath, Paths.get(customWog2, "WorldOfGoo2"));
+            } catch (FileAlreadyExistsException e) {}
+            
             extractRes(res, table, 0, res.fileCount());
         } else {
             copyMissingOriginalFiles(res, table);
@@ -210,7 +231,7 @@ class SaveTask extends Task<Void> {
                     .filter(p -> !p.toFile().isDirectory())
                     .count() + res.fileCount();
         } catch (IOException e) {
-            Platform.runLater(() -> {
+            runLater(() -> {
                 FX_Alarm.error(e);
             });
             fileCount = 0;
@@ -268,24 +289,28 @@ class SaveTask extends Task<Void> {
         
         String customWog2 = properties.getTargetWog2Directory();
         
-        for (ResFile file : res.getAllFiles()) {
-            tracker++;
-            updateProgress(tracker, fileCount);
-            updateMessage("game/" + file.path());
-            
-            Path customPath = Paths.get(customWog2, "game", file.path());
-            
-            if (garbageFiles.hasEntry(file.path())) {
-                garbageFiles.removeEntry(file.path());
-                Files.createDirectories(customPath.getParent());
-                Files.write(customPath, file.content(), StandardOpenOption.CREATE,
-                        StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-            } else if (!Files.exists(customPath)) {
-                Files.createDirectories(customPath.getParent());
-                try {
-                    Files.write(customPath, file.content(), StandardOpenOption.CREATE_NEW);
-                } catch (FileAlreadyExistsException e) {}
+        try {
+            for (ResFile file : res.getAllFiles()) {
+                tracker++;
+                updateProgress(tracker, fileCount);
+                updateMessage("game/" + file.path());
+                
+                Path customPath = Paths.get(customWog2, "game", file.path());
+                
+                if (garbageFiles.hasEntry(file.path())) {
+                    garbageFiles.removeEntry(file.path());
+                    Files.createDirectories(customPath.getParent());
+                    Files.write(customPath, file.content(), StandardOpenOption.CREATE,
+                            StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                } else if (!Files.exists(customPath)) {
+                    Files.createDirectories(customPath.getParent());
+                    try {
+                        Files.write(customPath, file.content(), StandardOpenOption.CREATE_NEW);
+                    } catch (FileAlreadyExistsException e) {}
+                }
             }
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
         }
     }
     
@@ -347,7 +372,7 @@ class SaveTask extends Task<Void> {
             
             success = false;
             
-            Platform.runLater(() -> {
+            runLater(() -> {
                 Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
                 dialog.setContentText("Failed loading the mod \"" + mod.getName() + "\":\n\n" + e.toString());
                 dialog.show();
