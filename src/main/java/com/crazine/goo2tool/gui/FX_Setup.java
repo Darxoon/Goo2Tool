@@ -93,7 +93,16 @@ public class FX_Setup extends Application {
                     icon, buttonNo, buttonYes);
             
             if (result.isPresent() && result.get() == buttonYes) {
-                PropertiesLoader.getProperties().setSteam(gooDir.get().steamDir().isPresent());
+                boolean isSteam = gooDir.get().steamDir().isPresent();
+                PropertiesLoader.getProperties().setSteam(isSteam);
+                
+                if (Platform.getCurrent() == Platform.LINUX && isSteam) {
+                    boolean isProton = Files.isRegularFile(Paths.get(path, "WorldOfGoo2.exe"));
+                    PropertiesLoader.getProperties().setProton(isProton);
+                } else {
+                    PropertiesLoader.getProperties().setProton(false);
+                }
+                
                 return path;
             }
         } else {
@@ -119,6 +128,7 @@ public class FX_Setup extends Application {
         
         // TODO: this might not be true
         PropertiesLoader.getProperties().setSteam(false);
+        PropertiesLoader.getProperties().setProton(false);
         
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
@@ -163,7 +173,7 @@ public class FX_Setup extends Application {
             case MAC -> Paths.get(System.getProperty("user.home"), "Library/Application Support/WorldOfGoo2");
             case LINUX -> {
                 // try looking in wineprefix
-                if (properties.isSteam() && gooDir.isPresent()) {
+                if (properties.isSteam() && properties.isProton() && gooDir.isPresent()) {
                     if (gooDir.get().steamDir().isEmpty())
                         throw new RuntimeException("Could not find Steam directory");
                     
@@ -174,8 +184,7 @@ public class FX_Setup extends Application {
                         yield steamProfileDir;
                 }
                 
-                // TODO: what is the correct directory?
-                yield null;
+                yield Paths.get(System.getProperty("user.home"), ".config/WorldOfGoo2");
             }
         };
         

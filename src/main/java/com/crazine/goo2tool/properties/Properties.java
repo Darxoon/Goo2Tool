@@ -19,6 +19,7 @@ public class Properties {
     private String saveFilePath = "";
     private String resGooPath = "";
     private boolean isSteam;
+    private boolean isProton;
     private boolean steamWarningShown;
     private StringProperty launchCommand = new SimpleStringProperty("");
     
@@ -106,6 +107,14 @@ public class Properties {
     
     public void setSteam(boolean isSteam) {
         this.isSteam = isSteam;
+    }
+    
+    public boolean isProton() {
+        return isProton;
+    }
+    
+    public void setProton(boolean isProton) {
+        this.isProton = isProton;
     }
     
     public boolean isSteamWarningShown() {

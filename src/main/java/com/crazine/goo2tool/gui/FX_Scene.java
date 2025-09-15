@@ -126,7 +126,13 @@ public class FX_Scene {
                     break;
             }
         } else if (PropertiesLoader.getProperties().isSteam()) {
-            Main_Application.openUrl("steam://rungameid/3385670");
+            if (Platform.getCurrent() == Platform.LINUX) {
+                // X11 specific issue for some reason?
+                ProcessBuilder processBuilder = new ProcessBuilder("/usr/bin/env", "steam", "steam://rungameid/3385670");
+                processBuilder.start();
+            } else {
+                Main_Application.openUrl("steam://rungameid/3385670");
+            }
         } else {
             // directly launch executable
             // TODO: specify the path to the executable manually
