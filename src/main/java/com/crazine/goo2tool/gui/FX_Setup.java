@@ -86,7 +86,8 @@ public class FX_Setup extends Application {
             ButtonType buttonYes = new ButtonType("Proceed", ButtonData.YES);
             
             Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", String.format("""
-                    Found World of Goo 2 installation at '%s'.
+                    Found World of Goo 2 installation at
+                    '%s'.
                     Would you like to proceed?
                     """, path),
                     icon, buttonNo, buttonYes);

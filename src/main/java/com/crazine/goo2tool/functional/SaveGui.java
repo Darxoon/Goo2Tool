@@ -11,8 +11,8 @@ import com.crazine.goo2tool.gui.util.CustomAlert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -30,7 +30,13 @@ import javafx.stage.Stage;
 
 public class SaveGui {
 
-    public static Optional<BooleanProperty> save(Stage originalStage, ResArchive res) {
+    public static enum Result {
+        Success,
+        Fail,
+        Canceled,
+    }
+    
+    public static Optional<Property<Result>> save(Stage originalStage, ResArchive res) {
         Properties properties = PropertiesLoader.getProperties();
         
         if (!properties.isSteam() && properties.getCustomWorldOfGoo2Directory().isEmpty()) {
@@ -123,25 +129,25 @@ public class SaveGui {
         stage.show();
         stage.setAlwaysOnTop(true);
 
-        BooleanProperty finished = new SimpleBooleanProperty();
+        Property<Result> finished = new SimpleObjectProperty<>();
 
         stage.setOnCloseRequest(event -> {
-            finished.set(true);
+            finished.setValue(Result.Canceled);
             task.cancel();
         });
 
         new Thread(task).start();
 
         task.setOnSucceeded(event -> {
-            finished.set(true);
+            finished.setValue(Result.Success);
             stage.close();
         });
         task.setOnFailed(event -> {
-            finished.set(true);
+            finished.setValue(Result.Fail);
             stage.close();
         });
         task.setOnCancelled(event -> {
-            finished.set(true);
+            finished.setValue(Result.Canceled);
             stage.close();
         });
         

@@ -49,7 +49,10 @@ import javafx.scene.control.Dialog;
 import javafx.stage.Stage;
 
 class SaveTask extends Task<Void> {
+    
     private final Stage stage;
+    
+    private boolean success = true;
 
     SaveTask(Stage stage) {
         this.stage = stage;
@@ -60,10 +63,16 @@ class SaveTask extends Task<Void> {
         try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
             save(res);
         } catch (Exception e) {
+            success = false;
+            
             Platform.runLater(() -> {
                 FX_Alarm.error(e);
             });
         }
+        
+        if (!success)
+            throw new RuntimeException("SaveTask failed");
+        
         return (Void) null;
     }
     
@@ -335,6 +344,8 @@ class SaveTask extends Task<Void> {
             
         } catch (Exception e) {
             e.printStackTrace();
+            
+            success = false;
             
             Platform.runLater(() -> {
                 Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);

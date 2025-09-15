@@ -5,7 +5,7 @@ import com.crazine.goo2tool.functional.SaveGui;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
-import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.Property;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -94,11 +94,14 @@ public class FX_Scene {
             return;
         }
         
-        Optional<BooleanProperty> finished = SaveGui.save(stage, res);
+        Optional<Property<SaveGui.Result>> finished = SaveGui.save(stage, res);
         if (finished.isEmpty())
             return;
         
         finished.get().addListener((observable, oldValue, newValue) -> {
+            if (newValue != SaveGui.Result.Success)
+                return;
+            
             try {
                 launchGame();
             } catch (IOException e) {
@@ -122,6 +125,8 @@ public class FX_Scene {
                     process = processBuilder.start();
                     break;
             }
+        } else if (PropertiesLoader.getProperties().isSteam()) {
+            Main_Application.openUrl("steam://rungameid/3385670");
         } else {
             // directly launch executable
             File customWOG2Dir = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory());
