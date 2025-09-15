@@ -282,7 +282,7 @@ class SaveTask extends Task<Void> {
     
     private void installGoo2mod(Goo2mod mod, ResFileTable table) {
         Properties properties = PropertiesLoader.getProperties();
-        Path customWog2 = Paths.get(properties.getTargetWog2Directory());
+        String customWog2 = properties.getTargetWog2Directory();
         
         try (AddinReader addinFile = new AddinReader(mod)) {
             
@@ -318,7 +318,7 @@ class SaveTask extends Task<Void> {
                             }
                         }
                         
-                        Path customPath = customWog2.resolve("game", resource.path());
+                        Path customPath = Paths.get(customWog2, "game", resource.path());
                         
                         if (resource.path().endsWith(".wog2")) {
                             mergeWog2(table, resource, customPath);
@@ -395,8 +395,8 @@ class SaveTask extends Task<Void> {
                 Level level = LevelLoader.loadLevel(resource.contentText());
                 System.out.println("Level " + level.getUuid() + ": " + level.getTitle());
                 
-                Path profileDir = Paths.get(PropertiesLoader.getProperties().getProfileDirectory());
-                Path outLevelPath = profileDir.resolve("levels", level.getUuid() + ".wog2");
+                String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
+                Path outLevelPath = Paths.get(profileDir, "levels", level.getUuid() + ".wog2");
                 
                 Files.write(outLevelPath, resource.content(),
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -405,7 +405,7 @@ class SaveTask extends Task<Void> {
                 // write thumbnail if it doesn't yet exist
                 Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.get().thumbnail());
                 if (thumbnail.isPresent()) {
-                    Path thumbnailPath = profileDir.resolve("tmp/thumbs-cache", level.getUuid() + ".jpg");
+                    Path thumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
                     
                     try {
                         Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
@@ -415,8 +415,8 @@ class SaveTask extends Task<Void> {
             }
         }
         
-        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
-        Path customPath = customWog2.resolve("game", resource.path());
+        String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
+        Path customPath = Paths.get(customWog2, "game", resource.path());
         
         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
         
@@ -435,8 +435,8 @@ class SaveTask extends Task<Void> {
             return;
         }
         
-        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
-        Path customPath = customWog2.resolve("game", resource.path());
+        String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
+        Path customPath = Paths.get(customWog2, "game", resource.path());
         
         if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
         
