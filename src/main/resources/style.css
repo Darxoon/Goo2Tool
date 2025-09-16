@@ -1,0 +1,24 @@
+.listView .list-cell:filled:even {
+    -fx-background-color: #efefef;
+}
+
+.listView .list-cell:filled:odd {
+    -fx-background-color: #ffffff;
+}
+
+.listView .list-cell:filled:hover {
+    -fx-background-color: #c0e0ff;
+}
+
+.listView .list-cell:filled:selected {
+    -fx-background-color: #0096c9;
+    -fx-text-fill: #ffffff;
+}
+
+.tooltip {
+    -fx-border-color: #767676;
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #000000;
+    -fx-font-size: 12;
+    -fx-padding: 4 4 4 4;
+}

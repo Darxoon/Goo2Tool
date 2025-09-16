@@ -1,8 +1,9 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.Platform;
-import com.crazine.goo2tool.functional.SaveGui;
+import com.crazine.goo2tool.functional.save.SaveGui;
 import com.crazine.goo2tool.gamefiles.ResArchive;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.beans.property.Property;
@@ -70,6 +71,7 @@ public class FX_Scene {
         VBox vBox = new VBox(FX_Menu.getMenuBar(), tabPane, hBox);
 
         scene = new Scene(vBox);
+        scene.getStylesheets().add("style.css");
 
     }
     

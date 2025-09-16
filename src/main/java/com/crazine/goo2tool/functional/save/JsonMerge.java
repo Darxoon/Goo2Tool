@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.functional;
+package com.crazine.goo2tool.functional.save;
 
 import java.util.Map;
 

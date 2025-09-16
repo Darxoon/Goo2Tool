@@ -8,7 +8,8 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.stage.Stage;
 
-public class CustomAlert {
+public class FX_Alert {
+    
     public static Optional<ButtonType> show(String title, String content, Image icon, ButtonType... buttonTypes) {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(title);
@@ -30,4 +31,5 @@ public class CustomAlert {
     public static Optional<ButtonType> show(String title, String content, ButtonType... buttonTypes) {
         return show(title, content, null, buttonTypes);
     }
+    
 }

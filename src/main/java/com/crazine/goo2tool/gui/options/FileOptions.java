@@ -1,7 +1,7 @@
-package com.crazine.goo2tool.gui.util;
+package com.crazine.goo2tool.gui.options;
 
-import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.Main_Application;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.geometry.Insets;

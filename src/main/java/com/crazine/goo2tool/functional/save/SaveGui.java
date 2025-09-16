@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.functional;
+package com.crazine.goo2tool.functional.save;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,8 +6,8 @@ import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gamefiles.ResArchive;
-import com.crazine.goo2tool.gui.FX_Alarm;
-import com.crazine.goo2tool.gui.util.CustomAlert;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -40,7 +40,7 @@ public class SaveGui {
         Properties properties = PropertiesLoader.getProperties();
         
         if (!properties.isSteam() && properties.getCustomWorldOfGoo2Directory().isEmpty()) {
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
+            Optional<ButtonType> result = FX_Alert.show("Goo2Tool", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
                     Instead, it copies everything into its own directory first.
                     
@@ -61,7 +61,7 @@ public class SaveGui {
         if (properties.isSteam() && !properties.isSteamWarningShown()) {
             ButtonType buttonConfirm = new ButtonType("Confirm", ButtonData.OK_DONE);
             
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", """
+            Optional<ButtonType> result = FX_Alert.show("Goo2Tool", """
                     Since the Steam version does not allow being copied \
                     to another location, Goo2Tool has to modify your \
                     existing main installation.

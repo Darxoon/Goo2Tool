@@ -11,7 +11,8 @@ import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.LocateGooDir;
 import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
-import com.crazine.goo2tool.gui.util.CustomAlert;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -85,7 +86,7 @@ public class FX_Setup extends Application {
             ButtonType buttonNo = new ButtonType("Pick installation manually", ButtonData.NO);
             ButtonType buttonYes = new ButtonType("Proceed", ButtonData.YES);
             
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", String.format("""
+            Optional<ButtonType> result = FX_Alert.show("Goo2Tool Setup", String.format("""
                     Found World of Goo 2 installation at
                     '%s'.
                     Would you like to proceed?
@@ -110,7 +111,7 @@ public class FX_Setup extends Application {
             ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
             
             if (Platform.getCurrent() == Platform.LINUX) {
-                CustomAlert.show("Goo2Tool Setup", """
+                FX_Alert.show("Goo2Tool Setup", """
                         Could not determine default World of Goo 2 installation.
                         Please pick one yourself.
                         
@@ -119,7 +120,7 @@ public class FX_Setup extends Application {
                         DRM-free version.
                         """, icon, buttonType);
             } else {
-                CustomAlert.show("Goo2Tool Setup", """
+                FX_Alert.show("Goo2Tool Setup", """
                         Could not determine default World of Goo 2 installation.
                         Please pick one yourself.
                         """, icon, buttonType);
@@ -191,7 +192,7 @@ public class FX_Setup extends Application {
         
         // show manual prompt if that didn't work
         if (profileDir == null || !Files.isDirectory(profileDir)) {
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool Setup", """
+            Optional<ButtonType> result = FX_Alert.show("Goo2Tool Setup", """
                     Could not determine World of Goo 2 profile folder.
                     If you have launched the game before, please pick it yourself.
                     """, icon, ButtonType.OK, ButtonType.CANCEL);

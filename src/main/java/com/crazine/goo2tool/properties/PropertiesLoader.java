@@ -3,8 +3,8 @@ package com.crazine.goo2tool.properties;
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
-import com.crazine.goo2tool.gui.FX_Alarm;
 import com.crazine.goo2tool.gui.FX_Mods;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 

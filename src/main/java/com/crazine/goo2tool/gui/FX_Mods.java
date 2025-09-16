@@ -3,7 +3,8 @@ package com.crazine.goo2tool.gui;
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
-import com.crazine.goo2tool.gui.util.CustomAlert;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -167,7 +168,7 @@ public class FX_Mods {
         uninstall.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             
-            Optional<ButtonType> result = CustomAlert.show("Goo2Tool", String.format("""
+            Optional<ButtonType> result = FX_Alert.show("Goo2Tool", String.format("""
                     You are trying to uninstall "%s".
                     Uninstalling a mod cannot be undone.
                     Do you want to continue?

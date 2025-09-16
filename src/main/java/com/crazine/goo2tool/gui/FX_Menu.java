@@ -1,7 +1,8 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.gui.util.CustomAlert;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.FX_Levels;
 
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Menu;
@@ -28,7 +29,7 @@ public class FX_Menu {
         install.setOnAction(event -> FX_Mods.installAddin());
         
         MenuItem create = new MenuItem("Package level as goo2mod...");
-        // TODO
+        create.setOnAction(event -> FX_Levels.show(stage));
         
         MenuItem save = new MenuItem("Save");
         save.setOnAction(event -> FX_Scene.save());
@@ -44,7 +45,7 @@ public class FX_Menu {
         
         MenuItem about = new MenuItem("About Goo2Tool");
         about.setOnAction(event -> {
-            CustomAlert.show("About Goo2Tool", """
+            FX_Alert.show("About Goo2Tool", """
                     Goo2Tool version 1.0
                     World of Goo 2 mod loader
                     

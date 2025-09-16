@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.gui.util;
+package com.crazine.goo2tool.gui.options;
 
 import com.crazine.goo2tool.properties.Properties;
 import javafx.beans.property.StringProperty;

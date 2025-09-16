@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.functional;
+package com.crazine.goo2tool.functional.save;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +36,7 @@ import com.crazine.goo2tool.gamefiles.translation.GameString;
 import com.crazine.goo2tool.gamefiles.translation.TextDB;
 import com.crazine.goo2tool.gamefiles.translation.TextLoader;
 import com.crazine.goo2tool.gamefiles.translation.GameString.LocaleText;
-import com.crazine.goo2tool.gui.FX_Alarm;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;

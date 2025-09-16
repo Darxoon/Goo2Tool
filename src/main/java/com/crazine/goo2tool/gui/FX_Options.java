@@ -1,7 +1,7 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.gui.util.FileOptions;
-import com.crazine.goo2tool.gui.util.LaunchOptions;
+import com.crazine.goo2tool.gui.options.FileOptions;
+import com.crazine.goo2tool.gui.options.LaunchOptions;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.geometry.Insets;
