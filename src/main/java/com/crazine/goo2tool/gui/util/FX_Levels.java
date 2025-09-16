@@ -1,13 +1,14 @@
 package com.crazine.goo2tool.gui.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.functional.export.ExportGui;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -19,16 +20,16 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class FX_Levels {
+    
+    private static record LevelFile(String title, Path path) {}
     
     public static void show(Stage originalStage) {
         Stage stage = new Stage();
@@ -46,11 +47,11 @@ public class FX_Levels {
         
         // collect all levels
         Path profileDir = Path.of(PropertiesLoader.getProperties().getProfileDirectory());
-        List<String> customLevels;
+        List<LevelFile> customLevels;
         try {
             
             customLevels = Files.list(profileDir.resolve("levels"))
-                .map(path -> getLevelName(path))
+                .map(path -> new LevelFile(getLevelName(path), path))
                 .toList();
             
         } catch (IOException e) {
@@ -66,18 +67,41 @@ public class FX_Levels {
         borderPane.setPadding(new Insets(10, 10, 10, 10));
         borderPane.setTop(new Label("Select level to package:"));
         
-        ObservableList<String> levels = FXCollections.observableArrayList(customLevels);
-        ListView<String> levelsView = new ListView<>(levels);
+        ObservableList<LevelFile> levels = FXCollections.observableArrayList(customLevels);
+        ListView<LevelFile> levelsView = new ListView<>(levels);
         levelsView.getStyleClass().addAll("listView");
+        
+        levelsView.setCellFactory(listView -> {
+            return new ListCell<>() {
+                
+                @Override
+                public void updateItem(LevelFile item, boolean empty) {
+                    super.updateItem(item, empty);
+                    
+                    if (item != null) {
+                        setText(item.title());
+                    }
+                }
+                
+            };
+        });
         
         borderPane.setCenter(levelsView);
         BorderPane.setMargin(levelsView, new Insets(5, 0, 10, 0));
         
         Button okButton = new Button("OK");
         okButton.setOnAction(event -> {
-            String level = levelsView.getSelectionModel().getSelectedItem();
-            System.out.println(level);
+            LevelFile levelFile = levelsView.getSelectionModel().getSelectedItem();
             stage.close();
+            
+            // Save Dialog
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("WoG2 Addin", "*.goo2mod"));
+            fileChooser.setInitialFileName(levelFile.title() + ".goo2mod");
+            File outFile = fileChooser.showSaveDialog(stage);
+            
+            System.out.println("Exporting level " + levelFile.title() + ": " + levelFile.path());
+            ExportGui.exportLevel(stage, levelFile.path(), outFile.toPath());
         });
         
         Button cancelButton = new Button("Cancel");

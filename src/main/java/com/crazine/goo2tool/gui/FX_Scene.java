@@ -2,7 +2,6 @@ package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.save.SaveGui;
-import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -76,30 +75,15 @@ public class FX_Scene {
     }
     
     public static void save() {
-        ResArchive res;
-        try {
-            res = ResArchive.loadOrSetupVanilla(stage);
-        } catch (IOException e) {
-            FX_Alarm.error(e);
-            return;
-        }
-        
-        SaveGui.save(stage, res);
+        SaveGui.save(stage);
     }
     
     public static void saveAndPlay() {
-        ResArchive res;
-        try {
-            res = ResArchive.loadOrSetupVanilla(stage);
-        } catch (IOException e) {
-            FX_Alarm.error(e);
-            return;
-        }
+        Optional<Property<SaveGui.Result>> finished = SaveGui.save(stage);
         
-        Optional<Property<SaveGui.Result>> finished = SaveGui.save(stage, res);
         if (finished.isEmpty())
             return;
-        
+                
         finished.get().addListener((observable, oldValue, newValue) -> {
             if (newValue != SaveGui.Result.Success)
                 return;

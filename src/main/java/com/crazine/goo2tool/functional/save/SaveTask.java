@@ -439,13 +439,16 @@ class SaveTask extends Task<Void> {
                 table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
                 
                 // write thumbnail if it doesn't yet exist
-                Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.get().thumbnail());
-                if (thumbnail.isPresent()) {
-                    Path thumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
+                if (levelEntry.get().thumbnail() != null && !levelEntry.get().thumbnail().isEmpty()) {
+                    Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.get().thumbnail());
                     
-                    try {
-                        Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
-                    } catch (FileAlreadyExistsException e) {}
+                    if (thumbnail.isPresent()) {
+                        Path thumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
+                        
+                        try {
+                            Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
+                        } catch (FileAlreadyExistsException e) {}
+                    }
                 }
                 return;
             }

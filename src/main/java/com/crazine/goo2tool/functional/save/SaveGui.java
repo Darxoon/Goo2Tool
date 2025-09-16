@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
@@ -36,7 +35,7 @@ public class SaveGui {
         Canceled,
     }
     
-    public static Optional<Property<Result>> save(Stage originalStage, ResArchive res) {
+    public static Optional<Property<Result>> save(Stage originalStage) {
         Properties properties = PropertiesLoader.getProperties();
         
         if (!properties.isSteam() && properties.getCustomWorldOfGoo2Directory().isEmpty()) {

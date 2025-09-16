@@ -12,11 +12,15 @@ public class Level {
     private String title = "";
     // ...
     
+    private String backgroundId;
+    // ...
+    
     @JsonCreator
     public Level(
         @JsonProperty("version") int version,
         @JsonProperty("uuid") String uuid,
-        @JsonProperty("title") String title
+        @JsonProperty("title") String title,
+        @JsonProperty("backgroundId") String backgroundId
     ) {
         if (version != 2)
             throw new IllegalArgumentException("Unknown level version " + version);
@@ -24,6 +28,7 @@ public class Level {
         this.version = version;
         this.uuid = uuid;
         this.title = title;
+        this.backgroundId = backgroundId;
     }
     
     public int getVersion() {
@@ -45,6 +50,13 @@ public class Level {
     }
     public void setTitle(String title) {
         this.title = title;
+    }
+    
+    public String getBackgroundId() {
+        return backgroundId;
+    }
+    public void setBackgroundId(String backgroundId) {
+        this.backgroundId = backgroundId;
     }
     
 }

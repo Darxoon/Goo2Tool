@@ -48,6 +48,24 @@ public class Goo2mod {
     @JsonIgnore
     private File file;
 
+    // used by Jackson
+    private Goo2mod() {}
+    
+    public Goo2mod(
+        String specVersion, String id, String name, ModType type, String version, String description,
+            String author) {
+        this.specVersion = specVersion;
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.version = version;
+        this.description = description;
+        this.author = author;
+        
+        this.levels = new ArrayList<>();
+    }
+
+    
     public String getSpecVersion() {
         return specVersion;
     }
