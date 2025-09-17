@@ -49,6 +49,15 @@ class ExportTask extends Task<Void> {
     private static record CompiledResource(CompileType type, String name, String content) {}
     
     private static enum AssetType {
+        // AMBIENCE,
+        // MUSIC,
+        // ENVIRONMENT_LUT,
+        // ITEM,
+        // ITEM_PREVIEW,
+        // PARTICLES,
+        // SOUND,
+        // TERRAIN,
+        // TERRAIN_DECORATION,
         ENVIRONMENT("environments", "res/environments/images/_resources.xml",
             new Resrc.SetDefaults("res/environments/images/", "ENV_BG_"));
         
