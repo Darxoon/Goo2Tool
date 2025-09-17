@@ -13,12 +13,13 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.addinFile;
     exports com.crazine.goo2tool.properties;
     exports com.crazine.goo2tool.functional;
+    exports com.crazine.goo2tool.functional.save.filetable;
     exports com.crazine.goo2tool.gamefiles;
-    exports com.crazine.goo2tool.gamefiles.filetable;
     exports com.crazine.goo2tool.gamefiles.islands;
     exports com.crazine.goo2tool.gamefiles.level;
     exports com.crazine.goo2tool.gamefiles.resrc;
     exports com.crazine.goo2tool.gamefiles.translation;
+    exports com.crazine.goo2tool.gamefiles.environment;
 
     opens com.crazine.goo2tool.addinFile;
     opens com.crazine.goo2tool.gamefiles.translation;

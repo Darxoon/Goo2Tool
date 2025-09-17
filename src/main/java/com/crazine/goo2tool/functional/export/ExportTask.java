@@ -2,6 +2,7 @@ package com.crazine.goo2tool.functional.export;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,12 +15,20 @@ import java.util.zip.ZipOutputStream;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
+import com.crazine.goo2tool.gamefiles.environment.Environment;
+import com.crazine.goo2tool.gamefiles.environment.EnvironmentLoader;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
+import com.crazine.goo2tool.gamefiles.resrc.Resrc;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import javafx.concurrent.Task;
@@ -39,11 +48,32 @@ class ExportTask extends Task<Void> {
     
     private static record CompiledResource(CompileType type, String name, String content) {}
     
+    private static enum AssetType {
+        ENVIRONMENT("environments", "res/environments/images/_resources.xml",
+            new Resrc.SetDefaults("res/environments/images/", "ENV_BG_"));
+        
+        public final String groupId;
+        public final String resrcFile;
+        public final Resrc.SetDefaults setDefaults;
+        
+        private AssetType(String groupId, String resrcFile, Resrc.SetDefaults setDefaults) {
+            this.groupId = groupId;
+            this.resrcFile = resrcFile;
+            this.setDefaults = setDefaults;
+        }
+    }
+    
+    private static record AssetResource(AssetType type, String id, String name, byte[] content) {}
+    
     private final Stage stage;
     private final Path levelPath;
     private Path outputPath;
     
+    private ResrcGroup environmentResrc;
+    private ResrcGroup originalEnvironmentResrc;
+    
     private List<CompiledResource> compiledResources = new ArrayList<>();
+    private List<AssetResource> assetResources = new ArrayList<>();
     
     private boolean success = true;
 
@@ -84,9 +114,18 @@ class ExportTask extends Task<Void> {
         
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), levelContent));
         
+        // Load resrc files
+        environmentResrc = loadResrcManifest(AssetType.ENVIRONMENT);
+        originalEnvironmentResrc = loadOriginalResrcManifest(res, AssetType.ENVIRONMENT);
+        
         // Background
         String background = Files.readString(Paths.get(customWog2, "game/res/environments", level.getBackgroundId() + ".wog2"));
         Optional<String> originalBackground = res.getFileText("res/environments/" + level.getBackgroundId() + ".wog2");
+        
+        JsonMapper jsonMapper = new JsonMapper();
+        JsonNode backgroundValue = jsonMapper.readTree(background);
+        
+        analyzeBackground(backgroundValue);
         
         if (originalBackground.isEmpty()) {
             compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), background));
@@ -104,9 +143,72 @@ class ExportTask extends Task<Void> {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         
         String addinXml = mapper.writer().withRootName("addin").writeValueAsString(mod);
-        System.out.println(addinXml);
         
         // Write zip file
+        writeZipFile(outputPath, addinXml);
+    }
+    
+    private ResrcGroup loadResrcManifest(AssetType type) throws IOException {
+        Properties properties = PropertiesLoader.getProperties();
+        String customWog2 = properties.getTargetWog2Directory();
+        
+        ResrcManifest environmentManifest = ResrcLoader.loadManifest(Paths.get(customWog2, "game", type.resrcFile));
+        Optional<ResrcGroup> group = environmentManifest.getGroup(type.groupId);
+        
+        if (group.isEmpty())
+            throw new IOException("Resource Manifest at '" + type.resrcFile + "' is missing resource group '" + type.groupId + "'");
+        
+        return group.get();
+    }
+    
+    private ResrcGroup loadOriginalResrcManifest(ResArchive res, AssetType type) throws IOException {
+        Optional<byte[]> fileContent = res.getFileContent(type.resrcFile);
+        
+        if (fileContent.isEmpty())
+            throw new IOException("Could not find Resource Manifest at '" + type.resrcFile + "'");
+        
+        ResrcManifest originalEnvironmenManifest = ResrcLoader.loadManifest(fileContent.get());
+        Optional<ResrcGroup> group = originalEnvironmenManifest.getGroup(type.groupId);
+        
+        if (group.isEmpty())
+            throw new IOException("Resource Manifest at '" + type.resrcFile
+                    + "' is missing resource group '" + type.groupId + "'");
+        
+        return group.get();
+    }
+    
+    private void analyzeBackground(JsonNode background) throws IOException {
+        Properties properties = PropertiesLoader.getProperties();
+        String customWog2 = properties.getTargetWog2Directory();
+        
+        Environment environment = EnvironmentLoader.loadBackground(background);
+        
+        for (Environment.Layer layer : environment.getLayers()) {
+            String imageId = layer.getImageName();
+            
+            Optional<Resrc> imageResrc = environmentResrc.getResource(imageId);
+            Optional<String> imagePath = environmentResrc.getResourcePath(imageId);
+            
+            if (imageResrc.isEmpty() || imagePath.isEmpty())
+                throw new IOException("Could not find image with ID '"
+                        + imageId + "'");
+            
+            if (!(imageResrc.get() instanceof Resrc.Image image))
+                throw new IOException("Resource with ID '"
+                        + imageId + "' should be an image");
+            
+            Optional<Resrc> originalImageResrc = originalEnvironmentResrc.getResource(imageId);
+            
+            if (originalImageResrc.isEmpty()) {
+                byte[] imageContent = Files.readAllBytes(Paths.get(customWog2, "game", imagePath.get() + ".image"));
+                
+                // TODO: image.id and image.path might be inaccurate if user used a different SetDefaults
+                assetResources.add(new AssetResource(AssetType.ENVIRONMENT, image.id(), image.path(), imageContent));
+            }
+        }
+    }
+    
+    private void writeZipFile(Path outputPath, String addinXml) throws IOException {
         FileOutputStream fileOutputStream  = new FileOutputStream(outputPath.toFile());
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
         
@@ -135,6 +237,35 @@ class ExportTask extends Task<Void> {
                 
                 zip.putNextEntry(new ZipEntry(entryPath));
                 zip.write(resource.content().getBytes());
+                zip.closeEntry();
+            }
+            
+            // resrc.xml files
+            for (AssetType type : AssetType.values()) {
+                List<Resrc> resources = new ArrayList<>();
+                resources.add(type.setDefaults);
+                
+                for (AssetResource asset : assetResources) {
+                    if (asset.type() == type) {
+                        resources.add(new Resrc.Image(asset.id(), asset.name()));
+                    }
+                }
+                
+                ResrcGroup group = new ResrcGroup(type.groupId, resources);
+                ResrcManifest manifest = new ResrcManifest(group);
+                
+                zip.putNextEntry(new ZipEntry("merge/" + type.resrcFile));
+                zip.write(ResrcLoader.saveManifest(manifest));
+                zip.closeEntry();
+            }
+            
+            // override directory
+            for (AssetResource asset : assetResources) {
+                Resrc.SetDefaults setDefaults = asset.type().setDefaults;
+                String entryPath = "override/" + setDefaults.path() + asset.name() + ".image";
+                
+                zip.putNextEntry(new ZipEntry(entryPath));
+                zip.write(asset.content());
                 zip.closeEntry();
             }
         }

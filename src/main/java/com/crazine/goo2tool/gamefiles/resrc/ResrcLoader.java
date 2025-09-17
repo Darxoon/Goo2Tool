@@ -167,4 +167,12 @@ public class ResrcLoader {
         mapper.writeValue(outFile, manifest);
     }
     
+    public static byte[] saveManifest(ResrcManifest manifest) throws IOException {
+        XmlMapper mapper = new XmlMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        mapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
+        
+        return mapper.writeValueAsBytes(manifest);
+    }
+    
 }

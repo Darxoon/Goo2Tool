@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.gamefiles.filetable;
+package com.crazine.goo2tool.functional.save.filetable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
