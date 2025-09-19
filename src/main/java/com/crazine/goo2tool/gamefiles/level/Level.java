@@ -15,12 +15,17 @@ public class Level {
     private String backgroundId;
     // ...
     
+    private String musicId;
+    private String ambienceId;
+    
     @JsonCreator
     public Level(
         @JsonProperty("version") int version,
         @JsonProperty("uuid") String uuid,
         @JsonProperty("title") String title,
-        @JsonProperty("backgroundId") String backgroundId
+        @JsonProperty("backgroundId") String backgroundId,
+        @JsonProperty("musicId") String musicId,
+        @JsonProperty("ambienceId") String ambienceId
     ) {
         if (version != 2)
             throw new IllegalArgumentException("Unknown level version " + version);
@@ -29,6 +34,8 @@ public class Level {
         this.uuid = uuid;
         this.title = title;
         this.backgroundId = backgroundId;
+        this.musicId = musicId;
+        this.ambienceId = ambienceId;
     }
     
     public int getVersion() {
@@ -57,6 +64,20 @@ public class Level {
     }
     public void setBackgroundId(String backgroundId) {
         this.backgroundId = backgroundId;
+    }
+    
+    public String getMusicId() {
+        return musicId;
+    }
+    public void setMusicId(String musicId) {
+        this.musicId = musicId;
+    }
+    
+    public String getAmbienceId() {
+        return ambienceId;
+    }
+    public void setAmbienceId(String ambienceId) {
+        this.ambienceId = ambienceId;
     }
     
 }

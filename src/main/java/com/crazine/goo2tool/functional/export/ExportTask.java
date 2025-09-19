@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -36,6 +38,8 @@ import javafx.stage.Stage;
 
 class ExportTask extends Task<Void> {
     
+    private static record PathResrc<T extends Resrc>(T resrc, String fullPath) {}
+    
     private static enum CompileType {
         LEVEL,
         ENVIRONMENT,
@@ -50,7 +54,10 @@ class ExportTask extends Task<Void> {
     
     private static enum AssetType {
         // AMBIENCE,
-        // MUSIC,
+        MUSIC("music", "res/music/_resources.xml", Resrc.Sound.class,
+            new Resrc.SetDefaults("res/music/", "BGM_")),
+        ENVIRONMENT("environments", "res/environments/images/_resources.xml", Resrc.Image.class,
+            new Resrc.SetDefaults("res/environments/images/", "ENV_BG_")),
         // ENVIRONMENT_LUT,
         // ITEM,
         // ITEM_PREVIEW,
@@ -58,16 +65,18 @@ class ExportTask extends Task<Void> {
         // SOUND,
         // TERRAIN,
         // TERRAIN_DECORATION,
-        ENVIRONMENT("environments", "res/environments/images/_resources.xml",
-            new Resrc.SetDefaults("res/environments/images/", "ENV_BG_"));
+        ;
         
         public final String groupId;
         public final String resrcFile;
+        public final Class<? extends Resrc> resrcClass;
         public final Resrc.SetDefaults setDefaults;
         
-        private AssetType(String groupId, String resrcFile, Resrc.SetDefaults setDefaults) {
+        private AssetType(String groupId, String resrcFile,
+                Class<? extends Resrc> resrcClass, Resrc.SetDefaults setDefaults) {
             this.groupId = groupId;
             this.resrcFile = resrcFile;
+            this.resrcClass = resrcClass;
             this.setDefaults = setDefaults;
         }
     }
@@ -78,8 +87,8 @@ class ExportTask extends Task<Void> {
     private final Path levelPath;
     private Path outputPath;
     
-    private ResrcGroup environmentResrc;
-    private ResrcGroup originalEnvironmentResrc;
+    private Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
+    private Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
     
     private List<CompiledResource> compiledResources = new ArrayList<>();
     private List<AssetResource> assetResources = new ArrayList<>();
@@ -124,21 +133,29 @@ class ExportTask extends Task<Void> {
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), levelContent));
         
         // Load resrc files
-        environmentResrc = loadResrcManifest(AssetType.ENVIRONMENT);
-        originalEnvironmentResrc = loadOriginalResrcManifest(res, AssetType.ENVIRONMENT);
+        for (AssetType type : AssetType.values()) {
+            customResrcs.put(type, loadResrcManifest(type));
+            originalResrcs.put(type, loadOriginalResrcManifest(res, type));
+        }
         
         // Background
-        String background = Files.readString(Paths.get(customWog2, "game/res/environments", level.getBackgroundId() + ".wog2"));
+        String backgroundText = Files.readString(Paths.get(customWog2, "game/res/environments", level.getBackgroundId() + ".wog2"));
         Optional<String> originalBackground = res.getFileText("res/environments/" + level.getBackgroundId() + ".wog2");
         
         JsonMapper jsonMapper = new JsonMapper();
-        JsonNode backgroundValue = jsonMapper.readTree(background);
+        JsonNode backgroundValue = jsonMapper.readTree(backgroundText);
+        Environment background = EnvironmentLoader.loadBackground(backgroundValue);
         
-        analyzeBackground(backgroundValue);
+        for (Environment.Layer layer : background.getLayers()) {
+            analyzeAsset(layer.getImageName(), AssetType.ENVIRONMENT);
+        }
         
         if (originalBackground.isEmpty()) {
-            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), background));
+            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), backgroundText));
         }
+        
+        // Music
+        analyzeAsset(level.getMusicId(), AssetType.MUSIC);
         
         // Create addin.xml
         // TODO: ask the user for actual values
@@ -186,34 +203,37 @@ class ExportTask extends Task<Void> {
         return group.get();
     }
     
-    private void analyzeBackground(JsonNode background) throws IOException {
+    @SuppressWarnings("unchecked")
+    private <T extends Resrc> PathResrc<T> getResrc(String id, ResrcGroup group, Class<T> resrcClass) throws IOException {
+        Optional<Resrc> resrc = group.getResource(id);
+        Optional<String> fullPath = group.getResourcePath(id);
+        
+        if (resrc.isEmpty() || fullPath.isEmpty())
+            throw new IOException("Could not find resource with ID '" + id + "'");
+        
+        if (!resrcClass.isInstance(resrc.get()))
+            throw new IOException("Resource with ID '" + id + "' should be of type " + resrcClass.getSimpleName());
+        
+        // Type of resrc was just checked above
+        return new PathResrc<>((T) resrc.get(), fullPath.get());
+    }
+    
+    private void analyzeAsset(String id, AssetType type) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
-        Environment environment = EnvironmentLoader.loadBackground(background);
+        ResrcGroup group = customResrcs.get(type);
+        ResrcGroup originalGroup = originalResrcs.get(type);
         
-        for (Environment.Layer layer : environment.getLayers()) {
-            String imageId = layer.getImageName();
+        PathResrc<? extends Resrc> resrc = getResrc(id, group, type.resrcClass);
+        Optional<Resrc> originalResrc = originalGroup.getResource(id);
+        
+        if (originalResrc.isEmpty()) {
+            Path contentPath = Paths.get(customWog2, "game", resrc.fullPath() + "." + resrc.resrc.fileExtension());
+            byte[] content = Files.readAllBytes(contentPath);
             
-            Optional<Resrc> imageResrc = environmentResrc.getResource(imageId);
-            Optional<String> imagePath = environmentResrc.getResourcePath(imageId);
-            
-            if (imageResrc.isEmpty() || imagePath.isEmpty())
-                throw new IOException("Could not find image with ID '"
-                        + imageId + "'");
-            
-            if (!(imageResrc.get() instanceof Resrc.Image image))
-                throw new IOException("Resource with ID '"
-                        + imageId + "' should be an image");
-            
-            Optional<Resrc> originalImageResrc = originalEnvironmentResrc.getResource(imageId);
-            
-            if (originalImageResrc.isEmpty()) {
-                byte[] imageContent = Files.readAllBytes(Paths.get(customWog2, "game", imagePath.get() + ".image"));
-                
-                // TODO: image.id and image.path might be inaccurate if user used a different SetDefaults
-                assetResources.add(new AssetResource(AssetType.ENVIRONMENT, image.id(), image.path(), imageContent));
-            }
+            // TODO: id() and path() might be inaccurate if user used a different SetDefaults
+            assetResources.add(new AssetResource(type, resrc.resrc().id(), resrc.resrc().path(), content));
         }
     }
     
@@ -256,7 +276,16 @@ class ExportTask extends Task<Void> {
                 
                 for (AssetResource asset : assetResources) {
                     if (asset.type() == type) {
-                        resources.add(new Resrc.Image(asset.id(), asset.name()));
+                        switch (type) {
+                            case ENVIRONMENT:
+                                resources.add(new Resrc.Image(asset.id(), asset.name()));
+                                break;
+                            case MUSIC:
+                                resources.add(new Resrc.Sound(asset.id(), asset.name(), true, "Music"));
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
                 
@@ -271,7 +300,8 @@ class ExportTask extends Task<Void> {
             // override directory
             for (AssetResource asset : assetResources) {
                 Resrc.SetDefaults setDefaults = asset.type().setDefaults;
-                String entryPath = "override/" + setDefaults.path() + asset.name() + ".image";
+                String fileExtension = Resrc.getFileExtension(asset.type.resrcClass);
+                String entryPath = "override/" + setDefaults.path() + asset.name() + "." + fileExtension;
                 
                 zip.putNextEntry(new ZipEntry(entryPath));
                 zip.write(asset.content());
