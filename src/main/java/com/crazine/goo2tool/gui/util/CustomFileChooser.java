@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.gui.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -49,6 +50,10 @@ public class CustomFileChooser {
     private static SecureRandom rnd = new SecureRandom();
 
     public static Path chooseFile(Stage stage, String title, ExtensionFilter... filters) throws IOException {
+        return chooseFile(stage, title, null, filters);
+    }
+    
+    public static Path chooseFile(Stage stage, String title, Path initialDir, ExtensionFilter... filters) throws IOException {
         if (Platform.getCurrent() == Platform.LINUX) {
             logger.info("Opening xdg-desktop-portal FileChooser");
             try (DBusConnection connection = DBusConnectionBuilder.forSessionBus().build()) {
@@ -66,6 +71,14 @@ public class CustomFileChooser {
                         .toList());
                     
                     options.put("filters", new Variant<>(dbusFilters, "a(sa(us))"));
+                    
+                    if (initialDir != null) {
+                        // imperfect size but good enough in most cases
+                        ByteArrayOutputStream currentFolder = new ByteArrayOutputStream(initialDir.toString().length() + 1);
+                        currentFolder.write(initialDir.toString().getBytes());
+                        currentFolder.write(0);
+                        options.put("current_folder", new Variant<>(currentFolder.toByteArray()));
+                    }
                 }
                 
                 Map<String, Variant<?>> results = makeDBusCall(connection, title, options);
@@ -87,6 +100,10 @@ public class CustomFileChooser {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle(title);
             fileChooser.getExtensionFilters().addAll(filters);
+            
+            if (initialDir != null)
+                fileChooser.setInitialDirectory(initialDir.toFile());
+            
             return fileChooser.showOpenDialog(stage).toPath();
         }
     }

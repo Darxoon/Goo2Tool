@@ -95,6 +95,7 @@ public class FX_Levels {
             stage.close();
             
             // Save Dialog
+            // TODO: migrate to CustomFileChooser
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("WoG2 Addin", "*.goo2mod"));
             fileChooser.setInitialFileName(levelFile.title() + ".goo2mod");

@@ -1,6 +1,8 @@
 package com.crazine.goo2tool.gui.options;
 
+import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.gui.Main_Application;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -14,7 +16,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
 
@@ -48,8 +49,13 @@ public class FileOptions {
         ColumnConstraints column4 = new ColumnConstraints();
         contents.getColumnConstraints().addAll(column1, column2, column3, column4);
         
-        // TODO: make this more platform independent
-        ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
+        ExtensionFilter exeFilter = switch (Platform.getCurrent()) {
+            case WINDOWS -> new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
+            case LINUX -> new ExtensionFilter("World of Goo 2 executable (WorldOfGoo2, *.exe, *.AppImage)",
+                    "*.exe", "WorldOfGoo2", "*.AppImage");
+            case MAC -> null;
+        };
+        
         String baseDir = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
         createSetting(contents, 0, "Base WoG2 Installation", baseDir, exeFilter, true, path -> {
             PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(path);
@@ -103,10 +109,13 @@ public class FileOptions {
                 if (Files.isRegularFile(initialDir))
                     initialDir = initialDir.getParent();
                 
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.getExtensionFilters().add(filter);
-                fileChooser.setInitialDirectory(initialDir.toFile());
-                chosenFile = fileChooser.showOpenDialog(stage);
+                try {
+                    chosenFile = CustomFileChooser.chooseFile(stage,
+                            "Please choose location", initialDir, filter).toFile();
+                } catch (IOException e) {
+                    FX_Alarm.error(e);
+                    return;
+                }
             } else {
                 DirectoryChooser directoryChooser = new DirectoryChooser();
                 directoryChooser.setInitialDirectory(new File(initialValue));

@@ -12,6 +12,7 @@ import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.LocateGooDir;
 import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
 import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -21,7 +22,6 @@ import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
@@ -44,9 +44,8 @@ public class FX_Setup extends Application {
         
         // setup wizard
         if (!PropertiesLoader.isValidBaseWog2(properties.getBaseWorldOfGoo2Directory())) {
-            properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit(), located));
-            
             try {
+                properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit(), located));
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
@@ -78,7 +77,7 @@ public class FX_Setup extends Application {
         new Main_Application().start(stage);
     }
     
-    private String getBaseDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) {
+    private String getBaseDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
         if (gooDir.isPresent()) {
             // ask if detected dir is okay
             String path = gooDir.get().path().toString();
@@ -133,12 +132,9 @@ public class FX_Setup extends Application {
         
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
-                FileChooser fileChooser = new FileChooser();
                 ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
-                fileChooser.getExtensionFilters().add(exeFilter);
-                
-                File file = fileChooser.showOpenDialog(stage);
-                yield file.getParentFile().getAbsolutePath();
+                Path file = CustomFileChooser.chooseFile(stage, "Please choose World of Goo 2 installation", exeFilter);
+                yield file.getParent().toString();
             }
             case MAC -> {
                 DirectoryChooser directoryChooser = new DirectoryChooser();
@@ -146,18 +142,16 @@ public class FX_Setup extends Application {
                 yield file.getAbsolutePath();
             }
             case LINUX -> {
-                // TODO: try figuring out how to use xdg_desktop_portal for this
-                FileChooser fileChooser = new FileChooser();
-                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable",
+                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable (WorldOfGoo2, *.exe, *.AppImage)",
                         "*.exe", "WorldOfGoo2", "*.AppImage");
-                fileChooser.getExtensionFilters().add(exeFilter);
                 
-                File file = fileChooser.showOpenDialog(stage);
+                Path file = CustomFileChooser.chooseFile(stage, "Please choose World of Goo 2 installation", exeFilter);
+                String fileString = file.toString();
                 
-                if (file.getAbsolutePath().endsWith(".exe")) {
-                    yield file.getParentFile().getAbsolutePath();
+                if (fileString.endsWith(".exe")) {
+                    yield file.getParent().toString();
                 } else {
-                    yield file.getAbsolutePath();
+                    yield fileString;
                 }
             }
         };
@@ -200,6 +194,7 @@ public class FX_Setup extends Application {
             if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
                 return "";
             
+            // TODO: make this work with xdg-desktop-portal too
             DirectoryChooser directoryChooser = new DirectoryChooser();
             File file = directoryChooser.showDialog(stage);
             return file.getAbsolutePath();

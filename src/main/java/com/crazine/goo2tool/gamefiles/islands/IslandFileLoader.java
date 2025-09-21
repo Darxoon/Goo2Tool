@@ -20,7 +20,6 @@ public class IslandFileLoader {
         if (islandFile.exists() && islandFile.isFile()) {
             islandFileContent = Files.readString(islandFile.toPath());
         } else {
-            // TODO: add AppImage support
             byte[] fileBytes = res.getFileContent("res/islands/islands.wog2").get();
             islandFileContent = new String(fileBytes, StandardCharsets.UTF_8);
         }

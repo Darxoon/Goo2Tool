@@ -11,12 +11,12 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
@@ -72,16 +72,14 @@ public interface ResArchive extends Closeable {
                     + "Please pick the new location of the file instead.");
             alert.showAndWait();
             
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.getExtensionFilters().add(new ExtensionFilter("res.goo Archive", "*.*"));
+            ExtensionFilter filter = new ExtensionFilter("res.goo Archive", "*.*");
+            Path initialDir = Path.of(baseWOG2, "game");
             
-            File initialDirectory = new File(baseWOG2 + "/game");
-            if (initialDirectory.exists())
-                fileChooser.setInitialDirectory(initialDirectory);
+            Path chosenFile = CustomFileChooser.chooseFile(stage,
+                    "Please open res.goo archive", initialDir, filter);
             
-            File chosenFile = fileChooser.showOpenDialog(stage);
             PropertiesLoader.getProperties().setResGooPath(chosenFile.toString());
-            resGooFile = chosenFile;
+            resGooFile = chosenFile.toFile();
         }
         
         PropertiesLoader.saveProperties();

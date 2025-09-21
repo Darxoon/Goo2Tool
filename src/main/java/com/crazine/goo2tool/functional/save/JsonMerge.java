@@ -84,7 +84,7 @@ public class JsonMerge {
             
             if (!toMerge.isObject())
                 throw new IllegalArgumentException(
-                        "Property \"merge\" of property with type \"array\" has to be an object");
+                        "Property \"merge\" of property with type \"" + toMerge.getNodeType().name().toLowerCase() + "\" has to be an object");
             
             
             for (Map.Entry<String, JsonNode> field : toMerge.properties()) {
