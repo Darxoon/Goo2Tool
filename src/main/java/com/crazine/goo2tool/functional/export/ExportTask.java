@@ -20,11 +20,15 @@ import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.environment.Environment;
 import com.crazine.goo2tool.gamefiles.environment.EnvironmentLoader;
 import com.crazine.goo2tool.gamefiles.level.Level;
+import com.crazine.goo2tool.gamefiles.level.LevelItem;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gamefiles.resrc.Resrc;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
+import com.crazine.goo2tool.gamefiles.translation.GameString;
+import com.crazine.goo2tool.gamefiles.translation.TextDB;
+import com.crazine.goo2tool.gamefiles.translation.TextLoader;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -132,6 +136,38 @@ class ExportTask extends Task<Void> {
         
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), levelContent));
         
+        // translation-local.xml
+        Optional<byte[]> translationLocalBytes = res.getFileContent("res/properties/translation-local.xml");
+        TextDB translationLocal = TextLoader.loadText(translationLocalBytes.get());
+        TextDB customTranslationLocal = TextLoader.loadText(Paths.get(customWog2, "game/res/properties/translation-local.xml"));
+        
+        TextDB textPatch = new TextDB();
+        
+        for (LevelItem item : level.getItems()) {
+            String localizedStringId = item.getLocalizedStringId();
+            
+            if (localizedStringId.isEmpty())
+                continue;
+            
+            // TODO: support for non-english languages
+            Optional<GameString> customString = customTranslationLocal.getString(localizedStringId);
+            if (customString.isEmpty())
+                throw new IOException("Could not find string with id " + localizedStringId);
+            
+            String customText = customString.get().getLocal().get().getText();
+            
+            Optional<GameString> originalString = translationLocal.getString(localizedStringId);
+            
+            if (originalString.isPresent()) {
+                String originalText = originalString.get().getLocal().get().getText();
+                
+                if (!customText.equals(originalText))
+                    textPatch.putString(customString.get());
+            } else {
+                textPatch.putString(customString.get());
+            }
+        }
+        
         // Load resrc files
         for (AssetType type : AssetType.values()) {
             customResrcs.put(type, loadResrcManifest(type));
@@ -171,7 +207,7 @@ class ExportTask extends Task<Void> {
         String addinXml = mapper.writer().withRootName("addin").writeValueAsString(mod);
         
         // Write zip file
-        writeZipFile(outputPath, addinXml);
+        writeZipFile(outputPath, addinXml, textPatch);
     }
     
     private ResrcGroup loadResrcManifest(AssetType type) throws IOException {
@@ -237,7 +273,7 @@ class ExportTask extends Task<Void> {
         }
     }
     
-    private void writeZipFile(Path outputPath, String addinXml) throws IOException {
+    private void writeZipFile(Path outputPath, String addinXml, TextDB textPatch) throws IOException {
         FileOutputStream fileOutputStream  = new FileOutputStream(outputPath.toFile());
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
         
@@ -247,7 +283,12 @@ class ExportTask extends Task<Void> {
             zip.write(addinXml.getBytes());
             zip.closeEntry();
             
-            // TODO: translation.xml
+            // translation.xml
+            byte[] textPatchBytes = TextLoader.saveText(textPatch);
+            
+            zip.putNextEntry(new ZipEntry("translation.xml"));
+            zip.write(textPatchBytes);
+            zip.closeEntry();
             
             // compile directory
             for (CompiledResource resource : compiledResources) {

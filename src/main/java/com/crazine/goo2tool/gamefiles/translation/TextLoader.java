@@ -28,6 +28,14 @@ public class TextLoader {
         return mapper.readValue(content, TextDB.class);
     }
     
+    public static byte[] saveText(TextDB text) throws IOException {
+        XmlMapper mapper = new XmlMapper();
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        mapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
+        
+        return mapper.writeValueAsBytes(text);
+    }
+    
     public static void saveText(TextDB text, File outFile) throws IOException {
         XmlMapper mapper = new XmlMapper();
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);

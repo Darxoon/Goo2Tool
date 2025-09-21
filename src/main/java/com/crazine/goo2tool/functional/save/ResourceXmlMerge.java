@@ -55,7 +55,7 @@ public class ResourceXmlMerge {
                 + original.getId() + "\" has to start with a SetDefaults element (to avoid compatibility issues)!");
         }
         
-        out.getResources().addAll(patch.getResources());
+        out.addResources(patch.getResources());
         return out;
     }
     
