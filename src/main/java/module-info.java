@@ -6,6 +6,8 @@ module com.crazine.goo2tool {
     requires transitive com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.dataformat.xml;
     requires java.xml;
+    requires transitive org.freedesktop.dbus;
+    requires org.slf4j;
 
     exports com.crazine.goo2tool;
     exports com.crazine.goo2tool.gui;
@@ -20,8 +22,11 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles.resrc;
     exports com.crazine.goo2tool.gamefiles.translation;
     exports com.crazine.goo2tool.gamefiles.environment;
+    
+    exports org.freedesktop.portal;
 
     opens com.crazine.goo2tool.addinFile;
     opens com.crazine.goo2tool.gamefiles.translation;
+    opens com.crazine.goo2tool.gui.util;
     
 }

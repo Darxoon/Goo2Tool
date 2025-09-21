@@ -133,7 +133,8 @@ public class FX_Profile {
         levelTableView.getColumns().add(attemptsColumn);
         attemptsColumn.setPrefWidth(100);
 
-        levelTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        // TODO: is this the best resize policy?
+        levelTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         levelNameColumn.setMaxWidth(10000);
 

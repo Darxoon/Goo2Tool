@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.addinFile;
 
+import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import java.io.File;
@@ -15,7 +16,12 @@ public class AddinFileLoader {
             Optional<String> addinXmlFile = reader.getFileText("addin.xml");
             
             XmlMapper xmlMapper = new XmlMapper();
-            Goo2mod goo2mod = xmlMapper.readValue(addinXmlFile.get(), Goo2mod.class);
+            Goo2mod goo2mod;
+            try {
+                goo2mod = xmlMapper.readValue(addinXmlFile.get(), Goo2mod.class);
+            } catch (JacksonException e) {
+                throw new IOException("Failed to parse addin.xml: " + e.getMessage());
+            }
             goo2mod.setFile(goo2modFile);
             
             if (!goo2mod.getSpecVersion().equals("2.2")) {

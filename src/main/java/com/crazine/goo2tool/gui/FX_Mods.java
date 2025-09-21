@@ -4,6 +4,7 @@ import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -17,11 +18,12 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser.ExtensionFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -249,7 +251,8 @@ public class FX_Mods {
         modTableView.getColumns().add(author);
         author.setPrefWidth(300);
 
-        modTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        // TODO: is this the best resize policy?
+        modTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TextArea descriptionArea = new TextArea();
         descriptionArea.setEditable(false);
@@ -302,15 +305,31 @@ public class FX_Mods {
     }
 
     public static void installAddin() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("World of Goo 2 mod file", "*.goo2mod"));
-        File goomodFile = fileChooser.showOpenDialog(stage);
+        Path goomodFile;
+        try {
+            ExtensionFilter filter = new ExtensionFilter(
+                    "World of Goo 2 addin (*.goo2mod)", "*.goo2mod");
+            goomodFile = CustomFileChooser.chooseFile(stage, "Open addin to install", filter);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        
         if (goomodFile == null) return;
         
         try {
-            PropertiesLoader.loadGoo2mod(goomodFile);
+            PropertiesLoader.loadGoo2mod(goomodFile.toFile());
         } catch (IOException e) {
-            FX_Alarm.error(e);
+            e.printStackTrace();
+            Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
+            dialog.setContentText("Failed to open addin: " + e.getMessage());
+            
+            if (IconLoader.getConduit() != null) {
+                Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
+                dialogStage.getIcons().add(IconLoader.getConduit());
+            }
+            
+            dialog.show();
         }
     }
     

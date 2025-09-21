@@ -49,6 +49,7 @@ public class Goo2mod {
     private File file;
 
     // used by Jackson
+    @SuppressWarnings("unused")
     private Goo2mod() {}
     
     public Goo2mod(
