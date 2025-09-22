@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -35,6 +36,7 @@ import com.crazine.goo2tool.properties.PropertiesLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import javafx.concurrent.Task;
@@ -96,6 +98,9 @@ class ExportTask extends Task<Void> {
     private final Path outputPath;
     private final boolean embedThumbnail;
     
+    private String resrcPathPrefix = "";
+    private String resrcIdPrefix = "";
+    
     private Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
     private Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
     
@@ -138,10 +143,19 @@ class ExportTask extends Task<Void> {
         String customWog2 = properties.getTargetWog2Directory();
         String profileDir = properties.getProfileDirectory();
         
-        String levelContent = Files.readString(levelPath);
-        Level level = LevelLoader.loadLevel(levelContent);
+        JsonMapper jsonMapper = new JsonMapper();
         
-        compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), levelContent));
+        String levelContent = Files.readString(levelPath);
+        ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(levelContent);
+        Level level = LevelLoader.loadLevel(levelJson);
+        
+        // TODO: ask the user for actual values
+        String modId = "sampleid." + level.getTitle().replace(" ", "");
+        
+        resrcPathPrefix = modId.replace(".", "_") + "_";
+        resrcPathPrefix = resrcPathPrefix.substring(0, 1).toUpperCase() + resrcPathPrefix.substring(1);
+        
+        resrcIdPrefix = resrcPathPrefix.toUpperCase();
         
         // translation-local.xml
         Optional<byte[]> translationLocalBytes = res.getFileContent("res/properties/translation-local.xml");
@@ -201,24 +215,45 @@ class ExportTask extends Task<Void> {
         String backgroundText = Files.readString(Paths.get(customWog2, "game/res/environments", level.getBackgroundId() + ".wog2"));
         Optional<String> originalBackground = res.getFileText("res/environments/" + level.getBackgroundId() + ".wog2");
         
-        JsonMapper jsonMapper = new JsonMapper();
-        JsonNode backgroundValue = jsonMapper.readTree(backgroundText);
+        ObjectNode backgroundValue = (ObjectNode) jsonMapper.readTree(backgroundText);
         Environment background = EnvironmentLoader.loadBackground(backgroundValue);
         
+        boolean backgroundModified = false;
+        
         for (Environment.Layer layer : background.getLayers()) {
-            analyzeAsset(layer.getImageName(), AssetType.ENVIRONMENT);
+            String newImageName = analyzeAsset(res, layer.getImageName(), AssetType.ENVIRONMENT);
+            
+            if (!newImageName.equals(layer.getImageName())) {
+                backgroundModified = true;
+                layer.setImageName(newImageName);
+            }
         }
         
-        if (originalBackground.isEmpty()) {
+        if (originalBackground.isPresent()) {
+            if (backgroundModified || !backgroundText.equals(originalBackground.get())) {
+                String newBackgroundId = UUID.randomUUID().toString();
+                levelJson.put("backgroundId", newBackgroundId);
+                
+                JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
+                backgroundValue.put("id", newBackgroundId);
+                backgroundValue.set("layers", serializedLayers);
+                
+                String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
+                compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, newBackgroundId, newBackgroundText));
+            }
+        } else {
             compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), backgroundText));
         }
         
         // Music
-        analyzeAsset(level.getMusicId(), AssetType.MUSIC);
+        String newMusicId = analyzeAsset(res, level.getMusicId(), AssetType.MUSIC);
+        levelJson.put("musicId", newMusicId);
+        
+        // Serialize level
+        String newLevelContent = LevelLoader.saveLevel(levelJson);
+        compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), newLevelContent));
         
         // Create addin.xml
-        // TODO: ask the user for actual values
-        String modId = "sampleid." + level.getTitle().replace(" ", "");
         Goo2mod mod = new Goo2mod("2.2", modId, level.getTitle(), ModType.LEVEL,
                 "1.0", "", "Sample Author");
         
@@ -277,23 +312,45 @@ class ExportTask extends Task<Void> {
         return new PathResrc<>((T) resrc.get(), fullPath.get());
     }
     
-    private void analyzeAsset(String id, AssetType type) throws IOException {
+    private String analyzeAsset(ResArchive res, String id, AssetType type) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
+        // get custom resource
         ResrcGroup group = customResrcs.get(type);
-        ResrcGroup originalGroup = originalResrcs.get(type);
-        
         PathResrc<? extends Resrc> resrc = getResrc(id, group, type.resrcClass);
-        Optional<Resrc> originalResrc = originalGroup.getResource(id);
         
-        if (originalResrc.isEmpty()) {
-            Path contentPath = Paths.get(customWog2, "game", resrc.fullPath() + "." + resrc.resrc.fileExtension());
-            byte[] content = Files.readAllBytes(contentPath);
+        // get original resource
+        ResrcGroup originalGroup = originalResrcs.get(type);
+        Optional<Resrc> originalResrc = originalGroup.getResource(id);
+        Optional<String> originalResrcPath = originalGroup.getResourcePath(id);
+        
+        // if original resource is non existant or different, add the asset to output
+        Path contentPath = Paths.get(customWog2, "game", resrc.fullPath() + "." + resrc.resrc().fileExtension());
+        byte[] content = Files.readAllBytes(contentPath);
+        
+        if (originalResrc.isPresent() && originalResrcPath.isPresent()) {
+            String fullOriginalPath = originalResrcPath.get() + "." + resrc.resrc().fileExtension();
+            Optional<byte[]> originalContent = res.getFileContent(fullOriginalPath);
             
-            // TODO: id() and path() might be inaccurate if user used a different SetDefaults
+            if (originalContent.isEmpty()) {
+                throw new IOException("Could not find resource of type " + type.resrcClass.getSimpleName()
+                        + " at location '" + fullOriginalPath + "'");
+            }
+            
+            if (!content.equals(originalContent.get())) {
+                // TODO: id() and path() might be inaccurate if user used a different SetDefaults
+                String newId = resrcIdPrefix + resrc.resrc().id();
+                String newPath = resrcPathPrefix + resrc.resrc().path();
+                
+                assetResources.add(new AssetResource(type, newId, newPath, content));
+                return type.setDefaults.idprefix() + newId;
+            }
+        } else {
             assetResources.add(new AssetResource(type, resrc.resrc().id(), resrc.resrc().path(), content));
         }
+        
+        return id;
     }
     
     private void writeZipFile(Path outputPath, String addinXml, TextDB textPatch) throws IOException {
@@ -355,6 +412,9 @@ class ExportTask extends Task<Void> {
                         }
                     }
                 }
+                
+                if (resources.stream().noneMatch(resrc -> !(resrc instanceof Resrc.SetDefaults)))
+                    continue;
                 
                 ResrcGroup group = new ResrcGroup(type.groupId, resources);
                 ResrcManifest manifest = new ResrcManifest(group);
