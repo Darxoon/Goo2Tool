@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 
 public class SaveFileLoader {
 
@@ -68,7 +69,7 @@ public class SaveFileLoader {
             if (value.startsWith("{")) {
                 WOG2SaveData.WOG2SaveFile saveFile1 = saveDataMapper.readValue(value, WOG2SaveData.WOG2SaveFile.class);
                 WOG2SaveData saveData1 = new WOG2SaveData();
-                saveData1.setValues(new ArrayList<>(currentSaveFileValues.stream().toList()));
+                saveData1.setValues(List.copyOf(currentSaveFileValues));
                 saveData1.setSaveFile(saveFile1);
                 saveData.add(saveData1);
                 currentSaveFileValues.clear();

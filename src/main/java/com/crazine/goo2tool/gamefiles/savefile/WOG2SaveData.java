@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class WOG2SaveData {
 
@@ -97,6 +97,14 @@ public class WOG2SaveData {
         @JsonSetter() public void setAttempts(int attempts) {
             this.attempts = attempts;
         }
+        
+        private boolean readSignposts;
+        @JsonGetter() public boolean isReadSignposts() {
+            return readSignposts;
+        }
+        @JsonSetter() public void setReadSignposts(boolean readSignposts) {
+            this.readSignposts = readSignposts;
+        }
 
         @JsonIgnore
         private String name;
@@ -178,6 +186,14 @@ public class WOG2SaveData {
         @JsonSetter() public void setZoomFactor(int zoomFactor) {
             this.zoomFactor = zoomFactor;
         }
+        
+        private int timebugCount;
+        @JsonGetter() public int getTimebugCount() {
+            return timebugCount;
+        }
+        @JsonSetter() public void setTimebugCount(int timebugCount) {
+            this.timebugCount = timebugCount;
+        }
 
         private WOG2SaveFileIsland[] islands;
         @JsonGetter() public WOG2SaveFileIsland[] getIslands() {
@@ -189,11 +205,11 @@ public class WOG2SaveData {
 
     }
 
-    private ArrayList<String> values;
-    @JsonGetter() public ArrayList<String> getValues() {
+    private List<String> values;
+    @JsonGetter() public List<String> getValues() {
         return values;
     }
-    @JsonSetter() public void setValues(ArrayList<String> values) {
+    @JsonSetter() public void setValues(List<String> values) {
         this.values = values;
     }
 
