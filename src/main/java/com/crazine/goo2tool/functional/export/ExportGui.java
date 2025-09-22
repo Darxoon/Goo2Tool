@@ -41,7 +41,7 @@ public class ExportGui {
 
         stage.setAlwaysOnTop(true);
 
-        ExportTask task = new ExportTask(stage, levelPath, outPath);
+        ExportTask task = new ExportTask(stage, levelPath, outPath, true);
         
         Label contentLabel = new Label();
         contentLabel.textProperty().bind(task.messageProperty());

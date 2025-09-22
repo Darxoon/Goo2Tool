@@ -69,6 +69,10 @@ class ExportTask extends Task<Void> {
         // SOUND,
         // TERRAIN,
         // TERRAIN_DECORATION,
+        
+        // not a real asset type but still belongs in override/
+        THUMBNAIL(null, null, null,
+            new Resrc.SetDefaults("res/thumbnails/", ""));
         ;
         
         public final String groupId;
@@ -89,7 +93,8 @@ class ExportTask extends Task<Void> {
     
     private final Stage stage;
     private final Path levelPath;
-    private Path outputPath;
+    private final Path outputPath;
+    private final boolean embedThumbnail;
     
     private Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
     private Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
@@ -99,10 +104,11 @@ class ExportTask extends Task<Void> {
     
     private boolean success = true;
 
-    ExportTask(Stage stage, Path levelPath, Path outputPath) {
+    ExportTask(Stage stage, Path levelPath, Path outputPath, boolean embedThumbnail) {
         this.stage = stage;
         this.levelPath = levelPath;
         this.outputPath = outputPath;
+        this.embedThumbnail = embedThumbnail;
     }
 
     @Override
@@ -130,6 +136,7 @@ class ExportTask extends Task<Void> {
     private void export(ResArchive res) throws Exception {
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
+        String profileDir = properties.getProfileDirectory();
         
         String levelContent = Files.readString(levelPath);
         Level level = LevelLoader.loadLevel(levelContent);
@@ -168,8 +175,24 @@ class ExportTask extends Task<Void> {
             }
         }
         
+        // Thumbnail
+        String addinThumbnailPath;
+        
+        if (embedThumbnail) {
+            Path realThumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
+            byte[] thumbnailContent = Files.readAllBytes(realThumbnailPath);
+            
+            assetResources.add(new AssetResource(AssetType.THUMBNAIL, null, level.getUuid(), thumbnailContent));
+            addinThumbnailPath = "res/thumbnails/" + level.getUuid() + ".jpg";
+        } else {
+            addinThumbnailPath = null;
+        }
+        
         // Load resrc files
         for (AssetType type : AssetType.values()) {
+            if (type.groupId == null || type.resrcFile == null)
+                continue;
+            
             customResrcs.put(type, loadResrcManifest(type));
             originalResrcs.put(type, loadOriginalResrcManifest(res, type));
         }
@@ -199,7 +222,7 @@ class ExportTask extends Task<Void> {
         Goo2mod mod = new Goo2mod("2.2", modId, level.getTitle(), ModType.LEVEL,
                 "1.0", "", "Sample Author");
         
-        mod.getLevels().add(new Goo2mod.Level(level.getUuid(), null));
+        mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
         
         XmlMapper mapper = new XmlMapper();
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -312,6 +335,9 @@ class ExportTask extends Task<Void> {
             
             // resrc.xml files
             for (AssetType type : AssetType.values()) {
+                if (type.groupId == null || type.resrcFile == null)
+                    continue;
+                
                 List<Resrc> resources = new ArrayList<>();
                 resources.add(type.setDefaults);
                 
@@ -341,7 +367,9 @@ class ExportTask extends Task<Void> {
             // override directory
             for (AssetResource asset : assetResources) {
                 Resrc.SetDefaults setDefaults = asset.type().setDefaults;
-                String fileExtension = Resrc.getFileExtension(asset.type.resrcClass);
+                
+                String fileExtension = asset.type() == AssetType.THUMBNAIL
+                    ? "jpg" : Resrc.getFileExtension(asset.type().resrcClass);
                 String entryPath = "override/" + setDefaults.path() + asset.name() + "." + fileExtension;
                 
                 zip.putNextEntry(new ZipEntry(entryPath));
