@@ -19,6 +19,7 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles;
     exports com.crazine.goo2tool.gamefiles.islands;
     exports com.crazine.goo2tool.gamefiles.level;
+    exports com.crazine.goo2tool.gamefiles.item;
     exports com.crazine.goo2tool.gamefiles.resrc;
     exports com.crazine.goo2tool.gamefiles.translation;
     exports com.crazine.goo2tool.gamefiles.environment;

@@ -5,21 +5,28 @@ import java.util.List;
 
 import com.crazine.goo2tool.gamefiles.Vector2;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Environment {
     
+    // TODO: verify i didn't miss any fields and that their default values are correct
+    @JsonInclude(Include.NON_NULL)
     public static class Layer {
         
         private String imageName;
-        private int scale;
-        private int depth;
+        private float scale;
+        private float depth;
+        private float depthYOverride;
         private boolean fill;
         private boolean foreground;
         private boolean repeatX;
         private boolean repeatY;
         private Vector2 anchors;
+        private boolean anchorsTakeDepthIntoAccount;
         private float bloom;
         private long color;
         private int blendingType;
@@ -27,23 +34,32 @@ public class Environment {
         private boolean isFlashAnimation;
         private Vector2 animScroll;
         
+        // ?
+        private JsonNode gradient;
+        
         public String getImageName() {
             return imageName;
         }
         public void setImageName(String imageName) {
             this.imageName = imageName;
         }
-        public int getScale() {
+        public float getScale() {
             return scale;
         }
-        public void setScale(int scale) {
+        public void setScale(float scale) {
             this.scale = scale;
         }
-        public int getDepth() {
+        public float getDepth() {
             return depth;
         }
-        public void setDepth(int depth) {
+        public void setDepth(float depth) {
             this.depth = depth;
+        }
+        public float getDepthYOverride() {
+            return depthYOverride;
+        }
+        public void setDepthYOverride(float depthYOverride) {
+            this.depthYOverride = depthYOverride;
         }
         public boolean isFill() {
             return fill;
@@ -74,6 +90,12 @@ public class Environment {
         }
         public void setAnchors(Vector2 anchors) {
             this.anchors = anchors;
+        }
+        public boolean isAnchorsTakeDepthIntoAccount() {
+            return anchorsTakeDepthIntoAccount;
+        }
+        public void setAnchorsTakeDepthIntoAccount(boolean anchorsTakeDepthIntoAccount) {
+            this.anchorsTakeDepthIntoAccount = anchorsTakeDepthIntoAccount;
         }
         public float getBloom() {
             return bloom;
@@ -111,6 +133,12 @@ public class Environment {
         public void setAnimScroll(Vector2 animScroll) {
             this.animScroll = animScroll;
         }
+        public JsonNode getGradient() {
+            return gradient;
+        }
+        public void setGradient(JsonNode gradient) {
+            this.gradient = gradient;
+        }
         
     }
     
@@ -119,23 +147,34 @@ public class Environment {
     private List<Layer> layers = new ArrayList<>();
     // ...
     
+    private String fireLut;
+    
     public String getName() {
         return name;
     }
     public void setName(String name) {
         this.name = name;
     }
+    
     public String getId() {
         return id;
     }
     public void setId(String id) {
         this.id = id;
     }
+    
     public List<Layer> getLayers() {
         return layers;
     }
     public void setLayers(List<Layer> layers) {
         this.layers = layers;
+    }
+    
+    public String getFireLut() {
+        return fireLut;
+    }
+    public void setFireLut(String fireLut) {
+        this.fireLut = fireLut;
     }
     
 }

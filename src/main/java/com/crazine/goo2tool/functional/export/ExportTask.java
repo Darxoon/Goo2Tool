@@ -7,11 +7,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -20,6 +23,10 @@ import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.environment.Environment;
 import com.crazine.goo2tool.gamefiles.environment.EnvironmentLoader;
+import com.crazine.goo2tool.gamefiles.item.Item;
+import com.crazine.goo2tool.gamefiles.item.ItemFile;
+import com.crazine.goo2tool.gamefiles.item.ItemLoader;
+import com.crazine.goo2tool.gamefiles.item.ItemObject;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelItem;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
@@ -49,7 +56,7 @@ class ExportTask extends Task<Void> {
     private static enum CompileType {
         LEVEL,
         ENVIRONMENT,
-        // ITEM,
+        ITEM,
         // BALL,
         // PARTICLE_EFFECT,
         // PARTICLE_SYSTEM,
@@ -64,11 +71,14 @@ class ExportTask extends Task<Void> {
             new Resrc.SetDefaults("res/music/", "BGM_")),
         ENVIRONMENT("environments", "res/environments/images/_resources.xml", Resrc.Image.class,
             new Resrc.SetDefaults("res/environments/images/", "ENV_BG_")),
-        // ENVIRONMENT_LUT,
-        // ITEM,
+        ENVIRONMENT_LUT("environments_lut", "res/environments/luts/_resources.xml", Resrc.Image.class,
+            new Resrc.SetDefaults("res/environments/luts/", "ENV_LUT_")),
+        ITEM("items", "res/items/images/_resources.xml", Resrc.Image.class,
+            new Resrc.SetDefaults("res/items/images/", "IMAGE_ITEM_")),
         // ITEM_PREVIEW,
         // PARTICLES,
         // SOUND,
+        // ANIMATION,
         // TERRAIN,
         // TERRAIN_DECORATION,
         
@@ -229,6 +239,13 @@ class ExportTask extends Task<Void> {
             }
         }
         
+        String newFireLut = analyzeAsset(res, background.getFireLut(), AssetType.ENVIRONMENT_LUT);
+        
+        if (!newFireLut.equals(background.getFireLut())) {
+            backgroundModified = true;
+            backgroundValue.put("fireLut", newFireLut);
+        }
+        
         if (originalBackground.isPresent()) {
             if (backgroundModified || !backgroundText.equals(originalBackground.get())) {
                 String newBackgroundId = UUID.randomUUID().toString();
@@ -242,8 +259,73 @@ class ExportTask extends Task<Void> {
                 compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, newBackgroundId, newBackgroundText));
             }
         } else {
-            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), backgroundText));
+            JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
+            backgroundValue.set("layers", serializedLayers);
+            
+            String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
+            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), newBackgroundText));
         }
+        
+        // Items
+        Set<String> itemIds = level.getItems().stream()
+                .map(item -> item.getType())
+                .collect(Collectors.toSet());
+        
+        Map<String, String> modifiedItemIds = new HashMap<>();
+        
+        for (String itemId : itemIds) {
+            String itemFileText = Files.readString(Paths.get(customWog2, "game/res/items", itemId + ".wog2"));
+            Optional<String> originalItemFileText = res.getFileText("res/items/" + itemId + ".wog2");
+            
+            ItemFile itemFile = ItemLoader.loadItemFile(itemFileText);
+            
+            if (itemFile.getItems().size() != 1)
+                throw new IOException("Expected " + itemId + ".wog2 file to contain 1 item, not " + itemFile.getItems().size());
+            
+            ObjectNode itemJson = (ObjectNode) itemFile.getItems().get(0);
+            Item item = ItemLoader.loadItem(itemJson);
+            
+            boolean itemModified = false;
+            
+            for (ItemObject object : item.getObjects()) {
+                String newName = analyzeAsset(res, object.getName(), AssetType.ITEM);
+                
+                if (!newName.equals(object.getName())) {
+                    itemModified = true;
+                    object.setName(newName);
+                }
+            }
+            
+            if (originalItemFileText.isPresent()) {
+                if (itemModified || !itemFileText.equals(originalItemFileText.get())) {
+                    String newItemId = UUID.randomUUID().toString();
+                    modifiedItemIds.put(itemId, newItemId);
+                    
+                    JsonNode serializedObjects = jsonMapper.valueToTree(item.getObjects());
+                    itemJson.put("uuid", newItemId);
+                    itemJson.set("objects", serializedObjects);
+                    
+                    ItemFile newItemFile = new ItemFile(List.of(itemJson));
+                    
+                    String newItemFileText = ItemLoader.saveItemFile(newItemFile);
+                    compiledResources.add(new CompiledResource(CompileType.ITEM, newItemId, newItemFileText));
+                }
+            } else {
+                JsonNode serializedObjects = jsonMapper.valueToTree(item.getObjects());
+                itemJson.set("objects", serializedObjects);
+                
+                ItemFile newItemFile = new ItemFile(List.of(itemJson));
+                String newItemFileText = ItemLoader.saveItemFile(newItemFile);
+                
+                compiledResources.add(new CompiledResource(CompileType.ITEM, itemId, newItemFileText));
+            }
+        }
+        
+        for (LevelItem item : level.getItems()) {
+            item.setType(modifiedItemIds.getOrDefault(item.getType(), item.getType()));
+        }
+        
+        levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
         
         // Music
         String newMusicId = analyzeAsset(res, level.getMusicId(), AssetType.MUSIC);
@@ -313,6 +395,9 @@ class ExportTask extends Task<Void> {
     }
     
     private String analyzeAsset(ResArchive res, String id, AssetType type) throws IOException {
+        if (id == null || id.isEmpty())
+            return id;
+        
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
@@ -338,7 +423,7 @@ class ExportTask extends Task<Void> {
                         + " at location '" + fullOriginalPath + "'");
             }
             
-            if (!content.equals(originalContent.get())) {
+            if (!Arrays.equals(content, originalContent.get())) {
                 // TODO: id() and path() might be inaccurate if user used a different SetDefaults
                 String newId = resrcIdPrefix + resrc.resrc().id();
                 String newPath = resrcPathPrefix + resrc.resrc().path();
@@ -381,6 +466,9 @@ class ExportTask extends Task<Void> {
                     case ENVIRONMENT:
                         entryPath = "compile/res/environments/" + resource.name() + ".wog2";
                         break;
+                    case ITEM:
+                        entryPath = "compile/res/items/" + resource.name() + ".wog2";
+                        break;
                     default:
                         throw new RuntimeException();
                 }
@@ -402,6 +490,8 @@ class ExportTask extends Task<Void> {
                     if (asset.type() == type) {
                         switch (type) {
                             case ENVIRONMENT:
+                            case ENVIRONMENT_LUT:
+                            case ITEM:
                                 resources.add(new Resrc.Image(asset.id(), asset.name()));
                                 break;
                             case MUSIC:

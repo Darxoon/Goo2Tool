@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -170,7 +171,9 @@ class SaveTask extends Task<Void> {
                 
                 if (!isLoaded) {
                     // TODO: try not deleting if the file has been modified by the user
-                    Files.delete(profilePath.resolve(path));
+                    try {
+                        Files.delete(profilePath.resolve(path));
+                    } catch (NoSuchFileException e) {}
                     table.removeEntry(entry);
                 }
             }
