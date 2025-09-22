@@ -97,18 +97,21 @@ public class FX_Mods {
 
 
         Button installNewAddinButton = new Button("Install new addin...");
-        installNewAddinButton.setPrefWidth(120);
+        installNewAddinButton.setMinWidth(120);
         installNewAddinButton.setOnAction(event -> installAddin());
         Button checkForUpdatesButton = new Button("Check for Updates...");
-        checkForUpdatesButton.setPrefWidth(120);
+        checkForUpdatesButton.setMinWidth(120);
         checkForUpdatesButton.setDisable(true);
         Hyperlink findMoreAddinsLink = new Hyperlink("Find more addins");
         findMoreAddinsLink.setDisable(true);
-        findMoreAddinsLink.setPrefWidth(120);
+        findMoreAddinsLink.setMinWidth(120);
         findMoreAddinsLink.setAlignment(Pos.CENTER);
         findMoreAddinsLink.setPadding(new Insets(-2, 0, -2, 0));
         findMoreAddinsLink.setOnAction(event -> findMoreAddinsLink.setVisited(false));
 
+        installNewAddinButton.prefWidthProperty().bind(checkForUpdatesButton.widthProperty());
+        findMoreAddinsLink.prefWidthProperty().bind(checkForUpdatesButton.widthProperty());
+        
         VBox buttonsVBox = new VBox();
         buttonsVBox.getChildren().addAll(installNewAddinButton, checkForUpdatesButton, findMoreAddinsLink);
         buttonsVBox.setSpacing(5);
