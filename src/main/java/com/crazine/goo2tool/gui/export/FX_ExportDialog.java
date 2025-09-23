@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.crazine.goo2tool.IconLoader;
 
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -148,6 +149,11 @@ public class FX_ExportDialog {
         
         gridPane.add(new Label(label), 0, rowValue);
         gridPane.add(field, 1, rowValue);
+        
+        // Make sure the first TextField is focused and not the ButtonBar
+        if (rowValue == 0) {
+            Platform.runLater(field::requestFocus);
+        }
     }
     
 }
