@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.LocateGooDir;
@@ -27,6 +30,8 @@ import javafx.stage.Stage;
 
 public class FX_Setup extends Application {
 
+    private static Logger logger = LoggerFactory.getLogger(FX_Setup.class);
+    
     @Override
     public void start(Stage stage) {
         stage.setTitle("Goo2Tool Setup");
@@ -251,7 +256,7 @@ public class FX_Setup extends Application {
             return Optional.empty();
         
         Optional<Path> steamProfile = Files.list(steamUserdata).findFirst();
-        System.out.println(steamProfile);
+        logger.debug("steamProfile {}", steamProfile);
         
         if (steamProfile.isEmpty())
             return Optional.empty();

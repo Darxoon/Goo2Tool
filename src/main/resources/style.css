@@ -15,6 +15,11 @@
     -fx-text-fill: #ffffff;
 }
 
+.text-field {
+    /* Always show placeholder/prompt text, even when selected */
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+}
+
 .tooltip {
     -fx-border-color: #767676;
     -fx-background-color: #FFFFFF;

@@ -37,6 +37,7 @@ import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gamefiles.translation.GameString;
 import com.crazine.goo2tool.gamefiles.translation.TextDB;
 import com.crazine.goo2tool.gamefiles.translation.TextLoader;
+import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -104,9 +105,9 @@ class ExportTask extends Task<Void> {
     private static record AssetResource(AssetType type, String id, String name, byte[] content) {}
     
     private final Stage stage;
+    private final AddinInfo addinInfo;
     private final Path levelPath;
     private final Path outputPath;
-    private final boolean embedThumbnail;
     
     private String resrcPathPrefix = "";
     private String resrcIdPrefix = "";
@@ -119,11 +120,11 @@ class ExportTask extends Task<Void> {
     
     private boolean success = true;
 
-    ExportTask(Stage stage, Path levelPath, Path outputPath, boolean embedThumbnail) {
+    ExportTask(Stage stage, AddinInfo addinInfo, Path levelPath, Path outputPath) {
         this.stage = stage;
+        this.addinInfo = addinInfo;
         this.levelPath = levelPath;
         this.outputPath = outputPath;
-        this.embedThumbnail = embedThumbnail;
     }
 
     @Override
@@ -159,10 +160,7 @@ class ExportTask extends Task<Void> {
         ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(levelContent);
         Level level = LevelLoader.loadLevel(levelJson);
         
-        // TODO: ask the user for actual values
-        String modId = "sampleid." + level.getTitle().replace(" ", "");
-        
-        resrcPathPrefix = modId.replace(".", "_") + "_";
+        resrcPathPrefix = addinInfo.modId().replace(".", "_") + "_";
         resrcPathPrefix = resrcPathPrefix.substring(0, 1).toUpperCase() + resrcPathPrefix.substring(1);
         
         resrcIdPrefix = resrcPathPrefix.toUpperCase();
@@ -202,7 +200,7 @@ class ExportTask extends Task<Void> {
         // Thumbnail
         String addinThumbnailPath;
         
-        if (embedThumbnail) {
+        if (addinInfo.embedThumbnail()) {
             Path realThumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
             byte[] thumbnailContent = Files.readAllBytes(realThumbnailPath);
             
@@ -336,8 +334,8 @@ class ExportTask extends Task<Void> {
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), newLevelContent));
         
         // Create addin.xml
-        Goo2mod mod = new Goo2mod("2.2", modId, level.getTitle(), ModType.LEVEL,
-                "1.0", "", "Sample Author");
+        Goo2mod mod = new Goo2mod("2.2", addinInfo.modId(), addinInfo.name(), ModType.LEVEL,
+                addinInfo.version(), addinInfo.description(), addinInfo.author());
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
         

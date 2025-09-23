@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
+
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -26,7 +28,7 @@ public class ExportGui {
         Canceled,
     }
     
-    public static Optional<Property<Result>> exportLevel(Stage originalStage, Path levelPath, Path outPath) {
+    public static Optional<Property<Result>> exportLevel(Stage originalStage, AddinInfo addinInfo, Path levelPath, Path outPath) {
         // Loading Screen
         Stage stage = new Stage();
         stage.initOwner(originalStage);
@@ -41,7 +43,7 @@ public class ExportGui {
 
         stage.setAlwaysOnTop(true);
 
-        ExportTask task = new ExportTask(stage, levelPath, outPath, true);
+        ExportTask task = new ExportTask(stage, addinInfo, levelPath, outPath);
         
         Label contentLabel = new Label();
         contentLabel.textProperty().bind(task.messageProperty());

@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.gui.util;
+package com.crazine.goo2tool.gui.export;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,13 +6,20 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.functional.export.ExportGui;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
+import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
+import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -28,6 +35,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class FX_Levels {
+    
+    private static Logger logger = LoggerFactory.getLogger(FX_Levels.class);
     
     private static record LevelFile(String title, Path path) {}
     
@@ -94,15 +103,24 @@ public class FX_Levels {
             LevelFile levelFile = levelsView.getSelectionModel().getSelectedItem();
             stage.close();
             
-            // Save Dialog
-            // TODO: migrate to CustomFileChooser
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("WoG2 Addin", "*.goo2mod"));
-            fileChooser.setInitialFileName(levelFile.title() + ".goo2mod");
-            File outFile = fileChooser.showSaveDialog(stage);
+            ObjectProperty<Optional<AddinInfo>> addinInfoProperty = FX_ExportDialog.show(originalStage, levelFile.title());
             
-            System.out.println("Exporting level " + levelFile.title() + ": " + levelFile.path());
-            ExportGui.exportLevel(stage, levelFile.path(), outFile.toPath());
+            addinInfoProperty.addListener(observable -> {
+                if (addinInfoProperty.get().isEmpty())
+                    return;
+                
+                AddinInfo addinInfo = addinInfoProperty.get().get();
+                
+                // Save Dialog
+                // TODO: migrate to CustomFileChooser
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("WoG2 Addin", "*.goo2mod"));
+                fileChooser.setInitialFileName(addinInfo.modId() + ".goo2mod");
+                File outFile = fileChooser.showSaveDialog(stage);
+                
+                logger.info("Exporting level " + levelFile.title() + ": " + levelFile.path());
+                ExportGui.exportLevel(stage, addinInfo, levelFile.path(), outFile.toPath());
+            });
         });
         
         Button cancelButton = new Button("Cancel");

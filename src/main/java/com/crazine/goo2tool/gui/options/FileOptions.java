@@ -25,7 +25,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class FileOptions {
+    
+    private static Logger logger = LoggerFactory.getLogger(FileOptions.class);
     
     private Stage stage;
     private boolean launchMainApplication;
@@ -129,7 +134,7 @@ public class FileOptions {
                 if (chosenFile == null) return;
             }
             
-            System.out.println(labelText + ": " + chosenFile.getAbsolutePath());
+            logger.debug("Set property {} to '{}'", labelText, chosenFile.getAbsolutePath());
             dirLabel.setText(chosenFile.getAbsolutePath());
             dirLabel.getTooltip().setText(chosenFile.getAbsolutePath());
             

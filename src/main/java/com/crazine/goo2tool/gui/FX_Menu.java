@@ -1,8 +1,8 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.gui.export.FX_Levels;
 import com.crazine.goo2tool.gui.util.FX_Alert;
-import com.crazine.goo2tool.gui.util.FX_Levels;
 
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Menu;

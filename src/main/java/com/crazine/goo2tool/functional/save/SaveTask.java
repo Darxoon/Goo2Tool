@@ -18,6 +18,9 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
@@ -53,6 +56,8 @@ import javafx.scene.control.Dialog;
 import javafx.stage.Stage;
 
 class SaveTask extends Task<Void> {
+    
+    private static Logger logger = LoggerFactory.getLogger(SaveTask.class);
     
     private final Stage stage;
     
@@ -318,6 +323,8 @@ class SaveTask extends Task<Void> {
     }
     
     private void installGoo2mod(Goo2mod mod, ResFileTable table) {
+        logger.info("Installing mod {}", mod.getId());
+        
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
@@ -432,7 +439,7 @@ class SaveTask extends Task<Void> {
                 // do not copy to customPath/game/res/levels, instead copy into profile/levels
                 // so it appears in the level editor menu
                 Level level = LevelLoader.loadLevel(resource.contentText());
-                System.out.println("Level " + level.getUuid() + ": " + level.getTitle());
+                logger.info("Copying level {} ({}) to profile", level.getTitle(), level.getUuid());
                 
                 String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
                 Path outLevelPath = Paths.get(profileDir, "levels", level.getUuid() + ".wog2");
