@@ -1,8 +1,11 @@
 package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.functional.FistyInstaller;
 import com.crazine.goo2tool.functional.save.SaveGui;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.beans.property.Property;
@@ -10,6 +13,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.HBox;
@@ -35,6 +39,7 @@ public class FX_Scene {
 
         FX_Scene.stage = stage;
         
+        // Create tabs
         TabPane tabPane = new TabPane();
         tabPane.prefHeightProperty().bind(stage.heightProperty());
 
@@ -53,6 +58,47 @@ public class FX_Scene {
         optionsTab.setClosable(false);
         tabPane.getTabs().add(optionsTab);
 
+        // Create buttons at the bottom
+        HBox hBox = new HBox();
+        
+        Properties properties = PropertiesLoader.getProperties();
+        
+        // TODO: Update FistyLoader button for old versions of FistyLoader
+        if (properties.getFistyVersion().isEmpty()) {
+            Button installFistyButton = new Button("Install FistyLoader");
+            
+            boolean disabled = switch (Platform.getCurrent()) {
+                case WINDOWS -> !properties.isSteam();
+                case MAC -> true;
+                case LINUX -> !properties.isSteam() && !properties.isProton();
+            };
+            
+            installFistyButton.setOnAction(event -> {
+                Optional<ButtonType> result = FX_Alert.show("FistyLoader",
+                        "FistyLoader is an exe mod for World of Goo 2 which is necessary "
+                        + "to use custom goo balls. Some mods might require this.\n\n"
+                        + "Do you want to install?",
+                        ButtonType.YES, ButtonType.NO);
+                
+                if (result.isEmpty() || result.get() == ButtonType.NO)
+                    return;
+                
+                try {
+                    FistyInstaller.installFisty();
+                    PropertiesLoader.saveProperties();
+                } catch (IOException e) {
+                    FX_Alarm.error(e);
+                    return;
+                }
+                
+                FX_Alert.show("FistyLoader", "Successfully installed.", ButtonType.OK);
+                hBox.getChildren().remove(installFistyButton);
+            });
+            
+            installFistyButton.setDisable(disabled);
+            hBox.getChildren().add(installFistyButton);
+        }
+        
         Button saveButton = new Button("Save");
         saveButton.setOnAction(event -> {
             save();
@@ -62,7 +108,9 @@ public class FX_Scene {
         saveAndPlayButton.setOnAction(event -> {
             saveAndPlay();
         });
-        HBox hBox = new HBox(saveButton, saveAndPlayButton);
+        
+        hBox.getChildren().addAll(saveButton, saveAndPlayButton);
+        
         hBox.setPadding(new Insets(0, 10, 10, 10));
         hBox.setSpacing(10);
         hBox.setAlignment(Pos.CENTER_RIGHT);

@@ -21,6 +21,7 @@ public class Properties {
     private boolean isSteam;
     private boolean isProton;
     private boolean steamWarningShown;
+    private String fistyVersion = "";
     private StringProperty launchCommand = new SimpleStringProperty("");
     
     @JacksonXmlElementWrapper(localName = "Addins")
@@ -123,6 +124,14 @@ public class Properties {
     
     public void setSteamWarningShown(boolean steamWarningShown) {
         this.steamWarningShown = steamWarningShown;
+    }
+    
+    public String getFistyVersion() {
+        return fistyVersion;
+    }
+    
+    public void setFistyVersion(String fistyVersion) {
+        this.fistyVersion = fistyVersion;
     }
     
     public String getLaunchCommand() {

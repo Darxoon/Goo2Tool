@@ -9,6 +9,8 @@ module com.crazine.goo2tool {
     requires java.xml;
     requires transitive org.freedesktop.dbus;
     requires org.slf4j;
+    requires org.yaml.snakeyaml;
+    requires jelf;
 
     exports com.crazine.goo2tool;
     exports com.crazine.goo2tool.gui;
@@ -25,10 +27,15 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles.translation;
     exports com.crazine.goo2tool.gamefiles.environment;
     
+    exports fistyloader;
+    
     exports org.freedesktop.portal;
 
     opens com.crazine.goo2tool.addinFile;
     opens com.crazine.goo2tool.gamefiles.translation;
     opens com.crazine.goo2tool.gui.util;
+    opens com.crazine.goo2tool.functional;
+    
+    opens fistyloader;
     
 }
