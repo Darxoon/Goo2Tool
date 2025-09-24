@@ -19,6 +19,9 @@ public class Item {
     private List<ItemObject> objects = new ArrayList<>();
     // ...
     
+    private List<ItemUserVariable> userVariables = new ArrayList<>();
+    // ...
+    
     private JsonNode sound;
     // ...
 
@@ -48,6 +51,13 @@ public class Item {
     }
     public void setObjects(List<ItemObject> objects) {
         this.objects = objects;
+    }
+    
+    public List<ItemUserVariable> getUserVariables() {
+        return userVariables;
+    }
+    public void setUserVariables(List<ItemUserVariable> userVariables) {
+        this.userVariables = userVariables;
     }
     
     public JsonNode getSound() {

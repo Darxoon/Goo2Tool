@@ -22,7 +22,12 @@ public class Level {
     private String ambienceId;
     // ...
     
+    private List<LevelBallInstance> balls = new ArrayList<>();
+    private List<LevelStrand> strands = new ArrayList<>();
+    // ...
+    
     private List<LevelItem> items = new ArrayList<>();
+    // ...
     
     @JsonCreator
     public Level(
@@ -30,9 +35,7 @@ public class Level {
         @JsonProperty("uuid") String uuid,
         @JsonProperty("title") String title,
         @JsonProperty("backgroundId") String backgroundId,
-        @JsonProperty("musicId") String musicId,
-        @JsonProperty("ambienceId") String ambienceId,
-        @JsonProperty("items") List<LevelItem> items
+        @JsonProperty("musicId") String musicId
     ) {
         if (version != 2)
             throw new IllegalArgumentException("Unknown level version " + version);
@@ -42,8 +45,6 @@ public class Level {
         this.title = title;
         this.backgroundId = backgroundId;
         this.musicId = musicId;
-        this.ambienceId = ambienceId;
-        this.items = items;
     }
     
     public int getVersion() {
@@ -86,6 +87,20 @@ public class Level {
     }
     public void setAmbienceId(String ambienceId) {
         this.ambienceId = ambienceId;
+    }
+    
+    public List<LevelBallInstance> getBalls() {
+        return balls;
+    }
+    public void setBalls(List<LevelBallInstance> balls) {
+        this.balls = balls;
+    }
+
+    public List<LevelStrand> getStrands() {
+        return strands;
+    }
+    public void setStrands(List<LevelStrand> strands) {
+        this.strands = strands;
     }
     
     public List<LevelItem> getItems() {

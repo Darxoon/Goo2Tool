@@ -4,9 +4,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.crazine.goo2tool.gamefiles.Vector2;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class LevelItem {
+    
+    public static class UserVariable {
+        
+        private float value;
+
+        @JsonCreator
+        public UserVariable(@JsonProperty("value") float value) {
+            this.value = value;
+        }
+        
+        public float getValue() {
+            return value;
+        }
+        public void setValue(float value) {
+            this.value = value;
+        }
+        
+    }
     
     private String id;
     private String type;
@@ -28,8 +47,7 @@ public class LevelItem {
     private int uid1;
     private int uid2;
     
-    // ?
-    private List<JsonNode> userVariables = new ArrayList<>();
+    private List<UserVariable> userVariables = new ArrayList<>();
     
     public String getId() {
         return id;
@@ -164,10 +182,10 @@ public class LevelItem {
         this.uid2 = uid2;
     }
     
-    public List<JsonNode> getUserVariables() {
+    public List<UserVariable> getUserVariables() {
         return userVariables;
     }
-    public void setUserVariables(List<JsonNode> userVariables) {
+    public void setUserVariables(List<UserVariable> userVariables) {
         this.userVariables = userVariables;
     }
     

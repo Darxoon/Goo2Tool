@@ -110,7 +110,7 @@ public class Goo2mod {
     
     public boolean isThumbnail(String filename) {
         for (Level level : levels) {
-            if (level.thumbnail.equals(filename))
+            if (level.thumbnail() != null && level.thumbnail().equals(filename))
                 return true;
         }
         

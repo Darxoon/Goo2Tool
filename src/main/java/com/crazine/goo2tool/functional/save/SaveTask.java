@@ -13,9 +13,13 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -32,8 +36,17 @@ import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFil
 import com.crazine.goo2tool.gamefiles.AppImageResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
+import com.crazine.goo2tool.gamefiles.fistyini.DefaultFistyIni;
+import com.crazine.goo2tool.gamefiles.fistyini.FistyIniFile;
+import com.crazine.goo2tool.gamefiles.fistyini.FistyIniLoader;
+import com.crazine.goo2tool.gamefiles.item.Item;
+import com.crazine.goo2tool.gamefiles.item.ItemLoader;
+import com.crazine.goo2tool.gamefiles.item.ItemUserVariable;
 import com.crazine.goo2tool.gamefiles.level.Level;
+import com.crazine.goo2tool.gamefiles.level.LevelBallInstance;
+import com.crazine.goo2tool.gamefiles.level.LevelItem;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
+import com.crazine.goo2tool.gamefiles.level.LevelStrand;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gamefiles.translation.GameString;
@@ -130,6 +143,26 @@ class SaveTask extends Task<Void> {
         } else {
             copyMissingOriginalFiles(res, table);
         }
+        
+        // Load ballTable
+        FistyIniFile ballTable = null;
+        if (!properties.getFistyVersion().isEmpty()) {
+            Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
+            
+            if (Files.exists(ballTablePath)) {
+                String ballTableString = Files.readString(ballTablePath);
+                
+                if (ballTableString.endsWith("\n\n")) {}
+                else if (ballTableString.endsWith("\n"))
+                    ballTableString += "\n";
+                else
+                    ballTableString += "\n\n";
+                
+                ballTable = FistyIniLoader.loadIni(ballTableString);
+            } else {
+                ballTable = DefaultFistyIni.generateBallTable();
+            }
+        }
 
         // Retrieve mods
         ArrayList<Goo2mod> goo2mods = new ArrayList<>();
@@ -154,7 +187,15 @@ class SaveTask extends Task<Void> {
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {
             updateTitle("Installing addin " + goo2mod.getId());
-            installGoo2mod(goo2mod, table);
+            installGoo2mod(goo2mod, table, ballTable);
+        }
+        
+        // Save ballTable
+        if (ballTable != null) {
+            Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
+            
+            Files.writeString(ballTablePath, ballTable.getSourceFile(),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         }
         
         // Delete unloaded levels from profile
@@ -322,16 +363,41 @@ class SaveTask extends Task<Void> {
         }
     }
     
-    private void installGoo2mod(Goo2mod mod, ResFileTable table) {
+    private void installGoo2mod(Goo2mod mod, ResFileTable table, FistyIniFile ballTable) {
         logger.info("Installing mod {}", mod.getId());
         
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
+        // TODO: check FistyLoader 'requires' field
+        
         try (AddinReader addinFile = new AddinReader(mod)) {
             
             long count = addinFile.getFileCount();
             long i = 0;
+            
+            // Load FistyLoader balls.ini
+            Map<Integer, Integer> ballIdMap = new HashMap<>();
+            if (ballTable != null) {
+                Optional<String> modBallsString = addinFile.getFileText("balls.ini");
+                
+                if (modBallsString.isPresent()) {
+                    FistyIniFile modBalls = FistyIniLoader.loadIni(modBallsString.get());
+                    List<String> entries = modBalls.getEntries();
+                    
+                    for (int j = 0; j < entries.size(); j++) {
+                        String ballName = entries.get(j);
+                        
+                        if (ballName.isEmpty())
+                            continue;
+                        
+                        // addBallId returns the actual id of the gooball in the final ballTable.ini
+                        // this creates a map of old ballId -> new ballId which will be used to transform
+                        // every gooball definition in all level wog2 files
+                        ballIdMap.put(j, ballTable.addBallId(ballName, j));
+                    }
+                }
+            }
 
             for (Resource resource : addinFile.getAllFiles()) {
                 i++;
@@ -342,9 +408,14 @@ class SaveTask extends Task<Void> {
                         if (resource.path().equals("translation.xml"))
                             writeTranslation(table, resource);
                         
+                        if (resource.path().equals("balls.ini") && ballTable == null) {
+                            throw new Exception("Mod contains 'balls.ini' file even though "
+                                    + "FistyLoader is not listed in its dependencies");
+                        }
+                        
                         break;
                     case COMPILE:
-                        writeCompiledFile(table, addinFile, mod, resource);
+                        writeCompiledFile(table, ballIdMap, addinFile, mod, resource);
                         break;
                     case OVERRIDE:
                         overrideFile(table, mod, resource);
@@ -362,6 +433,9 @@ class SaveTask extends Task<Void> {
                             }
                         }
                         
+                        if (resource.path().length() > 1)
+                            updateMessage(resource.path().substring(1));
+            
                         Path customPath = Paths.get(customWog2, "game", resource.path());
                         
                         if (resource.path().endsWith(".wog2")) {
@@ -427,24 +501,44 @@ class SaveTask extends Task<Void> {
         TextLoader.saveText(originalIntl, intlPath.toFile());
     }
     
-    private void writeCompiledFile(ResFileTable table, AddinReader addinFile, Goo2mod mod, Resource resource) throws IOException {
+    private void writeCompiledFile(ResFileTable table, Map<Integer, Integer> ballIdMap,
+            AddinReader addinFile, Goo2mod mod, Resource resource) throws IOException {
+        
         if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
+        
+        if (resource.path().length() > 1)
+            updateMessage(resource.path().substring(1));
         
         if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
             String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
             Optional<Goo2mod.Level> levelEntry = mod.getLevel(levelName);
             
             if (levelEntry.isPresent()) {
+                JsonMapper jsonMapper = new JsonMapper();
+                
                 // do not copy to customPath/game/res/levels, instead copy into profile/levels
                 // so it appears in the level editor menu
-                Level level = LevelLoader.loadLevel(resource.contentText());
+                ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(resource.contentText());
+                Level level = LevelLoader.loadLevel(levelJson);
+                
+                byte[] outLevel;
+                if (ballIdMap.isEmpty()) {
+                    outLevel = resource.content();
+                } else {
+                    updateLevel(addinFile, level, ballIdMap);
+                    levelJson.set("balls", jsonMapper.valueToTree(level.getBalls()));
+                    levelJson.set("strands", jsonMapper.valueToTree(level.getStrands()));
+                    levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
+                    outLevel = LevelLoader.saveLevel(levelJson).getBytes();
+                }
+                
                 logger.info("Copying level {} ({}) to profile", level.getTitle(), level.getUuid());
                 
                 String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
                 Path outLevelPath = Paths.get(profileDir, "levels", level.getUuid() + ".wog2");
                 
-                Files.write(outLevelPath, resource.content(),
+                Files.write(outLevelPath, outLevel,
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
                 
@@ -467,8 +561,6 @@ class SaveTask extends Task<Void> {
         String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         Path customPath = Paths.get(customWog2, "game", resource.path());
         
-        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
-        
         table.addEntry(mod.getId(), resource.path());
         
         Files.createDirectories(customPath.getParent());
@@ -476,9 +568,73 @@ class SaveTask extends Task<Void> {
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     }
     
+    private void updateLevel(AddinReader addinFile, Level level, Map<Integer, Integer> ballIdMap) {
+        Properties properties = PropertiesLoader.getProperties();
+        String customWog2 = properties.getTargetWog2Directory();
+        
+        // Collect all items
+        Set<String> allItemTypes = level.getItems().stream()
+            .map(item -> item.getType())
+            .collect(Collectors.toSet());
+        
+        Map<String, Item> itemDefs = allItemTypes.stream()
+            .collect(Collectors.toMap(type -> type, type -> {
+                try {
+                    // TODO: i should probably cache item definitions between addins and defer
+                    // level compiling at the end of a mod
+                    Optional<String> itemAddinString = addinFile.getFileText("res/items/" + type + ".wog2");
+                    
+                    if (itemAddinString.isPresent()) {
+                        return ItemLoader.loadItemFileAsItem(itemAddinString.get());
+                    } else {
+                        Path itemPath = Paths.get(customWog2, "game/res/items", type + ".wog2");
+                        
+                        if (!Files.isRegularFile(itemPath))
+                            throw new IOException("Could not find item with ID " + type);
+                        
+                        String itemString = Files.readString(itemPath);
+                        return  ItemLoader.loadItemFileAsItem(itemString);
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }));
+        
+        for (LevelBallInstance ballInstance : level.getBalls()) {
+            int originalTypeEnum = ballInstance.getTypeEnum();
+            ballInstance.setTypeEnum(ballIdMap.getOrDefault(originalTypeEnum, originalTypeEnum));
+        }
+        
+        for (LevelStrand strand : level.getStrands()) {
+            int originalTypeEnum = strand.getType();
+            strand.setType(ballIdMap.getOrDefault(originalTypeEnum, originalTypeEnum));
+        }
+        
+        for (LevelItem item : level.getItems()) {
+            Item itemDef = itemDefs.get(item.getType());
+            List<ItemUserVariable> itemVars = itemDef.getUserVariables();
+            
+            int count = Math.min(itemVars.size(), item.getUserVariables().size());
+            for (int i = 0; i < count; i++) {
+                ItemUserVariable itemVar = itemVars.get(i);
+                LevelItem.UserVariable value = item.getUserVariables().get(i);
+                
+                if (itemVar.getType() == ItemUserVariable.TYPE_GOO_BALL) {
+                    int oldValue = (int) value.getValue();
+                    int newValue = ballIdMap.getOrDefault(oldValue, oldValue);
+                    logger.debug("Gooball user var {} with value {} -> {} in item {}", itemVar.getName(), oldValue, newValue, itemDef.getName());
+                    value.setValue(newValue);
+                }
+            }
+        }
+    }
+    
     private void overrideFile(ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
         if (resource.path().endsWith(".wog2") || resource.path().endsWith(".xml"))
             throw new IllegalArgumentException(".wog2 and .xml are not supported in override/, put them in compile/ instead!");
+        
+        if (resource.path().length() > 1)
+            updateMessage(resource.path().substring(1));
         
         if (mod.isThumbnail(resource.path())) {
             return;
@@ -486,8 +642,6 @@ class SaveTask extends Task<Void> {
         
         String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         Path customPath = Paths.get(customWog2, "game", resource.path());
-        
-        if (resource.path().length() > 1) updateMessage(resource.path().substring(1));
         
         table.addEntry(mod.getId(), resource.path());
         
