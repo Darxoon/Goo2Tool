@@ -20,9 +20,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class FX_Scene {
@@ -155,7 +155,7 @@ public class FX_Scene {
                     break;
                 case MAC:
                 case LINUX:
-                    ProcessBuilder processBuilder = new ProcessBuilder("/usr/bin/sh", "-c", customLaunchCommand);
+                    ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", customLaunchCommand);
                     process = processBuilder.start();
                     break;
             }
@@ -168,19 +168,21 @@ public class FX_Scene {
                 Main_Application.openUrl("steam://rungameid/3385670");
             }
         } else {
+            // TODO: test this
+            Path customWog2 = Path.of(PropertiesLoader.getProperties().getTargetWog2Directory());
+            
             // directly launch executable
-            // TODO: specify the path to the executable manually
-            File customWOG2Dir = new File(PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory());
-            File[] children = customWOG2Dir.listFiles();
-            if (children == null) return;
-            for (File child : children) {
-                if (child.isDirectory()) continue;
-                if (Files.isExecutable(child.toPath())) {
-                    ProcessBuilder processBuilder = new ProcessBuilder(child.getPath());
-                    process = processBuilder.start();
-                    break;
-                }
-            }
+            Path gameExecutable = switch (Platform.getCurrent()) {
+                case WINDOWS -> customWog2.resolve("World of Goo 2.exe");
+                case MAC -> customWog2.resolve("MacOS/WorldOfGoo2");
+                case LINUX -> customWog2.resolve("WorldOfGoo2");
+            };
+            
+            if (!Files.isExecutable(gameExecutable))
+                throw new IOException("File '" + gameExecutable + "' is not executable!");
+            
+            ProcessBuilder processBuilder = new ProcessBuilder(gameExecutable.toString());
+            processBuilder.start();
         }
         
         final Process process2 = process;
