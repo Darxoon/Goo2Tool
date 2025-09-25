@@ -71,6 +71,7 @@ public class Main_Application extends Application {
                 try {
                     goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
                 } catch (IOException e) {
+                    e.printStackTrace();
                     Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
                     dialog.setContentText("Failed loading the mod \"" + goomodFile.getName() + "\":\n\n" + e.toString());
                     dialog.show();

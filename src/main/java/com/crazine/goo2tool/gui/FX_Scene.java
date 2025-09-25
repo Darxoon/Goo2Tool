@@ -64,7 +64,8 @@ public class FX_Scene {
         Properties properties = PropertiesLoader.getProperties();
         
         // TODO: Update FistyLoader button for old versions of FistyLoader
-        if (properties.getFistyVersion().isEmpty()) {
+        // TODO: auto detect if FistyLoader is already installed at setup
+        if (properties.getFistyVersion() == null) {
             Button installFistyButton = new Button("Install FistyLoader");
             
             boolean disabled = switch (Platform.getCurrent()) {

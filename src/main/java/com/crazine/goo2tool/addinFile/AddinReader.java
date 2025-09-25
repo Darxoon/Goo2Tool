@@ -58,15 +58,12 @@ public class AddinReader implements Closeable {
     }
     
     public Optional<Resource> getFileContent(String path) throws IOException {
-        for (Iterator<? extends ZipEntry> it = zipFile.stream().iterator(); it.hasNext(); ) {
-            ZipEntry zipEntry = it.next();
-
-            if (zipEntry.getName().equals(path)) {
-                return Optional.of(Resource.fromZipEntry(zipFile, zipEntry));
-            }
-        }
+        ZipEntry entry = zipFile.getEntry(path);
         
-        return Optional.empty();
+        if (entry == null || entry.isDirectory())
+            return Optional.empty();
+        
+        return Optional.of(Resource.fromZipEntry(zipFile, entry));
     }
     
     public Optional<String> getFileText(String path) throws IOException {

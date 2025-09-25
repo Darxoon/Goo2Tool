@@ -19,15 +19,10 @@ public class AddinFileLoader {
             Goo2mod goo2mod;
             try {
                 goo2mod = xmlMapper.readValue(addinXmlFile.get(), Goo2mod.class);
-            } catch (JacksonException e) {
+            } catch (JacksonException | IllegalArgumentException e) {
                 throw new IOException("Failed to parse addin.xml: " + e.getMessage());
             }
             goo2mod.setFile(goo2modFile);
-            
-            if (!goo2mod.getSpecVersion().equals("2.2")) {
-                throw new IOException("Unsupported spec version '"
-                    + goo2mod.getSpecVersion() + "', supported versions are: 2.2");
-            }
             
             // "*" is reserved because it's being used as 'more than 1 mod' in the file table
             if (goo2mod.getName().equals("*")) {

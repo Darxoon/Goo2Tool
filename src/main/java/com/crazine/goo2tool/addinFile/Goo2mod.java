@@ -1,9 +1,12 @@
 package com.crazine.goo2tool.addinFile;
 
+import com.crazine.goo2tool.VersionNumber;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,10 +32,43 @@ public class Goo2mod {
         }
     }
     
+    public static final class Depends {
+        
+        @JacksonXmlText
+        private String id;
+        @JsonProperty("min-version")
+        private VersionNumber minVersion;
+        @JsonProperty("max-version")
+        private VersionNumber maxVersion;
+        
+        @SuppressWarnings("unused")
+        private Depends() {}
+        
+        public Depends(String id, VersionNumber minVersion, VersionNumber maxVersion) {
+            this.id = id;
+            this.minVersion = minVersion;
+            this.maxVersion = maxVersion;
+        }
+
+        public String getId() {
+            return id;
+        }
+        public VersionNumber getMinVersion() {
+            return minVersion;
+        }
+        public VersionNumber getMaxVersion() {
+            return maxVersion;
+        }
+        
+    }
+    
     public static record Level(String filename, @JsonProperty(required = false) String thumbnail) {}
     
+    public static final VersionNumber MIN_SPEC_VERSION = new VersionNumber(2, 2);
+    public static final VersionNumber MAX_SPEC_VERSION = new VersionNumber(2, 2);
+    
     @JacksonXmlProperty(isAttribute = true, localName = "spec-version")
-    private String specVersion;
+    private VersionNumber specVersion;
     
     private String id;
     private String name;
@@ -41,6 +77,10 @@ public class Goo2mod {
     private String description;
     private String author;
     
+    @JacksonXmlElementWrapper(localName = "dependencies")
+    @JacksonXmlProperty(localName = "depends")
+    private List<Depends> dependencies = new ArrayList<>();
+    
     @JacksonXmlElementWrapper(localName = "levels")
     @JacksonXmlProperty(localName = "level")
     private List<Level> levels = new ArrayList<>();
@@ -48,13 +88,23 @@ public class Goo2mod {
     @JsonIgnore
     private File file;
 
-    // used by Jackson
-    @SuppressWarnings("unused")
-    private Goo2mod() {}
+    @JsonCreator
+    private Goo2mod(@JsonProperty("spec-version") VersionNumber specVersion) {
+        if (MIN_SPEC_VERSION.compareTo(specVersion) > 0) {
+            throw new IllegalArgumentException("spec-version " + specVersion
+                    + " not supported, minimum supported version is " + MIN_SPEC_VERSION);
+        } else if (MAX_SPEC_VERSION.compareTo(specVersion) < 0) {
+            throw new IllegalArgumentException("spec-version " + specVersion
+                    + " is too new, maximum supported version is " + MAX_SPEC_VERSION
+                    + ". You are probably using an outdated version of Goo2Tool"
+                    + " and should update to the newest version!");
+        }
+        
+        this.specVersion = specVersion;
+    }
     
-    public Goo2mod(
-        String specVersion, String id, String name, ModType type, String version, String description,
-            String author) {
+    public Goo2mod(VersionNumber specVersion, String id, String name, ModType type,
+                String version, String description, String author) {
         this.specVersion = specVersion;
         this.id = id;
         this.name = name;
@@ -67,7 +117,7 @@ public class Goo2mod {
     }
 
     
-    public String getSpecVersion() {
+    public VersionNumber getSpecVersion() {
         return specVersion;
     }
 
@@ -95,6 +145,19 @@ public class Goo2mod {
         return author;
     }
 
+    public List<Depends> getDependencies() {
+        return dependencies;
+    }
+    
+    public Optional<Depends> getDependency(String id) {
+        for (Depends dependency : dependencies) {
+            if (dependency.getId().equals(id))
+                return Optional.of(dependency);
+        }
+        
+        return Optional.empty();
+    }
+    
     public List<Level> getLevels() {
         return levels;
     }

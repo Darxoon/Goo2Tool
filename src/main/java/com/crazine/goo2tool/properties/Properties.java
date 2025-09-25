@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.properties;
 
+import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
@@ -21,7 +22,7 @@ public class Properties {
     private boolean isSteam;
     private boolean isProton;
     private boolean steamWarningShown;
-    private String fistyVersion = "";
+    private VersionNumber fistyVersion;
     private StringProperty launchCommand = new SimpleStringProperty("");
     
     @JacksonXmlElementWrapper(localName = "Addins")
@@ -126,11 +127,11 @@ public class Properties {
         this.steamWarningShown = steamWarningShown;
     }
     
-    public String getFistyVersion() {
+    public VersionNumber getFistyVersion() {
         return fistyVersion;
     }
     
-    public void setFistyVersion(String fistyVersion) {
+    public void setFistyVersion(VersionNumber fistyVersion) {
         this.fistyVersion = fistyVersion;
     }
     

@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
@@ -146,7 +147,7 @@ class SaveTask extends Task<Void> {
         
         // Load ballTable
         FistyIniFile ballTable = null;
-        if (!properties.getFistyVersion().isEmpty()) {
+        if (properties.getFistyVersion() != null) {
             Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
             
             if (Files.exists(ballTablePath)) {
@@ -369,14 +370,30 @@ class SaveTask extends Task<Void> {
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
         
-        // TODO: check FistyLoader 'requires' field
-        
         try (AddinReader addinFile = new AddinReader(mod)) {
             
             long count = addinFile.getFileCount();
             long i = 0;
             
             // Load FistyLoader balls.ini
+            Optional<Goo2mod.Depends> fistyDepends = mod.getDependency("FistyLoader");
+            
+            // Check FistyLoader version
+            if (fistyDepends.isPresent()) {
+                if (ballTable == null || properties.getFistyVersion() == null)
+                    throw new Exception("Mod '" + mod.getId() + "' requires FistyLoader, which is not installed!");
+                
+                VersionNumber minVersion = fistyDepends.get().getMinVersion();
+                if (minVersion != null && properties.getFistyVersion().compareTo(minVersion) < 0)
+                    throw new Exception("Mod '" + mod.getId() + "' requires FistyLoader "
+                            + minVersion + " but version " + properties.getFistyVersion() + " is installed!");
+                
+                VersionNumber maxVersion = fistyDepends.get().getMaxVersion();
+                if (maxVersion != null && properties.getFistyVersion().compareTo(maxVersion) > 0)
+                    throw new Exception("Mod '" + mod.getId() + "' requires MAXIMUM FistyLoader "
+                            + maxVersion + " but version " + properties.getFistyVersion() + " is installed!");
+            }
+            
             Map<Integer, Integer> ballIdMap = new HashMap<>();
             if (ballTable != null) {
                 Optional<String> modBallsString = addinFile.getFileText("balls.ini");
@@ -408,9 +425,9 @@ class SaveTask extends Task<Void> {
                         if (resource.path().equals("translation.xml"))
                             writeTranslation(table, resource);
                         
-                        if (resource.path().equals("balls.ini") && ballTable == null) {
+                        if (resource.path().equals("balls.ini") && fistyDepends.isEmpty()) {
                             throw new Exception("Mod contains 'balls.ini' file even though "
-                                    + "FistyLoader is not listed in its dependencies");
+                                    + "FistyLoader is not listed in its dependencies!");
                         }
                         
                         break;

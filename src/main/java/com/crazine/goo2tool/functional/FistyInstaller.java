@@ -23,6 +23,7 @@ import org.yaml.snakeyaml.yamlrecords.RecordConstructor;
 import org.yaml.snakeyaml.yamlrecords.RecordConstructor.RecordSubstitute;
 
 import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
@@ -37,6 +38,8 @@ public class FistyInstaller {
     
     public static record HookFile(Map<String, Hook> hooks) {}
     public static record Hook(long targetAddr, int byteLength) {}
+    
+    public static final VersionNumber FISTY_VERSION = new VersionNumber(1, 1);
     
     public static final String BASE_WOG2_STEAM_HASH = "0b39f56b47d6947640ca5c8fba0b91af";
     
@@ -139,7 +142,7 @@ public class FistyInstaller {
         Files.write(outPath, buffer.array(),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         
-        properties.setFistyVersion("1.1");
+        properties.setFistyVersion(FISTY_VERSION);
     }
     
     private static void writeBytes(ByteBuffer buffer, long virtualAddress, byte[] replacement) {

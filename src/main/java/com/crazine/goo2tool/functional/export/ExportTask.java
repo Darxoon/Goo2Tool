@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
@@ -334,7 +335,7 @@ class ExportTask extends Task<Void> {
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), newLevelContent));
         
         // Create addin.xml
-        Goo2mod mod = new Goo2mod("2.2", addinInfo.modId(), addinInfo.name(), ModType.LEVEL,
+        Goo2mod mod = new Goo2mod(new VersionNumber(2, 2), addinInfo.modId(), addinInfo.name(), ModType.LEVEL,
                 addinInfo.version(), addinInfo.description(), addinInfo.author());
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));

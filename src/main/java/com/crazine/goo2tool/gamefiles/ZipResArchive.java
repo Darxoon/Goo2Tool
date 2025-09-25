@@ -3,7 +3,6 @@ package com.crazine.goo2tool.gamefiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
@@ -19,19 +18,12 @@ public class ZipResArchive implements ResArchive {
     
     @Override
     public Optional<byte[]> getFileContent(String path) throws IOException {
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        ZipEntry entry = zipFile.getEntry(path);
         
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            if (entry.isDirectory())
-                continue;
-            
-            if (entry.getName() != null && entry.getName().equals(path)) {
-                return Optional.of(zipFile.getInputStream(entry).readAllBytes());
-            }
-        }
+        if (entry == null || entry.isDirectory())
+            return Optional.empty();
         
-        return Optional.empty();
+        return Optional.of(zipFile.getInputStream(entry).readAllBytes());
     }
 
     @Override
