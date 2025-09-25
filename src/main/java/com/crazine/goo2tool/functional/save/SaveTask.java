@@ -349,14 +349,18 @@ class SaveTask extends Task<Void> {
                 Path customPath = Paths.get(customWog2, "game", file.path());
                 
                 if (garbageFiles.hasEntry(file.path())) {
+                    byte[] fileContent = file.readContent();
+                    
                     garbageFiles.removeEntry(file.path());
                     Files.createDirectories(customPath.getParent());
-                    Files.write(customPath, file.content(), StandardOpenOption.CREATE,
+                    Files.write(customPath, fileContent, StandardOpenOption.CREATE,
                             StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 } else if (!Files.exists(customPath)) {
+                    byte[] fileContent = file.readContent();
+                    
                     Files.createDirectories(customPath.getParent());
                     try {
-                        Files.write(customPath, file.content(), StandardOpenOption.CREATE_NEW);
+                        Files.write(customPath, fileContent, StandardOpenOption.CREATE_NEW);
                     } catch (FileAlreadyExistsException e) {}
                 }
             }

@@ -12,6 +12,28 @@ import java.util.Optional;
 
 public class AppImageResArchive implements ResArchive {
 
+    private static class AppImageResFile implements ResFile {
+
+        private final String path;
+        private final Path fsPath;
+        
+        public AppImageResFile(String path, Path fsPath) {
+            this.path = path;
+            this.fsPath = fsPath;
+        }
+
+        @Override
+        public String path() {
+            return path;
+        }
+
+        @Override
+        public byte[] readContent() throws IOException {
+            return Files.readAllBytes(fsPath);
+        }
+        
+    }
+    
     private Process appImageProcess;
     private Path gameDir;
     
@@ -70,14 +92,8 @@ public class AppImageResArchive implements ResArchive {
             }
             
             private ResFile getFile(Path path) {
-                try {
-                    Path relativePath = gameDir.relativize(path);
-                    byte[] content = Files.readAllBytes(path);
-                    
-                    return new ResFile(relativePath.toString(), content);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
+                Path relativePath = gameDir.relativize(path);
+                return new AppImageResFile(relativePath.toString(), path);
             }
             
         };

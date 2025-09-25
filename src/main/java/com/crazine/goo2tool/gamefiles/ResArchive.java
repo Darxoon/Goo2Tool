@@ -22,7 +22,10 @@ import javafx.stage.Stage;
 
 public interface ResArchive extends Closeable {
     
-    public static record ResFile(String path, byte[] content) {}
+    public static interface ResFile {
+        public String path();
+        public byte[] readContent() throws IOException;
+    }
     
     public Optional<byte[]> getFileContent(String path) throws IOException;
     public Iterable<ResFile> getAllFiles() throws UncheckedIOException;

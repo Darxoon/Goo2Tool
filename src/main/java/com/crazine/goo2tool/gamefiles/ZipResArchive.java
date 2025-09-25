@@ -10,6 +10,30 @@ import java.util.zip.ZipFile;
 
 public class ZipResArchive implements ResArchive {
     
+    private static class ZipResFile implements ResFile {
+
+        private final String path;
+        private final ZipFile zipFile;
+        private final ZipEntry zipEntry;
+        
+        public ZipResFile(String path, ZipFile zipFile, ZipEntry zipEntry) {
+            this.path = path;
+            this.zipFile = zipFile;
+            this.zipEntry = zipEntry;
+        }
+
+        @Override
+        public String path() {
+            return path;
+        }
+
+        @Override
+        public byte[] readContent() throws IOException {
+            return zipFile.getInputStream(zipEntry).readAllBytes();
+        }
+        
+    }
+    
     private ZipFile zipFile;
     
     public ZipResArchive(File inputFile) throws IOException {
@@ -49,7 +73,7 @@ public class ZipResArchive implements ResArchive {
     }
     
     private static ResFile fromZipEntry(ZipFile file, ZipEntry entry) throws IOException {
-        return new ResFile(entry.getName(), file.getInputStream(entry).readAllBytes());
+        return new ZipResFile(entry.getName(), file, entry);
     }
     
     @Override
