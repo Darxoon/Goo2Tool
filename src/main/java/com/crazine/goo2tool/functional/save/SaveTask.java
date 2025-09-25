@@ -31,6 +31,7 @@ import com.crazine.goo2tool.addinFile.AddinFileLoader;
 import com.crazine.goo2tool.addinFile.AddinReader;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.AddinReader.Resource;
+import com.crazine.goo2tool.addinFile.AddinReader.ResourceType;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFileEntry;
@@ -375,10 +376,9 @@ class SaveTask extends Task<Void> {
             long count = addinFile.getFileCount();
             long i = 0;
             
-            // Load FistyLoader balls.ini
+            // Check FistyLoader version
             Optional<Goo2mod.Depends> fistyDepends = mod.getDependency("FistyLoader");
             
-            // Check FistyLoader version
             if (fistyDepends.isPresent()) {
                 if (ballTable == null || properties.getFistyVersion() == null)
                     throw new Exception("Mod '" + mod.getId() + "' requires FistyLoader, which is not installed!");
@@ -394,6 +394,7 @@ class SaveTask extends Task<Void> {
                             + maxVersion + " but version " + properties.getFistyVersion() + " is installed!");
             }
             
+            // Load FistyLoader balls.ini
             Map<Integer, Integer> ballIdMap = new HashMap<>();
             if (ballTable != null) {
                 Optional<String> modBallsString = addinFile.getFileText("balls.ini");
@@ -416,12 +417,12 @@ class SaveTask extends Task<Void> {
                 }
             }
 
+            // Load main resources
             for (Resource resource : addinFile.getAllFiles()) {
-                i++;
-                updateProgress(i, count);
-                
                 switch (resource.type()) {
                     case METADATA:
+                        updateProgress(++i, count);
+                        
                         if (resource.path().equals("translation.xml"))
                             writeTranslation(table, resource);
                         
@@ -432,12 +433,21 @@ class SaveTask extends Task<Void> {
                         
                         break;
                     case COMPILE:
-                        writeCompiledFile(table, ballIdMap, addinFile, mod, resource);
+                        if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
+                            logger.debug("Skipping level {} for now", resource.path());
+                            break;
+                        }
+                        
+                        updateProgress(++i, count);
+                        writeCompiledFile(table, mod, resource);
                         break;
                     case OVERRIDE:
+                        updateProgress(++i, count);
                         overrideFile(table, mod, resource);
                         break;
                     case MERGE: {
+                        updateProgress(++i, count);
+                        
                         // merging files that have been overriden by previous mods could
                         // lead to weird conflicts, so it's not supported at all
                         if (table.hasEntry(resource.path())) {
@@ -468,6 +478,48 @@ class SaveTask extends Task<Void> {
                 }
             }
             
+            // Load levels
+            for (Resource resource : addinFile.getAllFiles()) {
+                if (resource.type() != ResourceType.COMPILE)
+                    continue;
+                if (!resource.path().startsWith("res/levels/") || !resource.path().endsWith(".wog2"))
+                    continue;
+                
+                updateProgress(++i, count);
+                if (resource.path().length() > 1)
+                    updateMessage(resource.path().substring(1));
+                
+                JsonMapper jsonMapper = new JsonMapper();
+                
+                ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(resource.contentText());
+                Level level = LevelLoader.loadLevel(levelJson);
+                
+                // Update gooball typeEnum entries based on ballTable
+                byte[] outLevel;
+                
+                if (ballIdMap.isEmpty()) {
+                    outLevel = resource.content();
+                } else {
+                    outLevel = serializeUpdatedLevel(level, levelJson, ballIdMap);
+                }
+                
+                // Write level either to profile or wog2 dir
+                String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
+                Optional<Goo2mod.Level> levelEntry = mod.getLevel(levelName);
+                
+                if (levelEntry.isPresent()) {
+                    writeLevelToProfile(addinFile, level, levelEntry.get(), outLevel);
+                    table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
+                } else {
+                    table.addEntry(mod.getId(), resource.path());
+                    
+                    Path customPath = Paths.get(customWog2, "game", resource.path());
+                    
+                    Files.createDirectories(customPath.getParent());
+                    Files.write(customPath, resource.content(),
+                            StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
             
@@ -518,62 +570,12 @@ class SaveTask extends Task<Void> {
         TextLoader.saveText(originalIntl, intlPath.toFile());
     }
     
-    private void writeCompiledFile(ResFileTable table, Map<Integer, Integer> ballIdMap,
-            AddinReader addinFile, Goo2mod mod, Resource resource) throws IOException {
-        
+    private void writeCompiledFile(ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
         if (!resource.path().endsWith(".wog2") && !resource.path().endsWith(".xml"))
             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
         
         if (resource.path().length() > 1)
             updateMessage(resource.path().substring(1));
-        
-        if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
-            String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
-            Optional<Goo2mod.Level> levelEntry = mod.getLevel(levelName);
-            
-            if (levelEntry.isPresent()) {
-                JsonMapper jsonMapper = new JsonMapper();
-                
-                // do not copy to customPath/game/res/levels, instead copy into profile/levels
-                // so it appears in the level editor menu
-                ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(resource.contentText());
-                Level level = LevelLoader.loadLevel(levelJson);
-                
-                byte[] outLevel;
-                if (ballIdMap.isEmpty()) {
-                    outLevel = resource.content();
-                } else {
-                    updateLevel(addinFile, level, ballIdMap);
-                    levelJson.set("balls", jsonMapper.valueToTree(level.getBalls()));
-                    levelJson.set("strands", jsonMapper.valueToTree(level.getStrands()));
-                    levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
-                    outLevel = LevelLoader.saveLevel(levelJson).getBytes();
-                }
-                
-                logger.info("Copying level {} ({}) to profile", level.getTitle(), level.getUuid());
-                
-                String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
-                Path outLevelPath = Paths.get(profileDir, "levels", level.getUuid() + ".wog2");
-                
-                Files.write(outLevelPath, outLevel,
-                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-                table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
-                
-                // write thumbnail if it doesn't yet exist
-                if (levelEntry.get().thumbnail() != null && !levelEntry.get().thumbnail().isEmpty()) {
-                    Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.get().thumbnail());
-                    
-                    if (thumbnail.isPresent()) {
-                        Path thumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
-                        
-                        try {
-                            Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
-                        } catch (FileAlreadyExistsException e) {}
-                    }
-                }
-                return;
-            }
-        }
         
         String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         Path customPath = Paths.get(customWog2, "game", resource.path());
@@ -585,25 +587,49 @@ class SaveTask extends Task<Void> {
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     }
     
-    private void updateLevel(AddinReader addinFile, Level level, Map<Integer, Integer> ballIdMap) {
+    private void writeLevelToProfile(AddinReader addinFile, Level level, Goo2mod.Level levelEntry, byte[] levelContent) throws IOException {
+        // do not copy to customPath/game/res/levels, instead copy into profile/levels
+        // so it appears in the level editor menu
+        logger.info("Copying level {} ({}) to profile", level.getTitle(), level.getUuid());
+        
+        String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
+        Path outLevelPath = Paths.get(profileDir, "levels", level.getUuid() + ".wog2");
+        
+        Files.write(outLevelPath, levelContent,
+            StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        
+        // write thumbnail if it doesn't yet exist
+        if (levelEntry.thumbnail() != null && !levelEntry.thumbnail().isEmpty()) {
+            Optional<Resource> thumbnail = addinFile.getFileContent("override/" + levelEntry.thumbnail());
+            
+            if (thumbnail.isPresent()) {
+                Path thumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
+                
+                try {
+                    Files.write(thumbnailPath, thumbnail.get().content(), StandardOpenOption.CREATE_NEW);
+                } catch (FileAlreadyExistsException e) {}
+            }
+        }
+    }
+    
+    private byte[] serializeUpdatedLevel(Level level, ObjectNode levelJson, Map<Integer, Integer> ballIdMap) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         String customWog2 = properties.getTargetWog2Directory();
+        
+        JsonMapper jsonMapper = new JsonMapper();
         
         // Collect all items
         Set<String> allItemTypes = level.getItems().stream()
             .map(item -> item.getType())
             .collect(Collectors.toSet());
         
-        Map<String, Item> itemDefs = allItemTypes.stream()
-            .collect(Collectors.toMap(type -> type, type -> {
-                try {
-                    // TODO: i should probably cache item definitions between addins and defer
-                    // level compiling at the end of a mod
-                    Optional<String> itemAddinString = addinFile.getFileText("res/items/" + type + ".wog2");
-                    
-                    if (itemAddinString.isPresent()) {
-                        return ItemLoader.loadItemFileAsItem(itemAddinString.get());
-                    } else {
+        Map<String, Item> itemDefs;
+        try {
+            itemDefs = allItemTypes.parallelStream()
+                .collect(Collectors.toMap(type -> type, type -> {
+                    try {
+                        // Any other file in the addin will already have been written to the wog2 dir
+                        // so the addin file doesn't need to be checked anymore
                         Path itemPath = Paths.get(customWog2, "game/res/items", type + ".wog2");
                         
                         if (!Files.isRegularFile(itemPath))
@@ -611,21 +637,27 @@ class SaveTask extends Task<Void> {
                         
                         String itemString = Files.readString(itemPath);
                         return  ItemLoader.loadItemFileAsItem(itemString);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            }));
+                }));
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
         
         for (LevelBallInstance ballInstance : level.getBalls()) {
             int originalTypeEnum = ballInstance.getTypeEnum();
             ballInstance.setTypeEnum(ballIdMap.getOrDefault(originalTypeEnum, originalTypeEnum));
         }
         
+        levelJson.set("balls", jsonMapper.valueToTree(level.getBalls()));
+        
         for (LevelStrand strand : level.getStrands()) {
             int originalTypeEnum = strand.getType();
             strand.setType(ballIdMap.getOrDefault(originalTypeEnum, originalTypeEnum));
         }
+        
+        levelJson.set("strands", jsonMapper.valueToTree(level.getStrands()));
         
         for (LevelItem item : level.getItems()) {
             Item itemDef = itemDefs.get(item.getType());
@@ -644,6 +676,10 @@ class SaveTask extends Task<Void> {
                 }
             }
         }
+        
+        levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
+        
+        return LevelLoader.saveLevel(levelJson).getBytes();
     }
     
     private void overrideFile(ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
