@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.functional.export.addininfocache;
+package com.crazine.goo2tool.gui.export.addininfocache;
 
 import java.io.IOException;
 import java.nio.file.Files;

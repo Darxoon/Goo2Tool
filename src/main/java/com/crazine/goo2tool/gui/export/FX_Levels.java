@@ -13,11 +13,11 @@ import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.functional.export.ExportGui;
-import com.crazine.goo2tool.functional.export.addininfocache.AddinInfoCache;
-import com.crazine.goo2tool.functional.export.addininfocache.AddinInfoCacheLoader;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
+import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCache;
+import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCacheLoader;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 

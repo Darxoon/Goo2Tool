@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.functional.export.addininfocache;
+package com.crazine.goo2tool.gui.export.addininfocache;
 
 import java.util.ArrayList;
 import java.util.List;

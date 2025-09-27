@@ -15,11 +15,11 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool;
     exports com.crazine.goo2tool.gui;
     exports com.crazine.goo2tool.gui.export;
+    exports com.crazine.goo2tool.gui.export.addininfocache;
     exports com.crazine.goo2tool.gamefiles.savefile;
     exports com.crazine.goo2tool.addinFile;
     exports com.crazine.goo2tool.properties;
     exports com.crazine.goo2tool.functional;
-    exports com.crazine.goo2tool.functional.export.addininfocache;
     exports com.crazine.goo2tool.functional.save.filetable;
     exports com.crazine.goo2tool.gamefiles;
     exports com.crazine.goo2tool.gamefiles.islands;

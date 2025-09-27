@@ -182,6 +182,24 @@ class ExportTask extends Task<Void> {
         
         resrcIdPrefix = resrcPathPrefix.toUpperCase();
         
+        // Set up progress reporting
+        Set<String> uniqueItemIds = level.allItemTypes();
+        long maxProgress = level.getItems().size() + uniqueItemIds.size() + 4;
+        
+        Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
+        boolean ballTableExists = Files.isRegularFile(ballTablePath);
+        
+        if (addinInfo.embedThumbnail()) {
+            maxProgress++;
+        }
+        
+        if (ballTableExists) {
+            Set<Integer> ballTypeEnums = level.allBallTypes();
+            maxProgress += ballTypeEnums.size() + level.getItems().size() + 1;
+        }
+        
+        long tracker = 0;
+        
         // translation-local.xml
         Optional<byte[]> translationLocalBytes = res.getFileContent("res/properties/translation-local.xml");
         TextDB translationLocal = TextLoader.loadText(translationLocalBytes.get());
@@ -192,8 +210,12 @@ class ExportTask extends Task<Void> {
         for (LevelItem item : level.getItems()) {
             String localizedStringId = item.getLocalizedStringId();
             
+            updateProgress(tracker++, maxProgress);
+            
             if (localizedStringId.isEmpty())
                 continue;
+            
+            updateMessage(localizedStringId);
             
             // TODO: support for non-english languages
             Optional<GameString> customString = customTranslationLocal.getString(localizedStringId);
@@ -218,7 +240,11 @@ class ExportTask extends Task<Void> {
         String addinThumbnailPath = null;
         
         if (addinInfo.embedThumbnail()) {
-            Path realThumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
+            String relativePath = "tmp/thumbs-cache/" + level.getUuid() + ".jpg";
+            Path realThumbnailPath = Paths.get(profileDir, relativePath);
+            
+            updateProgress(tracker++, maxProgress);
+            updateMessage(relativePath);
             
             try {
                 byte[] thumbnailContent = Files.readAllBytes(realThumbnailPath);
@@ -229,6 +255,9 @@ class ExportTask extends Task<Void> {
         }
         
         // Load resrc files
+        updateProgress(tracker++, maxProgress);
+        updateMessage("*/resources.xml");
+        
         for (AssetType type : AssetType.values()) {
             if (type.groupId == null || type.resrcFile == null)
                 continue;
@@ -238,18 +267,22 @@ class ExportTask extends Task<Void> {
         }
         
         // Background
+        updateProgress(tracker++, maxProgress);
+        updateMessage(level.getBackgroundId());
+        
         Optional<String> newBackgroundId = analyzeBackground(res, level.getBackgroundId());
         
         if (newBackgroundId.isPresent())
             levelJson.put("backgroundId", newBackgroundId.get());
         
         // Items
-        Set<String> itemIds = level.allItemTypes();
-        
         Map<String, Item> allItems = new HashMap<>();
         Map<String, String> modifiedItemIds = new HashMap<>();
         
-        for (String itemId : itemIds) {
+        for (String itemId : uniqueItemIds) {
+            updateProgress(tracker++, maxProgress);
+            updateMessage("Item " + itemId);
+            
             Optional<String> newItemId = analyzeItem(res, itemId, allItems);
             
             if (newItemId.isPresent())
@@ -263,12 +296,12 @@ class ExportTask extends Task<Void> {
         levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
         
         // Balls
-        Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
         String outBallsString = null;
         
-        boolean ballTableExists = Files.isRegularFile(ballTablePath);
-        
         if (ballTableExists) {
+            updateProgress(tracker++, maxProgress);
+            updateMessage("fisty/ballTable.ini");
+            
             FistyIniFile ballTable = FistyIniLoader.loadIni(Files.readString(ballTablePath));
             FistyIniFile outBalls = new FistyIniFile("; Mod-specific custom gooballs", List.of());
             
@@ -277,6 +310,9 @@ class ExportTask extends Task<Void> {
             Iterable<Integer> sortedBallTypeEnums = () -> ballTypeEnums.stream().sorted().iterator();
             
             for (int typeEnum : sortedBallTypeEnums) {
+                updateProgress(tracker++, maxProgress);
+                updateMessage("typeEnum " + typeEnum);
+            
                 Optional<String> customBallId = analyzeGooBall(typeEnum, ballTable);
                 
                 if (customBallId.isPresent()) {
@@ -289,6 +325,9 @@ class ExportTask extends Task<Void> {
             
             // Analyze all items for uservars
             for (LevelItem itemInstance : level.getItems()) {
+                updateProgress(tracker++, maxProgress);
+                updateMessage("Item " + itemInstance.getType());
+                
                 Item item = allItems.get(itemInstance.getType());
                 
                 if (item == null)
@@ -323,10 +362,16 @@ class ExportTask extends Task<Void> {
         
         
         // Music
+        updateProgress(tracker++, maxProgress);
+        updateMessage(level.getMusicId());
+        
         String newMusicId = analyzeAsset(res, level.getMusicId(), AssetType.MUSIC);
         levelJson.put("musicId", newMusicId);
         
         // Ambience
+        updateProgress(tracker++, maxProgress);
+        updateMessage(level.getAmbienceId());
+        
         String newAmbienceId = analyzeAsset(res, level.getAmbienceId(), AssetType.AMBIENCE);
         levelJson.put("ambienceId", newAmbienceId);
         
