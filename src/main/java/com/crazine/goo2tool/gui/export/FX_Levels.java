@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.functional.export.ExportGui;
+import com.crazine.goo2tool.functional.export.addininfocache.AddinInfoCache;
+import com.crazine.goo2tool.functional.export.addininfocache.AddinInfoCacheLoader;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
@@ -38,7 +40,7 @@ public class FX_Levels {
     
     private static Logger logger = LoggerFactory.getLogger(FX_Levels.class);
     
-    private static record LevelFile(String title, Path path) {}
+    private static record LevelFile(String id, String title, Path path) {}
     
     public static void show(Stage originalStage) {
         Stage stage = new Stage();
@@ -60,7 +62,7 @@ public class FX_Levels {
         try {
             
             customLevels = Files.list(profileDir.resolve("levels"))
-                .map(path -> new LevelFile(getLevelName(path), path))
+                .map(path -> getLevelFile(path))
                 .toList();
             
         } catch (IOException e) {
@@ -103,13 +105,34 @@ public class FX_Levels {
             LevelFile levelFile = levelsView.getSelectionModel().getSelectedItem();
             stage.close();
             
-            ObjectProperty<Optional<AddinInfo>> addinInfoProperty = FX_ExportDialog.show(originalStage, levelFile.title());
+            AddinInfoCache cache = null;
+            Optional<AddinInfo> cachedInfo = Optional.empty();
+            try {
+                cache = AddinInfoCacheLoader.getOrInit();
+                cachedInfo = cache.getEntry(levelFile.id(), levelFile.title());
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+            }
             
+            ObjectProperty<Optional<AddinInfo>> addinInfoProperty = FX_ExportDialog.show(originalStage, levelFile.title(), cachedInfo);
+            
+            AddinInfoCache cache2 = cache;
             addinInfoProperty.addListener(observable -> {
                 if (addinInfoProperty.get().isEmpty())
                     return;
                 
                 AddinInfo addinInfo = addinInfoProperty.get().get();
+                
+                // Save addinInfo for future export dialogs
+                if (cache2 != null) {
+                    cache2.addEntry(levelFile.id(), levelFile.title(), addinInfo);
+                    
+                    try {
+                        AddinInfoCacheLoader.save();
+                    } catch (IOException e) {
+                        FX_Alarm.error(e);
+                    }
+                }
                 
                 // Save Dialog
                 // TODO: migrate to CustomFileChooser
@@ -138,12 +161,12 @@ public class FX_Levels {
         stage.show();
     }
     
-    private static String getLevelName(Path levelPath) {
+    private static LevelFile getLevelFile(Path levelPath) {
         try {
             String fileContent = Files.readString(levelPath);
             Level level = LevelLoader.loadLevel(fileContent);
             
-            return level.getTitle();
+            return new LevelFile(level.getUuid(), level.getTitle(), levelPath);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -48,11 +48,27 @@ public class FX_ExportDialog {
             return new AddinInfo(modId.get(), name.get(), version, author.get(),
                     description.get(), embedThumbnail.get());
         }
+        
+        public static AddinPropertyInfo fromAddinInfo(AddinInfo addinInfo) {
+            AddinPropertyInfo result = new AddinPropertyInfo();
+            
+            result.modId.set(addinInfo.modId());
+            result.name.set(addinInfo.name());
+            
+            if (!"1.0".equals(addinInfo.version()))
+                result.version.set(addinInfo.version());
+            
+            result.author.set(addinInfo.author());
+            result.description.set(addinInfo.description());
+            result.embedThumbnail.set(addinInfo.embedThumbnail());
+            
+            return result;
+        }
     }
     
     private static final double VERTIAL_GAP = 4;
     
-    public static ObjectProperty<Optional<AddinInfo>> show(Stage originalStage, String levelName) {
+    public static ObjectProperty<Optional<AddinInfo>> show(Stage originalStage, String levelName, Optional<AddinInfo> startingValues) {
         
         Stage stage = new Stage();
         stage.initOwner(originalStage);
@@ -83,8 +99,13 @@ public class FX_ExportDialog {
         gridPane.getColumnConstraints().addAll(column1, column2);
         
         // Add grid options
-        AddinPropertyInfo addinInfo = new AddinPropertyInfo();
-        addinInfo.name.set(levelName);
+        AddinPropertyInfo addinInfo;
+        if (startingValues.isPresent()) {
+            addinInfo = AddinPropertyInfo.fromAddinInfo(startingValues.get());
+        } else {
+            addinInfo = new AddinPropertyInfo();
+            addinInfo.name.set(levelName);
+        }
         
         AtomicInteger row = new AtomicInteger(0);
         
