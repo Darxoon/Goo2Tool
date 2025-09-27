@@ -1,13 +1,24 @@
 package com.crazine.goo2tool.gui.options;
 
+import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.functional.LocateGooDir;
+import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
+import com.crazine.goo2tool.gui.FX_Setup;
 import com.crazine.goo2tool.gui.Main_Application;
 import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
+import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
+import javafx.beans.binding.BooleanExpression;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.Tooltip;
@@ -36,6 +47,14 @@ public class FileOptions {
     private boolean launchMainApplication;
     private GridPane contents;
     
+    // These have to be defined here otherwise they will get garbage collected and break
+    private BooleanExpression notSteamProperty = PropertiesLoader.getProperties().steamProperty().not();
+    private BooleanExpression notAppImageProperty = Platform.getCurrent() == Platform.LINUX
+            ? PropertiesLoader.getProperties().steamProperty()
+            : new ReadOnlyBooleanWrapper(true);
+    
+    private int rowIndex = 0;
+    
     public GridPane getContents() {
         return contents;
     }
@@ -61,50 +80,151 @@ public class FileOptions {
             case MAC -> null;
         };
         
-        String baseDir = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
-        createSetting(contents, 0, "Base WoG2 Installation", baseDir, exeFilter, true, path -> {
-            PropertiesLoader.getProperties().setBaseWorldOfGoo2Directory(path);
-        });
-
-        if (!PropertiesLoader.getProperties().isSteam()) {
-            String customDir = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
-            createSetting(contents, 1, "Custom WoG2 Installation", customDir, null, false, path -> {
-                PropertiesLoader.getProperties().setCustomWorldOfGoo2Directory(path);
-            });
-        }
-
-        String profileDir = PropertiesLoader.getProperties().getProfileDirectory();
-        createSetting(contents, 2, "Profile", profileDir, null, false, path -> {
-            PropertiesLoader.getProperties().setProfileDirectory(path);
-        });
+        Properties properties = PropertiesLoader.getProperties();
         
-        ExtensionFilter saveFileFilter = new ExtensionFilter("World of Goo 2 save file", "wog2_1.dat", "savegame.dat");
-        String saveFileDir = PropertiesLoader.getProperties().getSaveFilePath();
-        createSetting(contents, 3, "Save Files", saveFileDir, saveFileFilter, false, path -> {
-            PropertiesLoader.getProperties().setSaveFilePath(path);
+        StringProperty baseDir = properties.baseWorldOfGoo2DirectoryProperty();
+        createComplexSetting("Base WoG2 Installation", baseDir, exeFilter, true, path -> {
+            updateGameVersion(path);
         });
+
+        StringProperty customDir = properties.customWorldOfGoo2DirectoryProperty();
+        createConditionalSetting("Custom WoG2 Installation", customDir, null, notSteamProperty);
+
+        StringProperty profileDir = properties.profileDirectoryProperty();
+        createSetting("Profile", profileDir, null);
+        
+        ExtensionFilter saveFileFilter = new ExtensionFilter("World of Goo 2 save file", "*.dat");
+        StringProperty saveFileDir = properties.saveFilePathProperty();
+        createSetting("Save Files", saveFileDir, saveFileFilter);
         
         ExtensionFilter resGooFilter = new ExtensionFilter("res.goo file", "res.goo", "*.*");
-        String resGooPath = PropertiesLoader.getProperties().getResGooPath();
-        createSetting(contents, 4, "res.goo file", resGooPath, resGooFilter, false, path -> {
-            PropertiesLoader.getProperties().setResGooPath(path);
-        });
+        StringProperty resGooPath = properties.resGooPathProperty();
+        createConditionalSetting("res.goo file", resGooPath, resGooFilter, notAppImageProperty);
+    }
+    
+    private void updateGameVersion(String baseWog2) {
+        Properties properties = PropertiesLoader.getProperties();
+        
+        switch (Platform.getCurrent()) {
+            case WINDOWS: {
+                Path steamExePath = Path.of(baseWog2, "WorldOfGoo2.exe");
+                
+                if (Files.isRegularFile(steamExePath)) {
+                    properties.setSteam(true);
+                    FX_Setup.detectFistyVersion(baseWog2);
+                } else {
+                    properties.setSteam(false);
+                    properties.setFistyVersion(null);
+                }
+                break;
+            }
+            case MAC:
+                break;
+            case LINUX: {
+                boolean prevSteam = properties.isSteam();
+                boolean prevProton = properties.isProton();
+                
+                Path steamExePath = Path.of(baseWog2, "WorldOfGoo2.exe");
+                
+                if (Files.isRegularFile(steamExePath)) {
+                    // Steam Windows
+                    properties.setSteam(true);
+                    properties.setProton(true);
+                    
+                    if (!prevSteam || !prevProton) {
+                        Optional<GooDir> located = LocateGooDir.locateWog2();
+                        try {
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), located));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), located));
+                        } catch (IOException e) {
+                            FX_Alarm.error(e);
+                        }
+                        
+                        FX_Alert.show("Goo2Tool",
+                                "Reinitialized other properties for Steam Windows version",
+                                ButtonType.OK);
+                    }
+                    
+                    FX_Setup.detectFistyVersion(baseWog2);
+                } else if (baseWog2.endsWith(".AppImage")) {
+                    // AppImage
+                    properties.setSteam(false);
+                    properties.setProton(false);
+                    
+                    if (prevSteam || prevProton) {
+                        try {
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), Optional.empty()));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), Optional.empty()));
+                        } catch (IOException e) {
+                            FX_Alarm.error(e);
+                        }
+                        
+                        FX_Alert.show("Goo2Tool",
+                                "Reinitialized other properties for Linux AppImage",
+                                ButtonType.OK);
+                    }
+                    
+                    properties.setFistyVersion(null);
+                } else {
+                    // Steam Linux
+                    properties.setSteam(true);
+                    properties.setProton(false);
+                    
+                    if (!prevSteam || prevProton) {
+                        try {
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), Optional.empty()));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), Optional.empty()));
+                        } catch (IOException e) {
+                            FX_Alarm.error(e);
+                        }
+                        
+                        FX_Alert.show("Goo2Tool",
+                                "Reinitialized other properties for native Steam version",
+                                ButtonType.OK);
+                    }
+                    
+                    properties.setFistyVersion(null);
+                }
+                // TODO: test native Linux version
+                
+                break;
+            }
+        }
     }
     
     // If filter is null, will open a directory picker
-    private void createSetting(GridPane grid, int rowIndex, String labelText, String initialValue,
+    private void createComplexSetting(String labelText, StringProperty initialValue,
             ExtensionFilter filter, boolean useParent, Consumer<String> onChange) {
+        createSettingRaw(labelText, initialValue, filter, useParent, null, onChange);
+    }
+    
+    private void createSetting(String labelText, StringProperty initialValue,
+            ExtensionFilter filter) {
+        createSettingRaw(labelText, initialValue, filter, false, null, null);
+    }
+    
+    private void createConditionalSetting(String labelText, StringProperty initialValue,
+            ExtensionFilter filter, BooleanExpression condition) {
+        createSettingRaw(labelText, initialValue, filter, false, condition, null);
+    }
+    
+    private void createSettingRaw(String labelText, StringProperty initialValue, ExtensionFilter filter,
+            boolean useParent, BooleanExpression condition, Consumer<String> onChange) {
         Label label = new Label(labelText);
         // label.setPrefWidth(160);
         label.setPadding(new Insets(4, 0, 0, 0));
         
         Region empty = new Region();
         
-        Label dirLabel = new Label(initialValue);
-        dirLabel.setTooltip(new Tooltip(initialValue));
+        Label dirLabel = new Label();
+        dirLabel.textProperty().bind(initialValue);
         // dirLabel.setPrefWidth(200);
         dirLabel.setPadding(new Insets(4, 0, 0, 0));
         dirLabel.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
+        
+        Tooltip tooltip = new Tooltip();
+        tooltip.textProperty().bind(initialValue);
+        dirLabel.setTooltip(tooltip);
         
         Button changeDirButton = new Button("...");
         changeDirButton.setOnAction(event -> {
@@ -112,7 +232,7 @@ public class FileOptions {
             try {
                 if (filter != null) {
                     // Open file picker
-                    Path initialDir = Path.of(initialValue);
+                    Path initialDir = Path.of(initialValue.get());
                     if (Files.isRegularFile(initialDir))
                         initialDir = initialDir.getParent();
                     
@@ -126,7 +246,7 @@ public class FileOptions {
                 } else {
                     // Open dir picker
                     Optional<Path> chosenPath = CustomFileChooser.chooseDirectory(stage,
-                            "Please choose location", Path.of(initialValue));
+                            "Please choose location", Path.of(initialValue.get()));
                     
                     if (chosenPath.isEmpty())
                         return;
@@ -140,16 +260,20 @@ public class FileOptions {
             
             if (chosenFile == null) return;
             
-            if (useParent) {
+            // Dirty hack to support AppImage
+            if (useParent && !chosenFile.toString().endsWith(".AppImage")) {
                 chosenFile = chosenFile.getParentFile();
                 if (chosenFile == null) return;
             }
             
             logger.debug("Set property {} to '{}'", labelText, chosenFile.getAbsolutePath());
-            dirLabel.setText(chosenFile.getAbsolutePath());
-            dirLabel.getTooltip().setText(chosenFile.getAbsolutePath());
             
-            onChange.accept(chosenFile.getAbsolutePath());
+            initialValue.set(chosenFile.getAbsolutePath());
+            
+            if (onChange != null) {
+                onChange.accept(chosenFile.getAbsolutePath());
+            }
+            
             try {
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
@@ -162,7 +286,34 @@ public class FileOptions {
             }
         });
         
-        grid.addRow(rowIndex, label, empty, dirLabel, changeDirButton);
+        int currentRowIndex = rowIndex;
+        
+        Node[] rowChildren = new Node[] { label, empty, dirLabel, changeDirButton };
+        contents.addRow(currentRowIndex, rowChildren);
+        
+        if (condition != null) {
+            
+            logger.debug("Condition for {} is {}", labelText, condition.get());
+            
+            if (condition.get() == false) {
+                contents.getChildren().removeAll(rowChildren);
+            }
+            
+            condition.addListener((observable, oldValue, newValue) -> {
+                logger.debug("Condition for {} changed from {} to {}", labelText, oldValue, newValue);
+                
+                if (oldValue == false && newValue == true) {
+                    logger.debug("Condition for {} is {}", labelText, condition.get());
+                    contents.getChildren().addAll(rowChildren);
+                } else if (oldValue == true && newValue == false) {
+                    logger.debug("Condition for {} is {}", labelText, condition.get());
+                    contents.getChildren().removeAll(rowChildren);
+                }
+            });
+            
+        }
+        
+        rowIndex++;
     }
     
 }

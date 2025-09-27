@@ -6,6 +6,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -14,15 +18,15 @@ import java.util.Optional;
 
 public class Properties {
 
-    private String baseWorldOfGoo2Directory = "";
-    private String customWorldOfGoo2Directory = "";
-    private String profileDirectory = "";
-    private String saveFilePath = "";
-    private String resGooPath = "";
-    private boolean isSteam;
+    private StringProperty baseWorldOfGoo2Directory = new SimpleStringProperty("");
+    private StringProperty customWorldOfGoo2Directory = new SimpleStringProperty("");
+    private StringProperty profileDirectory = new SimpleStringProperty("");
+    private StringProperty saveFilePath = new SimpleStringProperty("");
+    private StringProperty resGooPath = new SimpleStringProperty("");
+    private BooleanProperty steam = new SimpleBooleanProperty();
     private boolean isProton;
     private boolean steamWarningShown;
-    private VersionNumber fistyVersion;
+    private ObjectProperty<VersionNumber> fistyVersion = new SimpleObjectProperty<>();
     private StringProperty launchCommand = new SimpleStringProperty("");
     
     @JacksonXmlElementWrapper(localName = "Addins")
@@ -58,57 +62,76 @@ public class Properties {
         return Optional.empty();
     }
     
-    public String getBaseWorldOfGoo2Directory() {
+    @JsonIgnore
+    public StringProperty baseWorldOfGoo2DirectoryProperty() {
         return baseWorldOfGoo2Directory;
     }
-    
+    public String getBaseWorldOfGoo2Directory() {
+        return baseWorldOfGoo2Directory.get();
+    }
     public void setBaseWorldOfGoo2Directory(String baseWorldOfGoo2Directory) {
-        this.baseWorldOfGoo2Directory = baseWorldOfGoo2Directory;
+        this.baseWorldOfGoo2Directory.set(baseWorldOfGoo2Directory);
     }
     
-    public String getCustomWorldOfGoo2Directory() {
+    @JsonIgnore
+    public StringProperty customWorldOfGoo2DirectoryProperty() {
         return customWorldOfGoo2Directory;
     }
-    
+    public String getCustomWorldOfGoo2Directory() {
+        return customWorldOfGoo2Directory.get();
+    }
     public void setCustomWorldOfGoo2Directory(String customWorldOfGoo2Directory) {
-        this.customWorldOfGoo2Directory = customWorldOfGoo2Directory;
+        this.customWorldOfGoo2Directory.set(customWorldOfGoo2Directory);
     }
     
     @JsonIgnore
     public String getTargetWog2Directory() {
-        return isSteam ? baseWorldOfGoo2Directory : customWorldOfGoo2Directory;
+        return steam.get() ? baseWorldOfGoo2Directory.get() : customWorldOfGoo2Directory.get();
     }
     
-    public String getProfileDirectory() {
+    @JsonIgnore
+    public StringProperty profileDirectoryProperty() {
         return profileDirectory;
     }
-    
+    public String getProfileDirectory() {
+        return profileDirectory.get();
+    }
     public void setProfileDirectory(String profileDirectory) {
-        this.profileDirectory = profileDirectory;
+        this.profileDirectory.set(profileDirectory);
     }
     
-    public String getResGooPath() {
+    @JsonIgnore
+    public StringProperty resGooPathProperty() {
         return resGooPath;
     }
-    
+    public String getResGooPath() {
+        return resGooPath.get();
+    }
     public void setResGooPath(String resGooPath) {
-        this.resGooPath = resGooPath;
+        this.resGooPath.set(resGooPath);
     }
     
-    public String getSaveFilePath() {
+    @JsonIgnore
+    public StringProperty saveFilePathProperty() {
         return saveFilePath;
     }
-    
+    public String getSaveFilePath() {
+        return saveFilePath.get();
+    }
     public void setSaveFilePath(String saveFile) {
-        this.saveFilePath = saveFile;
+        this.saveFilePath.set(saveFile);
     }
     
+    @JsonIgnore
+    public BooleanProperty steamProperty() {
+        return steam;
+    }
     public boolean isSteam() {
-        return isSteam;
+        return steam.get();
     }
-    
     public void setSteam(boolean isSteam) {
-        this.isSteam = isSteam;
+        System.out.println("setSteam " + isSteam);
+        steam.set(isSteam);
     }
     
     public boolean isProton() {
@@ -127,12 +150,16 @@ public class Properties {
         this.steamWarningShown = steamWarningShown;
     }
     
-    public VersionNumber getFistyVersion() {
+    public ObjectProperty<VersionNumber> firstyVersionProperty() {
         return fistyVersion;
     }
     
+    public VersionNumber getFistyVersion() {
+        return fistyVersion.get();
+    }
+    
     public void setFistyVersion(VersionNumber fistyVersion) {
-        this.fistyVersion = fistyVersion;
+        this.fistyVersion.set(fistyVersion);
     }
     
     public String getLaunchCommand() {

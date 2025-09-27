@@ -94,9 +94,7 @@ public final class VersionNumber implements Comparable<VersionNumber> {
         if (getClass() != obj.getClass())
             return false;
         VersionNumber other = (VersionNumber) obj;
-        if (!Arrays.equals(elements, other.elements))
-            return false;
-        return true;
+        return Arrays.equals(elements, other.elements);
     }
     
 }

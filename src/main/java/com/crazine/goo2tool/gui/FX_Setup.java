@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -11,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.VersionNumber;
+import com.crazine.goo2tool.functional.FistyInstaller;
 import com.crazine.goo2tool.functional.LocateGooDir;
 import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
 import com.crazine.goo2tool.gui.util.FX_Alert;
@@ -106,6 +111,8 @@ public class FX_Setup extends Application {
                     PropertiesLoader.getProperties().setProton(false);
                 }
                 
+                detectFistyVersion(path);
+                
                 return path;
             }
         } else {
@@ -129,13 +136,14 @@ public class FX_Setup extends Application {
             }
         }
         
-        // TODO: this might not be true
         PropertiesLoader.getProperties().setSteam(false);
         PropertiesLoader.getProperties().setProton(false);
+        PropertiesLoader.getProperties().setFistyVersion(null);
         
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
-                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
+                ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable",
+                        "World Of Goo 2.exe", "WorldOfGoo2.exe");
                 Optional<Path> file = CustomFileChooser.openFile(stage, "Please choose World of Goo 2 installation", exeFilter);
                 
                 if (file.isEmpty()) {
@@ -144,6 +152,12 @@ public class FX_Setup extends Application {
                             ButtonType.OK);
                     
                     System.exit(0);
+                }
+                
+                // Steam version's executable does not contain spaces, standalone version does
+                if (file.get().endsWith("WorldOfGoo2.exe")) {
+                    PropertiesLoader.getProperties().setSteam(true);
+                    detectFistyVersion(file.get().getParent().toString());
                 }
                 
                 yield file.get().getParent().toString();
@@ -175,6 +189,14 @@ public class FX_Setup extends Application {
                     System.exit(0);
                 }
                 
+                if (file.get().endsWith("WorldOfGoo2.exe")) {
+                    PropertiesLoader.getProperties().setSteam(true);
+                    PropertiesLoader.getProperties().setProton(true);
+                    
+                    detectFistyVersion(file.get().getParent().toString());
+                }
+                // TODO: detect native Steam version
+                
                 String fileString = file.get().toString();
                 
                 if (fileString.endsWith(".exe")) {
@@ -186,10 +208,68 @@ public class FX_Setup extends Application {
         };
     }
     
+    public static void detectFistyVersion(String baseWog2) {
+        Properties properties = PropertiesLoader.getProperties();
+        properties.setFistyVersion(null);
+        
+        // Make sure platform is supported by fisty
+        switch (Platform.getCurrent()) {
+            case WINDOWS:
+                if (!properties.isSteam())
+                    return;
+                break;
+            case MAC:
+                // FistyLoader is not supported on mac
+                properties.setFistyVersion(null);
+                return;
+            case LINUX:
+                if (!properties.isSteam() || !properties.isProton())
+                    return;
+                break;
+        }
+        
+        Path exePath = Paths.get(baseWog2, "WorldOfGoo2.exe");
+        
+        if (!Files.isRegularFile(exePath))
+            return;
+        
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        
+        VersionNumber fistyVersion;
+        try {
+            byte[] exeContent = Files.readAllBytes(exePath);
+            String exeHash = hashFile(digest, exeContent);
+            
+            fistyVersion = FistyInstaller.FISTY_WOG2_STEAM_HASHES.get(exeHash);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return;
+        }
+        
+        properties.setFistyVersion(fistyVersion);
+        
+        if (fistyVersion != null) {
+            FX_Alert.show("Goo2Tool setup",
+                    "Detected that FistyLoader " + fistyVersion + " is installed",
+                    ButtonType.OK);
+        }
+    }
+    
+    private static String hashFile(MessageDigest digest, byte[] fileContent) {
+        byte[] hashBytes = digest.digest(fileContent);
+        return HexFormat.of().formatHex(hashBytes);
+    }
+    
     private static final String STEAM_WINEPFX_PROFILE_DIR =
         "steamapps/compatdata/3385670/pfx/drive_c/users/steamuser/AppData/Local/2DBoy/WorldOfGoo2";
     
-    private String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+    public static String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         
         // try auto detecting
@@ -225,13 +305,8 @@ public class FX_Setup extends Application {
             
             Optional<Path> file = CustomFileChooser.chooseDirectory(stage, "Please choose World of Goo 2 profile");
             
-            if (file.isEmpty()) {
-                FX_Alert.show("Goo2Tool Setup",
-                        "No World of Goo 2 profile has been chosen. Exiting.",
-                        ButtonType.OK);
-                
-                System.exit(0);
-            }
+            if (file.isEmpty())
+                return "";
             
             return file.get().toString();
         }
@@ -263,7 +338,7 @@ public class FX_Setup extends Application {
             && !fileName.equals("levels");
     }
     
-    private String getSaveFilePath(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+    public static String getSaveFilePath(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
         if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
             Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
             
@@ -279,7 +354,7 @@ public class FX_Setup extends Application {
         }
     }
     
-    private Optional<String> getSteamProfileDirectory(Optional<GooDir> gooDir) throws IOException {
+    private static Optional<String> getSteamProfileDirectory(Optional<GooDir> gooDir) throws IOException {
         Path steamDir = gooDir.get().steamDir().get();
         Path steamUserdata = steamDir.resolve("userdata");
         

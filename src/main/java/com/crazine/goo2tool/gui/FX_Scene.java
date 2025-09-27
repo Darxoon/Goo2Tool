@@ -63,44 +63,29 @@ public class FX_Scene {
         
         Properties properties = PropertiesLoader.getProperties();
         
-        // TODO: auto detect if FistyLoader is already installed at setup
+        // Install Fisty button
+        Button installFistyButton = createInstallFistyButton();
+        updateInstallFistyButton(installFistyButton, properties);
+        
         if (properties.getFistyVersion() == null || properties.getFistyVersion().compareTo(FistyInstaller.FISTY_VERSION) < 0) {
-            Button installFistyButton = properties.getFistyVersion() == null
-                    ? new Button("Install FistyLoader")
-                    : new Button("Update FistyLoader");
-            
-            boolean disabled = switch (Platform.getCurrent()) {
-                case WINDOWS -> !properties.isSteam();
-                case MAC -> true;
-                case LINUX -> !properties.isSteam() && !properties.isProton();
-            };
-            
-            installFistyButton.setOnAction(event -> {
-                Optional<ButtonType> result = FX_Alert.show("FistyLoader",
-                        "FistyLoader is an exe mod for World of Goo 2 which is necessary "
-                        + "to use custom goo balls. Some mods might require this.\n\n"
-                        + "Do you want to install?",
-                        ButtonType.YES, ButtonType.NO);
-                
-                if (result.isEmpty() || result.get() == ButtonType.NO)
-                    return;
-                
-                try {
-                    FistyInstaller.installFisty();
-                    PropertiesLoader.saveProperties();
-                } catch (IOException e) {
-                    FX_Alarm.error(e);
-                    return;
-                }
-                
-                FX_Alert.show("FistyLoader", "Successfully installed.", ButtonType.OK);
-                hBox.getChildren().remove(installFistyButton);
-            });
-            
-            installFistyButton.setDisable(disabled);
             hBox.getChildren().add(installFistyButton);
         }
         
+        properties.firstyVersionProperty().addListener((observable, oldValue, newValue) -> {
+            updateInstallFistyButton(installFistyButton, properties);
+            
+            if (properties.getFistyVersion() == null || properties.getFistyVersion().compareTo(FistyInstaller.FISTY_VERSION) < 0) {
+                hBox.getChildren().add(0, installFistyButton);
+            } else {
+                hBox.getChildren().remove(installFistyButton);
+            }
+        });
+        
+        properties.steamProperty().addListener((observable, oldValue, newValue) -> {
+            updateInstallFistyButton(installFistyButton, properties);
+        });
+        
+        // Other buttons
         Button saveButton = new Button("Save");
         saveButton.setOnAction(event -> {
             save();
@@ -122,6 +107,45 @@ public class FX_Scene {
         scene = new Scene(vBox);
         scene.getStylesheets().add("style.css");
 
+    }
+    
+    private static Button createInstallFistyButton() {
+        Button installFistyButton = new Button();
+        
+        installFistyButton.setOnAction(event -> {
+            Optional<ButtonType> result = FX_Alert.show("FistyLoader",
+                    "FistyLoader is an exe mod for World of Goo 2 which is necessary "
+                    + "to use custom goo balls. Some mods might require this.\n\n"
+                    + "Do you want to install?",
+                    ButtonType.YES, ButtonType.NO);
+            
+            if (result.isEmpty() || result.get() == ButtonType.NO)
+                return;
+            
+            try {
+                FistyInstaller.installFisty();
+                PropertiesLoader.saveProperties();
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+                return;
+            }
+            
+            FX_Alert.show("FistyLoader", "Successfully installed.", ButtonType.OK);
+        });
+        
+        return installFistyButton;
+    }
+    
+    private static void updateInstallFistyButton(Button installFistyButton, Properties properties) {
+        installFistyButton.setText(properties.getFistyVersion() == null
+                ? "Install FistyLoader"
+                : "Update FistyLoader");
+        
+        installFistyButton.setDisable(switch (Platform.getCurrent()) {
+            case WINDOWS -> !properties.isSteam();
+            case MAC -> true;
+            case LINUX -> !properties.isSteam() && !properties.isProton();
+        });
     }
     
     public static void save() {

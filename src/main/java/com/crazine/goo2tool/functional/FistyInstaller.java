@@ -11,6 +11,8 @@ import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,6 +44,14 @@ public class FistyInstaller {
     public static final VersionNumber FISTY_VERSION = new VersionNumber(1, 1);
     
     public static final String BASE_WOG2_STEAM_HASH = "0b39f56b47d6947640ca5c8fba0b91af";
+    public static final Map<String, VersionNumber> FISTY_WOG2_STEAM_HASHES;
+    
+    static {
+        Map<String, VersionNumber> fistyHashes = new HashMap<>();
+        fistyHashes.put("ca31b42aa49d5eff6ec42e6267602620", new VersionNumber(1, 1));
+        
+        FISTY_WOG2_STEAM_HASHES = Collections.unmodifiableMap(fistyHashes);
+    }
     
     private static final byte[] BALLFACTORY_LOAD_PATCH = new byte[] {
         0x0F, 0x1F, (byte) 0x80, 0x00, 0x00, 0x00, 0x00, 0x44, 0x39, (byte) 0xf7
