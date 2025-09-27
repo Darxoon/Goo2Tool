@@ -623,9 +623,7 @@ class SaveTask extends Task<Void> {
         JsonMapper jsonMapper = new JsonMapper();
         
         // Collect all items
-        Set<String> allItemTypes = level.getItems().stream()
-            .map(item -> item.getType())
-            .collect(Collectors.toSet());
+        Set<String> allItemTypes = level.allItemTypes();
         
         Map<String, Item> itemDefs;
         try {

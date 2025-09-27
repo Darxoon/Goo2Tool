@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.gamefiles.item;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,10 @@ public class ItemFile {
 
     public ItemFile(List<JsonNode> items) {
         this.items = items;
+    }
+    
+    public static ItemFile fromItem(JsonNode itemJson, Item item) throws IOException {
+        return new ItemFile(List.of(ItemLoader.saveItem(itemJson, item)));
     }
     
     public List<JsonNode> getItems() {

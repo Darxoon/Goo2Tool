@@ -2,8 +2,11 @@ package com.crazine.goo2tool.gamefiles.level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -45,6 +48,20 @@ public class Level {
         this.title = title;
         this.backgroundId = backgroundId;
         this.musicId = musicId;
+    }
+    
+    @JsonIgnore
+    public Set<String> allItemTypes() {
+        return items.stream()
+                .map(item -> item.getType())
+                .collect(Collectors.toSet());
+    }
+    
+    @JsonIgnore
+    public Set<Integer> allBallTypes() {
+        return balls.stream()
+                .map(ball -> ball.getTypeEnum())
+                .collect(Collectors.toSet());
     }
     
     public int getVersion() {

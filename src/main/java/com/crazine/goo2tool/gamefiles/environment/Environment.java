@@ -25,6 +25,10 @@ public class Environment {
         private boolean foreground;
         private boolean repeatX;
         private boolean repeatY;
+        private boolean mirrorX;
+        private boolean mirrorY;
+        private boolean flipX;
+        private boolean flipY;
         private Vector2 anchors;
         private boolean anchorsTakeDepthIntoAccount;
         private float bloom;
@@ -84,6 +88,30 @@ public class Environment {
         }
         public void setRepeatY(boolean repeatY) {
             this.repeatY = repeatY;
+        }
+        public boolean isMirrorX() {
+            return mirrorX;
+        }
+        public void setMirrorX(boolean mirrorX) {
+            this.mirrorX = mirrorX;
+        }
+        public boolean isMirrorY() {
+            return mirrorY;
+        }
+        public void setMirrorY(boolean mirrorY) {
+            this.mirrorY = mirrorY;
+        }
+        public boolean isFlipX() {
+            return flipX;
+        }
+        public void setFlipX(boolean flipX) {
+            this.flipX = flipX;
+        }
+        public boolean isFlipY() {
+            return flipY;
+        }
+        public void setFlipY(boolean flipY) {
+            this.flipY = flipY;
         }
         public Vector2 getAnchors() {
             return anchors;

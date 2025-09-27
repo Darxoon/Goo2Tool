@@ -3,20 +3,25 @@ package com.crazine.goo2tool.functional.export;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.addinFile.Goo2mod;
@@ -24,10 +29,14 @@ import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.environment.Environment;
 import com.crazine.goo2tool.gamefiles.environment.EnvironmentLoader;
+import com.crazine.goo2tool.gamefiles.fistyini.DefaultFistyIni;
+import com.crazine.goo2tool.gamefiles.fistyini.FistyIniFile;
+import com.crazine.goo2tool.gamefiles.fistyini.FistyIniLoader;
 import com.crazine.goo2tool.gamefiles.item.Item;
 import com.crazine.goo2tool.gamefiles.item.ItemFile;
 import com.crazine.goo2tool.gamefiles.item.ItemLoader;
 import com.crazine.goo2tool.gamefiles.item.ItemObject;
+import com.crazine.goo2tool.gamefiles.item.ItemUserVariable;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelItem;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
@@ -59,7 +68,6 @@ class ExportTask extends Task<Void> {
         LEVEL,
         ENVIRONMENT,
         ITEM,
-        // BALL,
         // PARTICLE_EFFECT,
         // PARTICLE_SYSTEM,
         // RES_OPTIONS, // ?
@@ -68,7 +76,8 @@ class ExportTask extends Task<Void> {
     private static record CompiledResource(CompileType type, String name, String content) {}
     
     private static enum AssetType {
-        // AMBIENCE,
+        AMBIENCE("ambience", "res/ambience/_resources.xml", Resrc.Sound.class,
+            new Resrc.SetDefaults("res/ambience/", "AMBIENCE_GLOBAL_")),
         MUSIC("music", "res/music/_resources.xml", Resrc.Sound.class,
             new Resrc.SetDefaults("res/music/", "BGM_")),
         ENVIRONMENT("environments", "res/environments/images/_resources.xml", Resrc.Image.class,
@@ -105,10 +114,15 @@ class ExportTask extends Task<Void> {
     
     private static record AssetResource(AssetType type, String id, String name, byte[] content) {}
     
+    private static Logger logger = LoggerFactory.getLogger(ExportTask.class);
+    
     private final Stage stage;
     private final AddinInfo addinInfo;
     private final Path levelPath;
     private final Path outputPath;
+    
+    private String customWog2;
+    private JsonMapper jsonMapper;
     
     private String resrcPathPrefix = "";
     private String resrcIdPrefix = "";
@@ -118,6 +132,8 @@ class ExportTask extends Task<Void> {
     
     private List<CompiledResource> compiledResources = new ArrayList<>();
     private List<AssetResource> assetResources = new ArrayList<>();
+    
+    private Set<String> customGooballIds = new HashSet<>();
     
     private boolean success = true;
 
@@ -152,10 +168,10 @@ class ExportTask extends Task<Void> {
     
     private void export(ResArchive res) throws Exception {
         Properties properties = PropertiesLoader.getProperties();
-        String customWog2 = properties.getTargetWog2Directory();
         String profileDir = properties.getProfileDirectory();
         
-        JsonMapper jsonMapper = new JsonMapper();
+        customWog2 = properties.getTargetWog2Directory();
+        jsonMapper = new JsonMapper();
         
         String levelContent = Files.readString(levelPath);
         ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(levelContent);
@@ -199,16 +215,17 @@ class ExportTask extends Task<Void> {
         }
         
         // Thumbnail
-        String addinThumbnailPath;
+        String addinThumbnailPath = null;
         
         if (addinInfo.embedThumbnail()) {
             Path realThumbnailPath = Paths.get(profileDir, "tmp/thumbs-cache", level.getUuid() + ".jpg");
-            byte[] thumbnailContent = Files.readAllBytes(realThumbnailPath);
             
-            assetResources.add(new AssetResource(AssetType.THUMBNAIL, null, level.getUuid(), thumbnailContent));
-            addinThumbnailPath = "res/thumbnails/" + level.getUuid() + ".jpg";
-        } else {
-            addinThumbnailPath = null;
+            try {
+                byte[] thumbnailContent = Files.readAllBytes(realThumbnailPath);
+                
+                assetResources.add(new AssetResource(AssetType.THUMBNAIL, null, level.getUuid(), thumbnailContent));
+                addinThumbnailPath = "res/thumbnails/" + level.getUuid() + ".jpg";
+            } catch (NoSuchFileException e) {}
         }
         
         // Load resrc files
@@ -221,103 +238,22 @@ class ExportTask extends Task<Void> {
         }
         
         // Background
-        String backgroundText = Files.readString(Paths.get(customWog2, "game/res/environments", level.getBackgroundId() + ".wog2"));
-        Optional<String> originalBackground = res.getFileText("res/environments/" + level.getBackgroundId() + ".wog2");
+        Optional<String> newBackgroundId = analyzeBackground(res, level.getBackgroundId());
         
-        ObjectNode backgroundValue = (ObjectNode) jsonMapper.readTree(backgroundText);
-        Environment background = EnvironmentLoader.loadBackground(backgroundValue);
-        
-        boolean backgroundModified = false;
-        
-        for (Environment.Layer layer : background.getLayers()) {
-            String newImageName = analyzeAsset(res, layer.getImageName(), AssetType.ENVIRONMENT);
-            
-            if (!newImageName.equals(layer.getImageName())) {
-                backgroundModified = true;
-                layer.setImageName(newImageName);
-            }
-        }
-        
-        String newFireLut = analyzeAsset(res, background.getFireLut(), AssetType.ENVIRONMENT_LUT);
-        
-        if (!newFireLut.equals(background.getFireLut())) {
-            backgroundModified = true;
-            backgroundValue.put("fireLut", newFireLut);
-        }
-        
-        if (originalBackground.isPresent()) {
-            if (backgroundModified || !backgroundText.equals(originalBackground.get())) {
-                String newBackgroundId = UUID.randomUUID().toString();
-                levelJson.put("backgroundId", newBackgroundId);
-                
-                JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
-                backgroundValue.put("id", newBackgroundId);
-                backgroundValue.set("layers", serializedLayers);
-                
-                String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
-                compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, newBackgroundId, newBackgroundText));
-            }
-        } else {
-            JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
-            backgroundValue.set("layers", serializedLayers);
-            
-            String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
-            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, level.getBackgroundId(), newBackgroundText));
-        }
+        if (newBackgroundId.isPresent())
+            levelJson.put("backgroundId", newBackgroundId.get());
         
         // Items
-        Set<String> itemIds = level.getItems().stream()
-                .map(item -> item.getType())
-                .collect(Collectors.toSet());
+        Set<String> itemIds = level.allItemTypes();
         
+        Map<String, Item> allItems = new HashMap<>();
         Map<String, String> modifiedItemIds = new HashMap<>();
         
         for (String itemId : itemIds) {
-            String itemFileText = Files.readString(Paths.get(customWog2, "game/res/items", itemId + ".wog2"));
-            Optional<String> originalItemFileText = res.getFileText("res/items/" + itemId + ".wog2");
+            Optional<String> newItemId = analyzeItem(res, itemId, allItems);
             
-            ItemFile itemFile = ItemLoader.loadItemFile(itemFileText);
-            
-            if (itemFile.getItems().size() != 1)
-                throw new IOException("Expected " + itemId + ".wog2 file to contain 1 item, not " + itemFile.getItems().size());
-            
-            ObjectNode itemJson = (ObjectNode) itemFile.getItems().get(0);
-            Item item = ItemLoader.loadItem(itemJson);
-            
-            boolean itemModified = false;
-            
-            for (ItemObject object : item.getObjects()) {
-                String newName = analyzeAsset(res, object.getName(), AssetType.ITEM);
-                
-                if (!newName.equals(object.getName())) {
-                    itemModified = true;
-                    object.setName(newName);
-                }
-            }
-            
-            if (originalItemFileText.isPresent()) {
-                if (itemModified || !itemFileText.equals(originalItemFileText.get())) {
-                    String newItemId = UUID.randomUUID().toString();
-                    modifiedItemIds.put(itemId, newItemId);
-                    
-                    JsonNode serializedObjects = jsonMapper.valueToTree(item.getObjects());
-                    itemJson.put("uuid", newItemId);
-                    itemJson.set("objects", serializedObjects);
-                    
-                    ItemFile newItemFile = new ItemFile(List.of(itemJson));
-                    
-                    String newItemFileText = ItemLoader.saveItemFile(newItemFile);
-                    compiledResources.add(new CompiledResource(CompileType.ITEM, newItemId, newItemFileText));
-                }
-            } else {
-                JsonNode serializedObjects = jsonMapper.valueToTree(item.getObjects());
-                itemJson.set("objects", serializedObjects);
-                
-                ItemFile newItemFile = new ItemFile(List.of(itemJson));
-                String newItemFileText = ItemLoader.saveItemFile(newItemFile);
-                
-                compiledResources.add(new CompiledResource(CompileType.ITEM, itemId, newItemFileText));
-            }
+            if (newItemId.isPresent())
+                modifiedItemIds.put(itemId, newItemId.get());
         }
         
         for (LevelItem item : level.getItems()) {
@@ -326,9 +262,73 @@ class ExportTask extends Task<Void> {
         
         levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
         
+        // Balls
+        Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
+        String outBallsString = null;
+        
+        boolean ballTableExists = Files.isRegularFile(ballTablePath);
+        
+        if (ballTableExists) {
+            FistyIniFile ballTable = FistyIniLoader.loadIni(Files.readString(ballTablePath));
+            FistyIniFile outBalls = new FistyIniFile("; Mod-specific custom gooballs", List.of());
+            
+            // Analyze all ballInstances
+            Set<Integer> ballTypeEnums = level.allBallTypes();
+            Iterable<Integer> sortedBallTypeEnums = () -> ballTypeEnums.stream().sorted().iterator();
+            
+            for (int typeEnum : sortedBallTypeEnums) {
+                Optional<String> customBallId = analyzeGooBall(typeEnum, ballTable);
+                
+                if (customBallId.isPresent()) {
+                    logger.debug("Custom gooball {} {}", typeEnum, customBallId.get());
+                    
+                    int outTypeEnum = outBalls.addBallId(customBallId.get(), typeEnum);
+                    assert outTypeEnum == typeEnum;
+                }
+            }
+            
+            // Analyze all items for uservars
+            for (LevelItem itemInstance : level.getItems()) {
+                Item item = allItems.get(itemInstance.getType());
+                
+                if (item == null)
+                    continue;
+                
+                List<ItemUserVariable> itemVars = item.getUserVariables();
+                
+                int count = Math.min(itemVars.size(), itemInstance.getUserVariables().size());
+                for (int i = 0; i < count; i++) {
+                    ItemUserVariable itemVar = itemVars.get(i);
+                    
+                    if (itemVar.getType() == ItemUserVariable.TYPE_GOO_BALL) {
+                        LevelItem.UserVariable value = itemInstance.getUserVariables().get(i);
+                        int typeEnum = (int) value.getValue();
+                        
+                        if (!ballTypeEnums.contains(typeEnum)) {
+                            Optional<String> customBallId = analyzeGooBall(typeEnum, ballTable);
+                            
+                            if (customBallId.isPresent()) {
+                                logger.debug("Custom gooball (from item) {} {}", typeEnum, customBallId.get());
+                    
+                                int outTypeEnum = outBalls.addBallId(customBallId.get(), typeEnum);
+                                assert outTypeEnum == typeEnum;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            outBallsString = outBalls.getSourceFile();
+        }
+        
+        
         // Music
         String newMusicId = analyzeAsset(res, level.getMusicId(), AssetType.MUSIC);
         levelJson.put("musicId", newMusicId);
+        
+        // Ambience
+        String newAmbienceId = analyzeAsset(res, level.getAmbienceId(), AssetType.AMBIENCE);
+        levelJson.put("ambienceId", newAmbienceId);
         
         // Serialize level
         String newLevelContent = LevelLoader.saveLevel(levelJson);
@@ -346,13 +346,10 @@ class ExportTask extends Task<Void> {
         String addinXml = mapper.writer().withRootName("addin").writeValueAsString(mod);
         
         // Write zip file
-        writeZipFile(outputPath, addinXml, textPatch);
+        writeZipFile(outputPath, addinXml, textPatch, outBallsString);
     }
     
     private ResrcGroup loadResrcManifest(AssetType type) throws IOException {
-        Properties properties = PropertiesLoader.getProperties();
-        String customWog2 = properties.getTargetWog2Directory();
-        
         ResrcManifest environmentManifest = ResrcLoader.loadManifest(Paths.get(customWog2, "game", type.resrcFile));
         Optional<ResrcGroup> group = environmentManifest.getGroup(type.groupId);
         
@@ -397,9 +394,6 @@ class ExportTask extends Task<Void> {
         if (id == null || id.isEmpty())
             return id;
         
-        Properties properties = PropertiesLoader.getProperties();
-        String customWog2 = properties.getTargetWog2Directory();
-        
         // get custom resource
         ResrcGroup group = customResrcs.get(type);
         PathResrc<? extends Resrc> resrc = getResrc(id, group, type.resrcClass);
@@ -437,7 +431,127 @@ class ExportTask extends Task<Void> {
         return id;
     }
     
-    private void writeZipFile(Path outputPath, String addinXml, TextDB textPatch) throws IOException {
+    private Optional<String> analyzeBackground(ResArchive res, String backgroundId) throws IOException {
+        String backgroundText = Files.readString(Paths.get(customWog2, "game/res/environments", backgroundId + ".wog2"));
+        Optional<String> originalBackground = res.getFileText("res/environments/" + backgroundId + ".wog2");
+        
+        ObjectNode backgroundValue = (ObjectNode) jsonMapper.readTree(backgroundText);
+        Environment background = EnvironmentLoader.loadBackground(backgroundValue);
+        
+        boolean backgroundModified = false;
+        
+        for (Environment.Layer layer : background.getLayers()) {
+            String newImageName = analyzeAsset(res, layer.getImageName(), AssetType.ENVIRONMENT);
+            
+            if (!newImageName.equals(layer.getImageName())) {
+                backgroundModified = true;
+                layer.setImageName(newImageName);
+            }
+        }
+        
+        String newFireLut = analyzeAsset(res, background.getFireLut(), AssetType.ENVIRONMENT_LUT);
+        
+        if (!newFireLut.equals(background.getFireLut())) {
+            backgroundModified = true;
+            backgroundValue.put("fireLut", newFireLut);
+        }
+        
+        if (originalBackground.isPresent()) {
+            if (backgroundModified || !backgroundText.equals(originalBackground.get())) {
+                String newBackgroundId = UUID.randomUUID().toString();
+                
+                JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
+                backgroundValue.put("id", newBackgroundId);
+                backgroundValue.set("layers", serializedLayers);
+                
+                String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
+                compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, newBackgroundId, newBackgroundText));
+                
+                return Optional.of(newBackgroundId);
+            }
+        } else {
+            JsonNode serializedLayers = jsonMapper.valueToTree(background.getLayers());
+            backgroundValue.set("layers", serializedLayers);
+            
+            String newBackgroundText = EnvironmentLoader.saveBackground(backgroundValue);
+            compiledResources.add(new CompiledResource(CompileType.ENVIRONMENT, backgroundId, newBackgroundText));
+        }
+        
+        return Optional.empty();
+    }
+    
+    private Optional<String> analyzeItem(ResArchive res, String itemId, Map<String, Item> allItems) throws IOException {
+        String itemFileText = Files.readString(Paths.get(customWog2, "game/res/items", itemId + ".wog2"));
+        Optional<String> originalItemFileText = res.getFileText("res/items/" + itemId + ".wog2");
+        
+        ItemFile itemFile = ItemLoader.loadItemFile(itemFileText);
+        
+        if (itemFile.getItems().size() != 1)
+            throw new IOException("Expected " + itemId + ".wog2 file to contain 1 item, not " + itemFile.getItems().size());
+        
+        JsonNode itemJson = itemFile.getItems().get(0);
+        Item item = ItemLoader.loadItem(itemJson);
+        
+        allItems.put(itemId, item);
+        
+        boolean itemModified = false;
+        
+        for (ItemObject object : item.getObjects()) {
+            String newName = analyzeAsset(res, object.getName(), AssetType.ITEM);
+            
+            if (!newName.equals(object.getName())) {
+                itemModified = true;
+                object.setName(newName);
+            }
+        }
+        
+        if (originalItemFileText.isPresent()) {
+            if (itemModified || !itemFileText.equals(originalItemFileText.get())) {
+                String newItemId = UUID.randomUUID().toString();
+                item.setUuid(newItemId);
+                
+                ItemFile newItemFile = ItemFile.fromItem(itemJson, item);
+                String newItemFileText = ItemLoader.saveItemFile(newItemFile);
+                compiledResources.add(new CompiledResource(CompileType.ITEM, newItemId, newItemFileText));
+                
+                return Optional.of(newItemId);
+            }
+        } else {
+            ItemFile newItemFile = ItemFile.fromItem(itemJson, item);
+            String newItemFileText = ItemLoader.saveItemFile(newItemFile);
+            
+            compiledResources.add(new CompiledResource(CompileType.ITEM, itemId, newItemFileText));
+        }
+        
+        return Optional.empty();
+        
+    }
+    
+    private Optional<String> analyzeGooBall(int typeEnum, FistyIniFile ballTable) throws IOException {
+        Optional<String> ballId = ballTable.getBallName(typeEnum);
+        
+        if (ballId.isEmpty())
+            throw new IOException("Could not find gooball with typeEnum " + typeEnum);
+        
+        boolean ballIdIsCustom = DefaultFistyIni.BALL_TABLE.length <= typeEnum
+                || !DefaultFistyIni.BALL_TABLE[typeEnum].equals(ballId.get());
+        
+        if (ballIdIsCustom) {
+            customGooballIds.add(ballId.get());
+            
+            // TODO: analyze editor image
+            // String itemFileText = Files.readString(Paths.get(customWog2, "game/res/balls", ballId, "ball.wog2"));
+            
+            // JsonNode ballJson = jsonMapper.readTree(itemFileText);
+            // Ball ball = BallLoader.loadBall(ballJson);
+            
+            return Optional.of(ballId.get());
+        } else {
+            return Optional.empty();
+        }
+    }
+    
+    private void writeZipFile(Path outputPath, String addinXml, TextDB textPatch, String outBalls) throws IOException {
         FileOutputStream fileOutputStream  = new FileOutputStream(outputPath.toFile());
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
         
@@ -453,6 +567,13 @@ class ExportTask extends Task<Void> {
             zip.putNextEntry(new ZipEntry("translation.xml"));
             zip.write(textPatchBytes);
             zip.closeEntry();
+            
+            // balls.ini
+            if (outBalls != null) {
+                zip.putNextEntry(new ZipEntry("balls.ini"));
+                zip.write(outBalls.getBytes());
+                zip.closeEntry();
+            }
             
             // compile directory
             for (CompiledResource resource : compiledResources) {
@@ -524,6 +645,41 @@ class ExportTask extends Task<Void> {
                 zip.putNextEntry(new ZipEntry(entryPath));
                 zip.write(asset.content());
                 zip.closeEntry();
+            }
+            
+            // goo balls
+            for (String gooBallId : customGooballIds) {
+                Path gooBallDir = Paths.get(customWog2, "game/res/balls", gooBallId);
+                logger.trace("Saving custom goo ball at directory {}", gooBallDir);
+                
+                Iterable<Path> allSubFiles = () -> {
+                    try {
+                        return Files.walk(gooBallDir).iterator();
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                };
+                
+                try {
+                    for (Path filePath : allSubFiles) {
+                        if (!Files.isRegularFile(filePath))
+                            continue;
+                        
+                        byte[] content = Files.readAllBytes(filePath);
+                        
+                        String pathPrefix = filePath.toString().endsWith(".wog2") || filePath.toString().endsWith(".xml")
+                            ? "compile/" : "override/";
+                        Path relativePath = gooBallDir.relativize(filePath);
+                        
+                        String entryPath = pathPrefix + "res/balls/" + gooBallId + "/" + relativePath.toString();
+                        
+                        zip.putNextEntry(new ZipEntry(entryPath));
+                        zip.write(content);
+                        zip.closeEntry();
+                    }
+                } catch (UncheckedIOException e) {
+                    throw e.getCause();
+                }
             }
         }
     }
