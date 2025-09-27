@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.gui;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,7 +23,6 @@ import javafx.application.Application;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
@@ -138,23 +136,49 @@ public class FX_Setup extends Application {
         return switch (Platform.getCurrent()) {
             case WINDOWS -> {
                 ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
-                Path file = CustomFileChooser.chooseFile(stage, "Please choose World of Goo 2 installation", exeFilter);
-                yield file.getParent().toString();
+                Optional<Path> file = CustomFileChooser.openFile(stage, "Please choose World of Goo 2 installation", exeFilter);
+                
+                if (file.isEmpty()) {
+                    FX_Alert.show("Goo2Tool Setup",
+                            "No World of Goo 2 installation has been chosen. Exiting.",
+                            ButtonType.OK);
+                    
+                    System.exit(0);
+                }
+                
+                yield file.get().getParent().toString();
             }
             case MAC -> {
-                DirectoryChooser directoryChooser = new DirectoryChooser();
-                File file = directoryChooser.showDialog(stage);
-                yield file.getAbsolutePath();
+                Optional<Path> file = CustomFileChooser.chooseDirectory(stage, "Please choose World of Goo 2 installation");
+                
+                if (file.isEmpty()) {
+                    FX_Alert.show("Goo2Tool Setup",
+                            "No World of Goo 2 installation has been chosen. Exiting.",
+                            ButtonType.OK);
+                    
+                    System.exit(0);
+                }
+                
+                yield file.get().toString();
             }
             case LINUX -> {
                 ExtensionFilter exeFilter = new ExtensionFilter("World of Goo 2 executable (WorldOfGoo2, *.exe, *.AppImage)",
                         "*.exe", "WorldOfGoo2", "*.AppImage");
                 
-                Path file = CustomFileChooser.chooseFile(stage, "Please choose World of Goo 2 installation", exeFilter);
-                String fileString = file.toString();
+                Optional<Path> file = CustomFileChooser.openFile(stage, "Please choose World of Goo 2 installation", exeFilter);
+                
+                if (file.isEmpty()) {
+                    FX_Alert.show("Goo2Tool Setup",
+                            "No World of Goo 2 installation has been chosen. Exiting.",
+                            ButtonType.OK);
+                    
+                    System.exit(0);
+                }
+                
+                String fileString = file.get().toString();
                 
                 if (fileString.endsWith(".exe")) {
-                    yield file.getParent().toString();
+                    yield file.get().getParent().toString();
                 } else {
                     yield fileString;
                 }
@@ -199,10 +223,17 @@ public class FX_Setup extends Application {
             if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
                 return "";
             
-            // TODO: make this work with xdg-desktop-portal too
-            DirectoryChooser directoryChooser = new DirectoryChooser();
-            File file = directoryChooser.showDialog(stage);
-            return file.getAbsolutePath();
+            Optional<Path> file = CustomFileChooser.chooseDirectory(stage, "Please choose World of Goo 2 profile");
+            
+            if (file.isEmpty()) {
+                FX_Alert.show("Goo2Tool Setup",
+                        "No World of Goo 2 profile has been chosen. Exiting.",
+                        ButtonType.OK);
+                
+                System.exit(0);
+            }
+            
+            return file.get().toString();
         }
         
         if (properties.isSteam() && gooDir.isPresent()) {

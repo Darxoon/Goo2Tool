@@ -63,10 +63,11 @@ public class FX_Scene {
         
         Properties properties = PropertiesLoader.getProperties();
         
-        // TODO: Update FistyLoader button for old versions of FistyLoader
         // TODO: auto detect if FistyLoader is already installed at setup
-        if (properties.getFistyVersion() == null) {
-            Button installFistyButton = new Button("Install FistyLoader");
+        if (properties.getFistyVersion() == null || properties.getFistyVersion().compareTo(FistyInstaller.FISTY_VERSION) < 0) {
+            Button installFistyButton = properties.getFistyVersion() == null
+                    ? new Button("Install FistyLoader")
+                    : new Button("Update FistyLoader");
             
             boolean disabled = switch (Platform.getCurrent()) {
                 case WINDOWS -> !properties.isSteam();
@@ -124,6 +125,7 @@ public class FX_Scene {
     }
     
     public static void save() {
+        // TODO: verify dependencies between mods (especially FistyLoader)
         SaveGui.save(stage);
     }
     

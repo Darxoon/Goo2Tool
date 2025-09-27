@@ -1,6 +1,7 @@
 package com.crazine.goo2tool.gui.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -11,6 +12,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.Platform;
 
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -49,54 +52,34 @@ public class CustomFileChooser {
     private static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static SecureRandom rnd = new SecureRandom();
 
-    public static Path chooseFile(Stage stage, String title, ExtensionFilter... filters) throws IOException {
-        return chooseFile(stage, title, null, filters);
+    public static Optional<Path> openFile(Stage stage, String title, ExtensionFilter... filters) throws IOException {
+        return openFile(stage, title, null, filters);
     }
     
-    public static Path chooseFile(Stage stage, String title, Path initialDir, ExtensionFilter... filters) throws IOException {
+    public static Optional<Path> openFile(Stage stage, String title, Path initialDir, ExtensionFilter... filters) throws IOException {
         if (Platform.getCurrent() == Platform.LINUX) {
             logger.info("Opening xdg-desktop-portal FileChooser");
+            
             try (DBusConnection connection = DBusConnectionBuilder.forSessionBus().build()) {
                 Map<String, Variant<?>> options = new HashMap<>();
                 
-                if (filters != null && filters.length > 0) {
-                    List<CustomTuple2<String, List<CustomTuple2<Integer, String>>>> dbusFilters = new ArrayList<>(Arrays.stream(filters)
-                        .map(filter -> {
-                            List<CustomTuple2<Integer, String>> extensions = new ArrayList<>(filter.getExtensions().stream()
-                                .map(extension -> new CustomTuple2<>(0, extension))
-                                .toList());
-                            
-                            return new CustomTuple2<>(filter.getDescription(), extensions);
-                        })
-                        .toList());
-                    
-                    options.put("filters", new Variant<>(dbusFilters, "a(sa(us))"));
-                    
-                    if (initialDir != null) {
-                        // imperfect size but good enough in most cases
-                        ByteArrayOutputStream currentFolder = new ByteArrayOutputStream(initialDir.toString().length() + 1);
-                        currentFolder.write(initialDir.toString().getBytes());
-                        currentFolder.write(0);
-                        options.put("current_folder", new Variant<>(currentFolder.toByteArray()));
-                    }
-                }
+                updateFilters(options, filters);
+                updateInitialDir(options, initialDir);
                 
                 Map<String, Variant<?>> results = makeDBusCall(connection, title, options);
                 List<?> uris = (List<?>) results.get("uris").getValue();
                 
-                URI uri;
-                try {
-                    uri = new URI((String) uris.get(0));
-                } catch (URISyntaxException e) {
-                    throw new IOException(e);
-                }
+                if (uris.isEmpty())
+                    return Optional.empty();
                 
-                return Path.of(uri);
-            } catch (DBusException e) {
+                URI uri = new URI((String) uris.get(0));
+                return Optional.of(Path.of(uri));
+            } catch (DBusException | URISyntaxException e) {
                 throw new IOException(e);
             }
         } else {
             logger.info("Opening default FileChooser");
+            
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle(title);
             fileChooser.getExtensionFilters().addAll(filters);
@@ -104,12 +87,84 @@ public class CustomFileChooser {
             if (initialDir != null)
                 fileChooser.setInitialDirectory(initialDir.toFile());
             
-            return fileChooser.showOpenDialog(stage).toPath();
+            File result = fileChooser.showOpenDialog(stage);
+            
+            if (result != null)
+                return Optional.of(result.toPath());
+            else
+                return Optional.empty();
         }
     }
     
-    public static Path chooseDirectory() {
-        return null;
+    public static Optional<Path> chooseDirectory(Stage stage, String title) throws IOException {
+        return chooseDirectory(stage, title, null);
+    }
+    
+    public static Optional<Path> chooseDirectory(Stage stage, String title, Path initialDir) throws IOException {
+        if (Platform.getCurrent() == Platform.LINUX) {
+            logger.info("Opening xdg-desktop-portal DirectoryChooser");
+            
+            try (DBusConnection connection = DBusConnectionBuilder.forSessionBus().build()) {
+                Map<String, Variant<?>> options = new HashMap<>();
+                options.put("directory", new Variant<>(true));
+                
+                updateInitialDir(options, initialDir);
+                
+                Map<String, Variant<?>> results = makeDBusCall(connection, title, options);
+                List<?> uris = (List<?>) results.get("uris").getValue();
+                
+                if (uris.isEmpty())
+                    return Optional.empty();
+                
+                URI uri = new URI((String) uris.get(0));
+                return Optional.of(Path.of(uri));
+            } catch (DBusException | URISyntaxException e) {
+                throw new IOException(e);
+            }
+        } else {
+            logger.info("Opening default DirectoryChooser");
+            
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setTitle(title);
+            
+            if (initialDir != null)
+                directoryChooser.setInitialDirectory(initialDir.toFile());
+            
+            File result = directoryChooser.showDialog(stage);
+            
+            if (result != null)
+                return Optional.of(result.toPath());
+            else
+                return Optional.empty();
+        }
+    }
+    
+    private static void updateFilters(Map<String, Variant<?>> options, ExtensionFilter[] filters) {
+        if (filters == null || filters.length == 0)
+            return;
+        
+        List<CustomTuple2<String, List<CustomTuple2<Integer, String>>>> dbusFilters = new ArrayList<>(Arrays.stream(filters)
+            .map(filter -> {
+                List<CustomTuple2<Integer, String>> extensions = new ArrayList<>(filter.getExtensions().stream()
+                    .map(extension -> new CustomTuple2<>(0, extension))
+                    .toList());
+                
+                return new CustomTuple2<>(filter.getDescription(), extensions);
+            })
+            .toList());
+        
+        options.put("filters", new Variant<>(dbusFilters, "a(sa(us))"));
+    }
+    
+    private static void updateInitialDir(Map<String, Variant<?>> options, Path initialDir) throws IOException {
+        if (initialDir == null)
+            return;
+        
+        // imperfect size but good enough in most cases
+        ByteArrayOutputStream currentFolder = new ByteArrayOutputStream(initialDir.toString().length() + 1);
+        currentFolder.write(initialDir.toString().getBytes());
+        currentFolder.write(0);
+        options.put("current_folder", new Variant<>(currentFolder.toByteArray()));
     }
     
     private static Map<String, Variant<?>> makeDBusCall(DBusConnection connection, String title, Map<String, Variant<?>> options) throws DBusException {

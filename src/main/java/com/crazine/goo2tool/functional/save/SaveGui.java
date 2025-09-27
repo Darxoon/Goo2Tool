@@ -1,11 +1,12 @@
 package com.crazine.goo2tool.functional.save;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -23,7 +24,6 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -50,11 +50,17 @@ public class SaveGui {
             if (result.isEmpty() || result.get() != ButtonType.OK)
                 return Optional.empty();
             
-            DirectoryChooser directoryChooser = new DirectoryChooser();
-            File customDir = directoryChooser.showDialog(originalStage);
-            if (customDir == null)
+            try {
+                Optional<Path> customDir = CustomFileChooser.chooseDirectory(originalStage, "Create new Goo2Tool directory");
+                
+                if (customDir.isEmpty())
+                    return Optional.empty();
+                
+                properties.setCustomWorldOfGoo2Directory(customDir.get().toString());
+            } catch (IOException e) {
+                FX_Alarm.error(e);
                 return Optional.empty();
-            properties.setCustomWorldOfGoo2Directory(customDir.getAbsolutePath());
+            }
         }
         
         if (properties.isSteam() && !properties.isSteamWarningShown()) {

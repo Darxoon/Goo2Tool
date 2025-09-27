@@ -308,20 +308,20 @@ public class FX_Mods {
     }
 
     public static void installAddin() {
-        Path goomodFile;
+        Optional<Path> goomodFile;
         try {
             ExtensionFilter filter = new ExtensionFilter(
                     "World of Goo 2 addin (*.goo2mod)", "*.goo2mod");
-            goomodFile = CustomFileChooser.chooseFile(stage, "Open addin to install", filter);
+            goomodFile = CustomFileChooser.openFile(stage, "Open addin to install", filter);
         } catch (IOException e) {
             FX_Alarm.error(e);
             return;
         }
         
-        if (goomodFile == null) return;
+        if (goomodFile.isEmpty()) return;
         
         try {
-            PropertiesLoader.loadGoo2mod(goomodFile.toFile());
+            PropertiesLoader.loadGoo2mod(goomodFile.get().toFile());
         } catch (IOException e) {
             e.printStackTrace();
             Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);

@@ -78,11 +78,15 @@ public interface ResArchive extends Closeable {
             ExtensionFilter filter = new ExtensionFilter("res.goo Archive", "*.*");
             Path initialDir = Path.of(baseWOG2, "game");
             
-            Path chosenFile = CustomFileChooser.chooseFile(stage,
+            Optional<Path> chosenFile = CustomFileChooser.openFile(stage,
                     "Please open res.goo archive", initialDir, filter);
             
-            PropertiesLoader.getProperties().setResGooPath(chosenFile.toString());
-            resGooFile = chosenFile.toFile();
+            // TODO: is this ok to do?
+            if (chosenFile.isEmpty())
+                return null;
+            
+            PropertiesLoader.getProperties().setResGooPath(chosenFile.get().toString());
+            resGooFile = chosenFile.get().toFile();
         }
         
         PropertiesLoader.saveProperties();

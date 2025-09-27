@@ -15,7 +15,6 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
 
@@ -23,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -109,22 +109,33 @@ public class FileOptions {
         Button changeDirButton = new Button("...");
         changeDirButton.setOnAction(event -> {
             File chosenFile;
-            if (filter != null) {
-                Path initialDir = Path.of(initialValue);
-                if (Files.isRegularFile(initialDir))
-                    initialDir = initialDir.getParent();
-                
-                try {
-                    chosenFile = CustomFileChooser.chooseFile(stage,
-                            "Please choose location", initialDir, filter).toFile();
-                } catch (IOException e) {
-                    FX_Alarm.error(e);
-                    return;
+            try {
+                if (filter != null) {
+                    // Open file picker
+                    Path initialDir = Path.of(initialValue);
+                    if (Files.isRegularFile(initialDir))
+                        initialDir = initialDir.getParent();
+                    
+                    Optional<Path> chosenPath = CustomFileChooser.openFile(stage,
+                            "Please choose location", initialDir, filter);
+                    
+                    if (chosenPath.isEmpty())
+                        return;
+                    
+                    chosenFile = chosenPath.get().toFile();
+                } else {
+                    // Open dir picker
+                    Optional<Path> chosenPath = CustomFileChooser.chooseDirectory(stage,
+                            "Please choose location", Path.of(initialValue));
+                    
+                    if (chosenPath.isEmpty())
+                        return;
+                    
+                    chosenFile = chosenPath.get().toFile();
                 }
-            } else {
-                DirectoryChooser directoryChooser = new DirectoryChooser();
-                directoryChooser.setInitialDirectory(new File(initialValue));
-                chosenFile = directoryChooser.showDialog(stage);
+            } catch (IOException e) {
+                FX_Alarm.error(e);
+                return;
             }
             
             if (chosenFile == null) return;
