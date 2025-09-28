@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.functional.save.filetable;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,6 +8,7 @@ import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 
 public class ResFileTableLoader {
     
@@ -25,14 +25,15 @@ public class ResFileTableLoader {
         }
     }
     
-    public static void save(ResFileTable table, File outFile) throws IOException {
+    public static void save(ResFileTable table, Path outFile) throws IOException {
         
-        if (!Files.exists(outFile.toPath()))
-            Files.createFile(outFile.toPath());
+        if (!Files.exists(outFile))
+            Files.createFile(outFile);
         
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-        xmlMapper.writeValue(outFile, table);
+        xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
+        xmlMapper.writeValue(outFile.toFile(), table);
         
     }
     

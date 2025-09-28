@@ -49,26 +49,32 @@ public class ResrcLoader {
             } while (!parser.getCurrentToken().isStructStart());
             
             while (parser.getCurrentToken().isStructStart()) {
-                String name = stax.getLocalName();
-                resources.add(parseResource(stax));
-                
-                while (!parser.getCurrentToken().isStructEnd()) {
-                    if (!stax.getLocalName().equals(name))
-                        throw new RuntimeException("Unexpected tag <" + stax.getLocalName() + ">, expected </" + name + ">");
-                    
-                    parser.nextToken();
-                }
-                
-                parser.nextToken();
-                
-                if (parser.getCurrentToken() == JsonToken.FIELD_NAME)
-                    parser.nextToken();
+                resources.add(readResource(parser, stax));
             }
             
             return new ResrcGroup(id, resources);
         }
         
-        private Resrc parseResource(XMLStreamReader stax) {
+        public static Resrc readResource(FromXmlParser parser, XMLStreamReader stax) throws IOException, JacksonException {
+            String name = stax.getLocalName();
+            Resrc result = parseResource(stax);
+            
+            while (!parser.getCurrentToken().isStructEnd()) {
+                if (!stax.getLocalName().equals(name))
+                    throw new RuntimeException("Unexpected tag <" + stax.getLocalName() + ">, expected </" + name + ">");
+                
+                parser.nextToken();
+            }
+            
+            parser.nextToken();
+            
+            if (parser.getCurrentToken() == JsonToken.FIELD_NAME)
+                parser.nextToken();
+            
+            return result;
+        }
+        
+        public static Resrc parseResource(XMLStreamReader stax) {
             switch (stax.getLocalName()) {
                 case "SetDefaults": {
                     String path = stax.getAttributeValue("", "path");
@@ -124,22 +130,26 @@ public class ResrcLoader {
             gen.writeStringField("id", value.getId());
             
             for (Resrc resrc : value.getResources()) {
-                gen.writeFieldName(resrc.getClass().getSimpleName());
-                gen.writeStartObject(resrc);
-                
-                if (resrc instanceof Record) {
-                    for (RecordComponent component : resrc.getClass().getRecordComponents()) {
-                        try {
-                            Object fieldValue = component.getAccessor().invoke(resrc);
-                            gen.setNextIsAttribute(true);
-                            gen.writeObjectField(component.getName(), fieldValue);
-                        } catch (IllegalAccessException | InvocationTargetException e) {
-                            throw new RuntimeException(e);
-                        }
+                writeResource(gen, resrc);
+            }
+            
+            gen.writeEndObject();
+        }
+        
+        public static void writeResource(ToXmlGenerator gen, Resrc resrc) throws IOException, JacksonException {
+            gen.writeFieldName(resrc.getClass().getSimpleName());
+            gen.writeStartObject(resrc);
+            
+            if (resrc instanceof Record) {
+                for (RecordComponent component : resrc.getClass().getRecordComponents()) {
+                    try {
+                        Object fieldValue = component.getAccessor().invoke(resrc);
+                        gen.setNextIsAttribute(true);
+                        gen.writeObjectField(component.getName(), fieldValue);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        throw new RuntimeException(e);
                     }
                 }
-                
-                gen.writeEndObject();
             }
             
             gen.writeEndObject();

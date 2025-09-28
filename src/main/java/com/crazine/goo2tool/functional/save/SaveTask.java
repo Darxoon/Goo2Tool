@@ -33,6 +33,10 @@ import com.crazine.goo2tool.addinfile.AddinReader.ResourceType;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFileEntry;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTable;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTableLoader;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeFile;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeType;
 import com.crazine.goo2tool.gamefiles.AppImageResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
@@ -122,6 +126,10 @@ class SaveTask extends Task<Void> {
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
         ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
         
+        // TODO (priority): Restore original values again for mods that were uninstalled
+        Path mergeTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "mergeTable.xml");
+        MergeTable mergeTable = MergeTableLoader.loadOrInit(mergeTablePath);
+        
         // Merge original res folder
         updateTitle("Validating original WoG2");
         String baseWog2 = properties.getBaseWorldOfGoo2Directory();
@@ -189,7 +197,7 @@ class SaveTask extends Task<Void> {
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {
             updateTitle("Installing addin " + goo2mod.getId());
-            installGoo2mod(goo2mod, table, ballTable);
+            installGoo2mod(goo2mod, table, mergeTable, ballTable);
         }
         
         // Save ballTable
@@ -227,8 +235,9 @@ class SaveTask extends Task<Void> {
             }
         }
         
-        ResFileTableLoader.save(table, fileTablePath.toFile());
-
+        ResFileTableLoader.save(table, fileTablePath);
+        MergeTableLoader.save(mergeTable, mergeTablePath);
+        
         // Backup save file just for good measure
         Path saveFile = Paths.get(properties.getSaveFilePath());
         Path saveFileBackup = Paths.get(properties.getSaveFilePath().replace(".dat", "_backup.dat"));
@@ -369,7 +378,7 @@ class SaveTask extends Task<Void> {
         }
     }
     
-    private void installGoo2mod(Goo2mod mod, ResFileTable table, FistyIniFile ballTable) {
+    private void installGoo2mod(Goo2mod mod, ResFileTable table, MergeTable mergeTable, FistyIniFile ballTable) {
         logger.info("Installing mod {}", mod.getId());
         
         Properties properties = PropertiesLoader.getProperties();
@@ -472,7 +481,14 @@ class SaveTask extends Task<Void> {
                         if (resource.path().endsWith(".wog2")) {
                             mergeWog2(table, resource, customPath);
                         } else if (resource.path().endsWith(".xml")) {
-                            mergeXml(table, resource, customPath);
+                            if (resource.path().equals("res/properties/fx.xml"))
+                                throw new IllegalArgumentException("fx.xml merge not supported yet"
+                                        + " (you should probably use res/particles anyway)");
+                            
+                            MergeFile file = mergeTable.getOrAddFile(resource.path(),
+                                    () -> new MergeFile(resource.path(), MergeType.RESOURCE_XML));
+                            
+                            mergeXml(table, file, resource, customPath, mod.getId());
                         } else {
                             throw new IllegalArgumentException("Only allowed files in compile/ are .wog2 and .xml!");
                         }
@@ -733,12 +749,11 @@ class SaveTask extends Task<Void> {
         
     }
     
-    private void mergeXml(ResFileTable table, Resource resource, Path customPath) throws IOException {
+    private void mergeXml(ResFileTable table, MergeFile mergeFile, Resource resource, Path customPath, String modId) throws IOException {
         ResrcManifest original = ResrcLoader.loadManifest(customPath);
         ResrcManifest patch = ResrcLoader.loadManifest(resource.content());
         
-        table.addEntry("*", resource.path());
-        ResrcManifest merged = ResourceXmlMerge.transformResources(original, patch);
+        ResrcManifest merged = ResourceXmlMerge.transformResources(original, patch, mergeFile, modId);
         ResrcLoader.saveManifest(merged, customPath.toFile());
     }
     
