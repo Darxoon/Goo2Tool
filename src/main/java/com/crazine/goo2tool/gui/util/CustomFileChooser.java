@@ -66,7 +66,7 @@ public class CustomFileChooser {
                 updateFilters(options, filters);
                 updateInitialDir(options, initialDir);
                 
-                Map<String, Variant<?>> results = makeDBusCall(connection, title, options);
+                Map<String, Variant<?>> results = makeDBusCall(connection, title, options, false);
                 List<?> uris = (List<?>) results.get("uris").getValue();
                 
                 if (uris.isEmpty())
@@ -96,6 +96,59 @@ public class CustomFileChooser {
         }
     }
     
+    public static Optional<Path> saveFile(Stage stage, String title,
+            String initialFileName, ExtensionFilter... filters) throws IOException {
+        return saveFile(stage, title, null, initialFileName, filters);
+    }
+    
+    public static Optional<Path> saveFile(Stage stage, String title, Path initialDir,
+            String initialFileName, ExtensionFilter... filters) throws IOException {
+        
+        if (Platform.getCurrent() == Platform.LINUX) {
+            logger.info("Opening xdg-desktop-portal FileChooser");
+            
+            try (DBusConnection connection = DBusConnectionBuilder.forSessionBus().build()) {
+                Map<String, Variant<?>> options = new HashMap<>();
+                
+                updateFilters(options, filters);
+                updateInitialDir(options, initialDir);
+                
+                if (initialFileName != null)
+                    options.put("current_name", new Variant<>(initialFileName));
+                
+                Map<String, Variant<?>> results = makeDBusCall(connection, title, options, true);
+                List<?> uris = (List<?>) results.get("uris").getValue();
+                
+                if (uris.isEmpty())
+                    return Optional.empty();
+                
+                URI uri = new URI((String) uris.get(0));
+                return Optional.of(Path.of(uri));
+            } catch (DBusException | URISyntaxException e) {
+                throw new IOException(e);
+            }
+        } else {
+            logger.info("Opening default FileChooser");
+            
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle(title);
+            fileChooser.getExtensionFilters().addAll(filters);
+            
+            if (initialFileName != null)
+                fileChooser.setInitialFileName(initialFileName);
+            
+            if (initialDir != null)
+                fileChooser.setInitialDirectory(initialDir.toFile());
+            
+            File result = fileChooser.showSaveDialog(stage);
+            
+            if (result != null)
+                return Optional.of(result.toPath());
+            else
+                return Optional.empty();
+        }
+    }
+    
     public static Optional<Path> chooseDirectory(Stage stage, String title) throws IOException {
         return chooseDirectory(stage, title, null);
     }
@@ -110,7 +163,7 @@ public class CustomFileChooser {
                 
                 updateInitialDir(options, initialDir);
                 
-                Map<String, Variant<?>> results = makeDBusCall(connection, title, options);
+                Map<String, Variant<?>> results = makeDBusCall(connection, title, options, false);
                 List<?> uris = (List<?>) results.get("uris").getValue();
                 
                 if (uris.isEmpty())
@@ -167,7 +220,8 @@ public class CustomFileChooser {
         options.put("current_folder", new Variant<>(currentFolder.toByteArray()));
     }
     
-    private static Map<String, Variant<?>> makeDBusCall(DBusConnection connection, String title, Map<String, Variant<?>> options) throws DBusException {
+    private static Map<String, Variant<?>> makeDBusCall(DBusConnection connection, String title,
+            Map<String, Variant<?>> options, boolean isSave) throws DBusException {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Map<String, Variant<?>>> results = new AtomicReference<Map<String,Variant<?>>>(null);
         
@@ -191,8 +245,13 @@ public class CustomFileChooser {
                 org.freedesktop.portal.FileChooser.class);
         
         options.put("handle_token", new Variant<>(handleToken));
-        // TODO: figure out parentWindow
-        fileChooser.OpenFile("", title, options);
+        
+        if (isSave) {
+            // TODO: figure out parentWindow
+            fileChooser.SaveFile("", title, options);
+        } else {
+            fileChooser.OpenFile("", title, options);
+        }
         
         try {
             latch.await();

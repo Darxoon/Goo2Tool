@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.gui.export;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -18,6 +17,7 @@ import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
 import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCache;
 import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCacheLoader;
+import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -34,9 +34,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.BorderPane;
-import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser.ExtensionFilter;
 
 public class FX_Levels {
     
@@ -147,14 +147,21 @@ public class FX_Levels {
                     return;
                 
                 // Save Dialog
-                // TODO: migrate to CustomFileChooser
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("WoG2 Addin", "*.goo2mod"));
-                fileChooser.setInitialFileName(addinInfo.modId() + ".goo2mod");
-                File outFile = fileChooser.showSaveDialog(stage);
+                ExtensionFilter filter = new ExtensionFilter("WoG2 Addin (*.goo2mod)", "*.goo2mod");
+                Optional<Path> outFile;
+                try {
+                    outFile = CustomFileChooser.saveFile(stage, "Save level as .goo2mod",
+                            addinInfo.modId() + ".goo2mod", filter);
+                } catch (IOException e) {
+                    FX_Alarm.error(e);
+                    return;
+                }
+                
+                if (outFile.isEmpty())
+                    return;
                 
                 logger.info("Exporting level " + levelFile.title() + ": " + levelFile.path());
-                ExportGui.exportLevel(stage, addinInfo, levelFile.path(), outFile.toPath());
+                ExportGui.exportLevel(stage, addinInfo, levelFile.path(), outFile.get());
             });
         });
         
