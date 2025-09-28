@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
@@ -13,18 +15,23 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 public class ResFileTable {
     
     // this used to be a record but Jackson didn't like that >:(
+    @JsonInclude(Include.NON_EMPTY)
     public static class OverriddenFileEntry {
         
         @JacksonXmlProperty(isAttribute = true)
         private String modId;
+        @JacksonXmlProperty(isAttribute = true)
+        private String hash = "";
         
         @JacksonXmlText
         private String path;
         
-        public OverriddenFileEntry() {}
+        @SuppressWarnings("unused")
+        private OverriddenFileEntry() {}
         
-        public OverriddenFileEntry(String modId, String path) {
+        public OverriddenFileEntry(String modId, String hash, String path) {
             this.modId = modId;
+            this.hash = hash;
             this.path = path;
         }
 
@@ -32,16 +39,15 @@ public class ResFileTable {
             return modId;
         }
         
-        public void setModId(String modId) {
-            this.modId = modId;
+        public String getHash() {
+            return hash;
+        }
+        public void setHash(String hash) {
+            this.hash = hash;
         }
         
         public String getPath() {
             return path;
-        }
-        
-        public void setPath(String path) {
-            this.path = path;
         }
         
     }
@@ -64,8 +70,8 @@ public class ResFileTable {
         }
     }
     
-    public void addEntry(String owningModId, String path) {
-        entries.put(path, new OverriddenFileEntry(owningModId, path));
+    public void addEntry(String owningModId, String hash, String path) {
+        entries.put(path, new OverriddenFileEntry(owningModId, hash, path));
     }
     
     public void addEntry(OverriddenFileEntry entry) {

@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -20,6 +18,7 @@ import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.HashUtil;
 import com.crazine.goo2tool.util.IconLoader;
 import com.crazine.goo2tool.util.Platform;
 import com.crazine.goo2tool.util.VersionNumber;
@@ -42,6 +41,12 @@ public class FX_Setup extends Application {
         try {
             IconLoader.init();
         } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
+        
+        try {
+            HashUtil.init();
+        } catch (NoSuchAlgorithmException e) {
             FX_Alarm.error(e);
         }
         
@@ -233,18 +238,10 @@ public class FX_Setup extends Application {
         if (!Files.isRegularFile(exePath))
             return;
         
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            FX_Alarm.error(e);
-            return;
-        }
-        
         VersionNumber fistyVersion;
         try {
             byte[] exeContent = Files.readAllBytes(exePath);
-            String exeHash = hashFile(digest, exeContent);
+            String exeHash = HashUtil.getMD5Hash(exeContent);
             
             fistyVersion = FistyInstaller.FISTY_WOG2_STEAM_HASHES.get(exeHash);
         } catch (IOException e) {
@@ -259,11 +256,6 @@ public class FX_Setup extends Application {
                     "Detected that FistyLoader " + fistyVersion + " is installed",
                     ButtonType.OK);
         }
-    }
-    
-    private static String hashFile(MessageDigest digest, byte[] fileContent) {
-        byte[] hashBytes = digest.digest(fileContent);
-        return HexFormat.of().formatHex(hashBytes);
     }
     
     private static final String STEAM_WINEPFX_PROFILE_DIR =

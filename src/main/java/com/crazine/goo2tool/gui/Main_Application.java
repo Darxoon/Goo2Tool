@@ -5,6 +5,7 @@ import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.HashUtil;
 import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.application.Application;
@@ -18,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
 
 public class Main_Application extends Application {
 
@@ -30,6 +32,12 @@ public class Main_Application extends Application {
         try {
             IconLoader.init();
         } catch (IOException e) {
+            FX_Alarm.error(e);
+        }
+        
+        try {
+            HashUtil.init();
+        } catch (NoSuchAlgorithmException e) {
             FX_Alarm.error(e);
         }
         

@@ -8,12 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -26,6 +23,7 @@ import org.yaml.snakeyaml.yamlrecords.RecordConstructor.RecordSubstitute;
 
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.HashUtil;
 import com.crazine.goo2tool.util.IconLoader;
 import com.crazine.goo2tool.util.VersionNumber;
 
@@ -165,14 +163,7 @@ public class FistyInstaller {
         byte[] originalExe = Files.readAllBytes(originalExePath);
         
         // Check file hash
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException(e);
-        }
-        
-        String hash = hashFile(digest, originalExe);
+        String hash = HashUtil.getMD5Hash(originalExe);
         
         if (hash.equals(BASE_WOG2_STEAM_HASH)) {
             // Backup game
@@ -184,7 +175,7 @@ public class FistyInstaller {
             return Optional.of(originalExe);
         } else {
             // Try restoring game from backup
-            Optional<byte[]> backupExe = getBackupExe(digest, properties);
+            Optional<byte[]> backupExe = getBackupExe(properties);
             
             if (backupExe.isEmpty()) {
                 Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
@@ -208,25 +199,20 @@ public class FistyInstaller {
         }
     }
     
-    private static Optional<byte[]> getBackupExe(MessageDigest digest, Properties properties) throws IOException {
+    private static Optional<byte[]> getBackupExe(Properties properties) throws IOException {
         Path backupExePath = Path.of(properties.getBaseWorldOfGoo2Directory(), "WorldOfGoo2_backup.exe");
         
         if (!Files.isRegularFile(backupExePath))
             return Optional.empty();
         
         byte[] backupExe = Files.readAllBytes(backupExePath);
-        String hash = hashFile(digest, backupExe);
+        String hash = HashUtil.getMD5Hash(backupExe);
         
         if (hash.equals(BASE_WOG2_STEAM_HASH)) {
             return Optional.of(backupExe);
         } else {
             return Optional.empty();
         }
-    }
-    
-    private static String hashFile(MessageDigest digest, byte[] fileContent) {
-        byte[] hashBytes = digest.digest(fileContent);
-        return HexFormat.of().formatHex(hashBytes);
     }
     
 }

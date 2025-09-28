@@ -29,9 +29,6 @@ public class MergeTable {
         private Resrc.SetDefaults setDefaults;
         private Resrc value;
         
-        @SuppressWarnings("unused")
-        private MergeValue() {}
-        
         public MergeValue(SetDefaults setDefaults, Resrc value) {
             this.setDefaults = setDefaults;
             this.value = value;

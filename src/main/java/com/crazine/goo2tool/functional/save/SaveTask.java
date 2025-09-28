@@ -61,6 +61,7 @@ import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.HashUtil;
 import com.crazine.goo2tool.util.Platform;
 import com.crazine.goo2tool.util.VersionNumber;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -208,6 +209,18 @@ class SaveTask extends Task<Void> {
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         }
         
+        // Calculate hash of all modId="*" files
+        for (OverriddenFileEntry entry : table.getEntries()) {
+            if (!entry.getModId().equals("*"))
+                continue;
+            
+            Path filePath = Paths.get(customWog2, "game", entry.getPath());
+            byte[] content = Files.readAllBytes(filePath);
+            String contentHash = HashUtil.getMD5Hash(content);
+            
+            entry.setHash(contentHash);
+        }
+        
         // Delete unloaded levels from profile
         Path profilePath = Paths.get(properties.getProfileDirectory());
         
@@ -226,10 +239,20 @@ class SaveTask extends Task<Void> {
                 }
                 
                 if (!isLoaded) {
-                    // TODO (priority): try not deleting if the file has been modified by the user
-                    try {
-                        Files.delete(profilePath.resolve(path));
-                    } catch (NoSuchFileException e) {}
+                    Path realPath = profilePath.resolve(path);
+                    byte[] content = Files.readAllBytes(realPath);
+                    String contentHash = HashUtil.getMD5Hash(content);
+                    
+                    // Only delete level file if it hasn't been modified
+                    if (entry.getHash().isEmpty() || entry.getHash().equals(contentHash)) {
+                        try {
+                            Files.delete(realPath);
+                        } catch (NoSuchFileException e) {}
+                    } else {
+                        logger.info("File '{}' has been manually modified, therefore not deleting",
+                                path);
+                    }
+                    
                     table.removeEntry(entry);
                 }
             }
@@ -357,6 +380,7 @@ class SaveTask extends Task<Void> {
                 
                 Path customPath = Paths.get(customWog2, "game", file.path());
                 
+                // TODO (priority): Warn the user when a modId="*" is being wiped
                 if (garbageFiles.hasEntry(file.path())) {
                     byte[] fileContent = file.readContent();
                     
@@ -445,16 +469,36 @@ class SaveTask extends Task<Void> {
                         }
                         
                         break;
-                    case COMPILE:
+                    case COMPILE: {
+                        // Make sure file hasn't been merged before
+                        Optional<OverriddenFileEntry> entry = table.getEntry(resource.path());
+                        if (entry.isPresent()) {
+                            if (entry.get().getModId().equals("*"))
+                                throw new IllegalArgumentException("Cannot override compiled file that has been merged before!");
+                        }
+                        
+                        Optional<MergeFile> mergeFile = mergeTable.getFile(resource.path());
+                        if (mergeFile.isPresent()) {
+                            if (!mergeFile.get().getEntries().isEmpty())
+                                throw new IllegalArgumentException("Cannot override compiled file that has been merged before!");
+                            else
+                                mergeTable.getFiles().remove(mergeFile.get());
+                        }
+                        
+                        // Levels are handled after this loop
                         if (resource.path().startsWith("res/levels/") && resource.path().endsWith(".wog2")) {
-                            logger.debug("Skipping level {} for now", resource.path());
+                            logger.trace("Skipping level {} for now", resource.path());
                             break;
                         }
                         
                         updateProgress(++i, count);
                         writeCompiledFile(table, mod, resource);
                         break;
+                    }
                     case OVERRIDE:
+                        // Files that can be merged aren't allowed in override anyway
+                        // so no need to check if this file has been merged before
+                        
                         updateProgress(++i, count);
                         overrideFile(table, mod, resource);
                         break;
@@ -523,20 +567,22 @@ class SaveTask extends Task<Void> {
                     outLevel = serializeUpdatedLevel(level, levelJson, ballIdMap);
                 }
                 
+                String outLevelHash = HashUtil.getMD5Hash(outLevel);
+                
                 // Write level either to profile or wog2 dir
                 String levelName = resource.path().substring("res/levels/".length(), resource.path().length() - 5);
                 Optional<Goo2mod.Level> levelEntry = mod.getLevel(levelName);
                 
                 if (levelEntry.isPresent()) {
                     writeLevelToProfile(addinFile, level, levelEntry.get(), outLevel);
-                    table.addEntry(mod.getId(), "$profile/levels/" + level.getUuid() + ".wog2");
+                    table.addEntry(mod.getId(), outLevelHash, "$profile/levels/" + level.getUuid() + ".wog2");
                 } else {
-                    table.addEntry(mod.getId(), resource.path());
+                    table.addEntry(mod.getId(), outLevelHash, resource.path());
                     
                     Path customPath = Paths.get(customWog2, "game", resource.path());
                     
                     Files.createDirectories(customPath.getParent());
-                    Files.write(customPath, resource.content(),
+                    Files.write(customPath, outLevel,
                             StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 }
             }
@@ -584,8 +630,8 @@ class SaveTask extends Task<Void> {
             }
         }
         
-        table.addEntry("*", "res/properties/translation-local.xml");
-        table.addEntry("*", "res/properties/translation-tool-export.xml");
+        table.addEntry("*", "", "res/properties/translation-local.xml");
+        table.addEntry("*", "", "res/properties/translation-tool-export.xml");
         TextLoader.saveText(originalLocal, localPath.toFile());
         TextLoader.saveText(originalIntl, intlPath.toFile());
     }
@@ -600,7 +646,9 @@ class SaveTask extends Task<Void> {
         String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         Path customPath = Paths.get(customWog2, "game", resource.path());
         
-        table.addEntry(mod.getId(), resource.path());
+        String resourceHash = HashUtil.getMD5Hash(resource.content());
+        
+        table.addEntry(mod.getId(), resourceHash, resource.path());
         
         Files.createDirectories(customPath.getParent());
         Files.write(customPath, resource.content(),
@@ -714,7 +762,9 @@ class SaveTask extends Task<Void> {
         String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         Path customPath = Paths.get(customWog2, "game", resource.path());
         
-        table.addEntry(mod.getId(), resource.path());
+        String resourceHash = HashUtil.getMD5Hash(resource.content());
+        
+        table.addEntry(mod.getId(), resourceHash, resource.path());
         
         Files.createDirectories(customPath.getParent());
         Files.write(customPath, resource.content(),
@@ -743,7 +793,7 @@ class SaveTask extends Task<Void> {
                     + resource.path() + ")");
         }
         
-        table.addEntry("*", resource.path());
+        table.addEntry("*", "", resource.path());
         JsonNode merged = JsonMerge.transformJson(original, (ObjectNode) patch);
         mapper.writeValue(customPath.toFile(), merged);
         

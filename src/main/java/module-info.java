@@ -40,6 +40,7 @@ module com.crazine.goo2tool {
     opens com.crazine.goo2tool.gamefiles.translation;
     opens com.crazine.goo2tool.gui.util;
     opens com.crazine.goo2tool.functional;
+    opens com.crazine.goo2tool.functional.save.filetable;
     opens com.crazine.goo2tool.functional.save.mergetable;
     
     opens fistyloader;
