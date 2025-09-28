@@ -149,7 +149,7 @@ public class FX_Scene {
     }
     
     public static void save() {
-        // TODO: verify dependencies between mods (especially FistyLoader)
+        // TODO (priority): verify dependencies between mods (especially FistyLoader)
         SaveGui.save(stage);
     }
     
@@ -178,7 +178,7 @@ public class FX_Scene {
         if (!customLaunchCommand.isEmpty()) {
             switch (Platform.getCurrent()) {
                 case WINDOWS:
-                    // TODO: use cmd.exe for this probably
+                    // TODO (priority): use cmd.exe for this probably
                     break;
                 case MAC:
                 case LINUX:
@@ -195,7 +195,7 @@ public class FX_Scene {
                 Main_Application.openUrl("steam://rungameid/3385670");
             }
         } else {
-            // TODO: test this
+            // TODO (priority): test this
             Path customWog2 = Path.of(PropertiesLoader.getProperties().getTargetWog2Directory());
             
             // directly launch executable

@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Environment {
     
-    // TODO: verify i didn't miss any fields and that their default values are correct
+    // TODO (priority): verify i didn't miss any fields and that their default values are correct
     @JsonInclude(Include.NON_NULL)
     public static class Layer {
         

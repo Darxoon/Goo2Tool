@@ -218,7 +218,7 @@ class SaveTask extends Task<Void> {
                 }
                 
                 if (!isLoaded) {
-                    // TODO: try not deleting if the file has been modified by the user
+                    // TODO (priority): try not deleting if the file has been modified by the user
                     try {
                         Files.delete(profilePath.resolve(path));
                     } catch (NoSuchFileException e) {}

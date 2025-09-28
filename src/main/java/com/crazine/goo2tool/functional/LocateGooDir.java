@@ -40,7 +40,7 @@ public class LocateGooDir {
                     return Optional.empty();
             }
             case MAC:
-                // TODO: Detect Steam
+                // TODO (priority): Detect Steam
                 // Detect World of Goo 2.app
                 Path appDir = Paths.get("/Applications/World of Goo 2.app");
                 

@@ -195,7 +195,7 @@ public class FX_Setup extends Application {
                     
                     detectFistyVersion(file.get().getParent().toString());
                 }
-                // TODO: detect native Steam version
+                // TODO (priority): detect native Steam version
                 
                 String fileString = file.get().toString();
                 

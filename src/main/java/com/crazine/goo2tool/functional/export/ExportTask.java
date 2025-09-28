@@ -579,7 +579,7 @@ class ExportTask extends Task<Void> {
         if (ballIdIsCustom) {
             customGooballIds.add(ballId.get());
             
-            // TODO: analyze editor image
+            // TODO (priority): analyze editor image
             // String itemFileText = Files.readString(Paths.get(customWog2, "game/res/balls", ballId, "ball.wog2"));
             
             // JsonNode ballJson = jsonMapper.readTree(itemFileText);
