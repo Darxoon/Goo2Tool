@@ -113,7 +113,7 @@ public class FX_Scene {
         Button installFistyButton = new Button();
         
         installFistyButton.setOnAction(event -> {
-            Optional<ButtonType> result = FX_Alert.show("FistyLoader",
+            Optional<ButtonType> result = FX_Alert.info("FistyLoader",
                     "FistyLoader is an exe mod for World of Goo 2 which is necessary "
                     + "to use custom goo balls. Some mods might require this.\n\n"
                     + "Do you want to install?",
@@ -130,7 +130,7 @@ public class FX_Scene {
                 return;
             }
             
-            FX_Alert.show("FistyLoader", "Successfully installed.", ButtonType.OK);
+            FX_Alert.info("FistyLoader", "Successfully installed.", ButtonType.OK);
         });
         
         return installFistyButton;

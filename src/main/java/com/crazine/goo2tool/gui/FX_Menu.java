@@ -45,7 +45,7 @@ public class FX_Menu {
         
         MenuItem about = new MenuItem("About Goo2Tool");
         about.setOnAction(event -> {
-            FX_Alert.show("About Goo2Tool", """
+            FX_Alert.info("About Goo2Tool", """
                     Goo2Tool version 1.0
                     World of Goo 2 mod loader
                     

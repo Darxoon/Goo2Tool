@@ -173,7 +173,7 @@ public class FX_Mods {
         uninstall.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             
-            Optional<ButtonType> result = FX_Alert.show("Goo2Tool", String.format("""
+            Optional<ButtonType> result = FX_Alert.info("Goo2Tool", String.format("""
                     You are trying to uninstall "%s".
                     Uninstalling a mod cannot be undone.
                     Do you want to continue?

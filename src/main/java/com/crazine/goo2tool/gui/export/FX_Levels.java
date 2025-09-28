@@ -19,6 +19,7 @@ import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
 import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCache;
 import com.crazine.goo2tool.gui.export.addininfocache.AddinInfoCacheLoader;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
+import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.PropertiesLoader;
 
 import javafx.beans.property.ObjectProperty;
@@ -28,6 +29,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -133,6 +135,16 @@ public class FX_Levels {
                         FX_Alarm.error(e);
                     }
                 }
+                
+                Optional<ButtonType> result = FX_Alert.warn("Package level as .goo2mod",
+                        "Note that the following types of custom assets will NOT be automatically exported"
+                        + " and if you use one of these, you will have to edit the resulting goo2mod manually:\n\n"
+                        + "Particles, Sounds (except music and ambience), animations, terrains"
+                        + " and any other .wog2 merge (e.g. materials, environmentFxs, ...)",
+                        ButtonType.OK, ButtonType.CANCEL);
+                
+                if (result.isEmpty() || result.get() != ButtonType.OK)
+                    return;
                 
                 // Save Dialog
                 // TODO: migrate to CustomFileChooser

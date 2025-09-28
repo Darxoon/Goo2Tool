@@ -140,7 +140,7 @@ public class FileOptions {
                             FX_Alarm.error(e);
                         }
                         
-                        FX_Alert.show("Goo2Tool",
+                        FX_Alert.info("Goo2Tool",
                                 "Reinitialized other properties for Steam Windows version",
                                 ButtonType.OK);
                     }
@@ -159,7 +159,7 @@ public class FileOptions {
                             FX_Alarm.error(e);
                         }
                         
-                        FX_Alert.show("Goo2Tool",
+                        FX_Alert.info("Goo2Tool",
                                 "Reinitialized other properties for Linux AppImage",
                                 ButtonType.OK);
                     }
@@ -178,7 +178,7 @@ public class FileOptions {
                             FX_Alarm.error(e);
                         }
                         
-                        FX_Alert.show("Goo2Tool",
+                        FX_Alert.info("Goo2Tool",
                                 "Reinitialized other properties for native Steam version",
                                 ButtonType.OK);
                     }

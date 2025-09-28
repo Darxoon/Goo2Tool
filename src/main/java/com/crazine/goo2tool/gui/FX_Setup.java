@@ -93,7 +93,7 @@ public class FX_Setup extends Application {
             ButtonType buttonNo = new ButtonType("Pick installation manually", ButtonData.NO);
             ButtonType buttonYes = new ButtonType("Proceed", ButtonData.YES);
             
-            Optional<ButtonType> result = FX_Alert.show("Goo2Tool Setup", String.format("""
+            Optional<ButtonType> result = FX_Alert.info("Goo2Tool Setup", String.format("""
                     Found World of Goo 2 installation at
                     '%s'.
                     Would you like to proceed?
@@ -120,7 +120,7 @@ public class FX_Setup extends Application {
             ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
             
             if (Platform.getCurrent() == Platform.LINUX) {
-                FX_Alert.show("Goo2Tool Setup", """
+                FX_Alert.info("Goo2Tool Setup", """
                         Could not determine default World of Goo 2 installation.
                         Please pick one yourself.
                         
@@ -129,7 +129,7 @@ public class FX_Setup extends Application {
                         DRM-free version.
                         """, icon, buttonType);
             } else {
-                FX_Alert.show("Goo2Tool Setup", """
+                FX_Alert.info("Goo2Tool Setup", """
                         Could not determine default World of Goo 2 installation.
                         Please pick one yourself.
                         """, icon, buttonType);
@@ -147,7 +147,7 @@ public class FX_Setup extends Application {
                 Optional<Path> file = CustomFileChooser.openFile(stage, "Please choose World of Goo 2 installation", exeFilter);
                 
                 if (file.isEmpty()) {
-                    FX_Alert.show("Goo2Tool Setup",
+                    FX_Alert.info("Goo2Tool Setup",
                             "No World of Goo 2 installation has been chosen. Exiting.",
                             ButtonType.OK);
                     
@@ -166,7 +166,7 @@ public class FX_Setup extends Application {
                 Optional<Path> file = CustomFileChooser.chooseDirectory(stage, "Please choose World of Goo 2 installation");
                 
                 if (file.isEmpty()) {
-                    FX_Alert.show("Goo2Tool Setup",
+                    FX_Alert.info("Goo2Tool Setup",
                             "No World of Goo 2 installation has been chosen. Exiting.",
                             ButtonType.OK);
                     
@@ -182,7 +182,7 @@ public class FX_Setup extends Application {
                 Optional<Path> file = CustomFileChooser.openFile(stage, "Please choose World of Goo 2 installation", exeFilter);
                 
                 if (file.isEmpty()) {
-                    FX_Alert.show("Goo2Tool Setup",
+                    FX_Alert.info("Goo2Tool Setup",
                             "No World of Goo 2 installation has been chosen. Exiting.",
                             ButtonType.OK);
                     
@@ -255,7 +255,7 @@ public class FX_Setup extends Application {
         properties.setFistyVersion(fistyVersion);
         
         if (fistyVersion != null) {
-            FX_Alert.show("Goo2Tool setup",
+            FX_Alert.info("Goo2Tool setup",
                     "Detected that FistyLoader " + fistyVersion + " is installed",
                     ButtonType.OK);
         }
@@ -295,7 +295,7 @@ public class FX_Setup extends Application {
         
         // show manual prompt if that didn't work
         if (profileDir == null || !Files.isDirectory(profileDir)) {
-            Optional<ButtonType> result = FX_Alert.show("Goo2Tool Setup", """
+            Optional<ButtonType> result = FX_Alert.info("Goo2Tool Setup", """
                     Could not determine World of Goo 2 profile folder.
                     If you have launched the game before, please pick it yourself.
                     """, icon, ButtonType.OK, ButtonType.CANCEL);

@@ -8,15 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -27,26 +19,12 @@ import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.addinFile.Goo2mod;
 import com.crazine.goo2tool.addinFile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
-import com.crazine.goo2tool.gamefiles.environment.Environment;
-import com.crazine.goo2tool.gamefiles.environment.EnvironmentLoader;
-import com.crazine.goo2tool.gamefiles.fistyini.DefaultFistyIni;
-import com.crazine.goo2tool.gamefiles.fistyini.FistyIniFile;
-import com.crazine.goo2tool.gamefiles.fistyini.FistyIniLoader;
-import com.crazine.goo2tool.gamefiles.item.Item;
-import com.crazine.goo2tool.gamefiles.item.ItemFile;
-import com.crazine.goo2tool.gamefiles.item.ItemLoader;
-import com.crazine.goo2tool.gamefiles.item.ItemObject;
-import com.crazine.goo2tool.gamefiles.item.ItemUserVariable;
-import com.crazine.goo2tool.gamefiles.level.Level;
-import com.crazine.goo2tool.gamefiles.level.LevelItem;
-import com.crazine.goo2tool.gamefiles.level.LevelLoader;
-import com.crazine.goo2tool.gamefiles.resrc.Resrc;
-import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
-import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
-import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
-import com.crazine.goo2tool.gamefiles.translation.GameString;
-import com.crazine.goo2tool.gamefiles.translation.TextDB;
-import com.crazine.goo2tool.gamefiles.translation.TextLoader;
+import com.crazine.goo2tool.gamefiles.environment.*;
+import com.crazine.goo2tool.gamefiles.fistyini.*;
+import com.crazine.goo2tool.gamefiles.item.*;
+import com.crazine.goo2tool.gamefiles.level.*;
+import com.crazine.goo2tool.gamefiles.resrc.*;
+import com.crazine.goo2tool.gamefiles.translation.*;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
@@ -86,7 +64,8 @@ class ExportTask extends Task<Void> {
             new Resrc.SetDefaults("res/environments/luts/", "ENV_LUT_")),
         ITEM("items", "res/items/images/_resources.xml", Resrc.Image.class,
             new Resrc.SetDefaults("res/items/images/", "IMAGE_ITEM_")),
-        // ITEM_PREVIEW,
+        ITEM_PREVIEW(null, null, Resrc.Image.class,
+            new Resrc.SetDefaults("res/items/previews/", "")),
         // PARTICLES,
         // SOUND,
         // ANIMATION,
@@ -550,6 +529,14 @@ class ExportTask extends Task<Void> {
             }
         }
         
+        // res/items/previews/*.image (does not use a resources.xml file)
+        Path previewPath = Paths.get(customWog2, "game/res/items/previews", itemId + ".image");
+        byte[] previewContent = null;
+        
+        if (Files.isRegularFile(previewPath)) {
+            previewContent = Files.readAllBytes(previewPath);
+        }
+        
         if (originalItemFileText.isPresent()) {
             if (itemModified || !itemFileText.equals(originalItemFileText.get())) {
                 String newItemId = UUID.randomUUID().toString();
@@ -559,6 +546,10 @@ class ExportTask extends Task<Void> {
                 String newItemFileText = ItemLoader.saveItemFile(newItemFile);
                 compiledResources.add(new CompiledResource(CompileType.ITEM, newItemId, newItemFileText));
                 
+                if (previewContent != null) {
+                    assetResources.add(new AssetResource(AssetType.ITEM_PREVIEW, null, itemId, previewContent));
+                }
+                
                 return Optional.of(newItemId);
             }
         } else {
@@ -566,6 +557,10 @@ class ExportTask extends Task<Void> {
             String newItemFileText = ItemLoader.saveItemFile(newItemFile);
             
             compiledResources.add(new CompiledResource(CompileType.ITEM, itemId, newItemFileText));
+            
+            if (previewContent != null) {
+                assetResources.add(new AssetResource(AssetType.ITEM_PREVIEW, null, itemId, previewContent));
+            }
         }
         
         return Optional.empty();
@@ -659,6 +654,7 @@ class ExportTask extends Task<Void> {
                             case ITEM:
                                 resources.add(new Resrc.Image(asset.id(), asset.name()));
                                 break;
+                            case AMBIENCE:
                             case MUSIC:
                                 resources.add(new Resrc.Sound(asset.id(), asset.name(), true, "Music"));
                                 break;
