@@ -10,10 +10,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
-import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.Platform;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;

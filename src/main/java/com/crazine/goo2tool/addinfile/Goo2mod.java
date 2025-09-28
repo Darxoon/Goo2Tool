@@ -1,6 +1,6 @@
-package com.crazine.goo2tool.addinFile;
+package com.crazine.goo2tool.addinfile;
 
-import com.crazine.goo2tool.VersionNumber;
+import com.crazine.goo2tool.util.VersionNumber;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

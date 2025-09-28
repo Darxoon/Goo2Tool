@@ -4,12 +4,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;

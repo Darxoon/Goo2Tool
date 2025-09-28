@@ -12,9 +12,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.Platform;
-import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.functional.FistyInstaller;
 import com.crazine.goo2tool.functional.LocateGooDir;
 import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
@@ -23,6 +20,9 @@ import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
+import com.crazine.goo2tool.util.Platform;
+import com.crazine.goo2tool.util.VersionNumber;
 
 import javafx.application.Application;
 import javafx.scene.control.ButtonBar.ButtonData;

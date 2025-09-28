@@ -1,12 +1,12 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.FistyInstaller;
 import com.crazine.goo2tool.functional.save.SaveGui;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.Platform;
 
 import javafx.beans.property.Property;
 import javafx.geometry.Insets;

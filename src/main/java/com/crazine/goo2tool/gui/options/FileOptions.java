@@ -1,7 +1,5 @@
 package com.crazine.goo2tool.gui.options;
 
-import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.functional.LocateGooDir;
 import com.crazine.goo2tool.functional.LocateGooDir.GooDir;
 import com.crazine.goo2tool.gui.FX_Setup;
@@ -11,6 +9,8 @@ import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
+import com.crazine.goo2tool.util.Platform;
 
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.ReadOnlyBooleanWrapper;

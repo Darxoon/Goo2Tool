@@ -3,7 +3,7 @@ package com.crazine.goo2tool.gui.export;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;

@@ -3,8 +3,8 @@ package com.crazine.goo2tool.functional.export;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;

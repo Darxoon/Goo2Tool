@@ -24,10 +24,10 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.yamlrecords.RecordConstructor;
 import org.yaml.snakeyaml.yamlrecords.RecordConstructor.RecordSubstitute;
 
-import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.VersionNumber;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
+import com.crazine.goo2tool.util.VersionNumber;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;

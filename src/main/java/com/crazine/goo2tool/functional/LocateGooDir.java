@@ -9,8 +9,8 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.crazine.goo2tool.Platform;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
+import com.crazine.goo2tool.util.Platform;
 
 public class LocateGooDir {
     

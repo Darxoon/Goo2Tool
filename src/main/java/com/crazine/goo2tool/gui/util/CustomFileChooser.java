@@ -27,7 +27,7 @@ import org.freedesktop.portal.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.crazine.goo2tool.Platform;
+import com.crazine.goo2tool.util.Platform;
 
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;

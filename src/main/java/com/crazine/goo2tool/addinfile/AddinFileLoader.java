@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.addinFile;
+package com.crazine.goo2tool.addinfile;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;

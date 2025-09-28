@@ -10,7 +10,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.crazine.goo2tool.IconLoader;
 import com.crazine.goo2tool.functional.export.ExportGui;
 import com.crazine.goo2tool.gamefiles.level.Level;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
@@ -21,6 +20,7 @@ import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;

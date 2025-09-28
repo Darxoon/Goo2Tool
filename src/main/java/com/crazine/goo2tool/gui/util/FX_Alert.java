@@ -4,7 +4,7 @@ import javafx.scene.image.Image;
 
 import java.util.Optional;
 
-import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;

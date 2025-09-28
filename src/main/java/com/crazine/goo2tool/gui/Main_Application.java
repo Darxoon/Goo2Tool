@@ -1,11 +1,12 @@
 package com.crazine.goo2tool.gui;
 
-import com.crazine.goo2tool.IconLoader;
-import com.crazine.goo2tool.addinFile.AddinFileLoader;
-import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.addinfile.AddinFileLoader;
+import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.PropertiesLoader;
+import com.crazine.goo2tool.util.IconLoader;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;

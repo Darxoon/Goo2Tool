@@ -1,4 +1,4 @@
-package com.crazine.goo2tool;
+package com.crazine.goo2tool.util;
 
 import java.io.IOException;
 import java.io.InputStream;

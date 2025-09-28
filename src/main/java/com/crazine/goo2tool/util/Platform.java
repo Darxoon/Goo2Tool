@@ -1,4 +1,4 @@
-package com.crazine.goo2tool;
+package com.crazine.goo2tool.util;
 
 public enum Platform {
     WINDOWS,

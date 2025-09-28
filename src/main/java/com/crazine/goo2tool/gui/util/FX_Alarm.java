@@ -1,6 +1,6 @@
 package com.crazine.goo2tool.gui.util;
 
-import com.crazine.goo2tool.IconLoader;
+import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;

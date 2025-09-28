@@ -1,7 +1,7 @@
 package com.crazine.goo2tool.properties;
 
-import com.crazine.goo2tool.VersionNumber;
-import com.crazine.goo2tool.addinFile.Goo2mod;
+import com.crazine.goo2tool.addinfile.Goo2mod;
+import com.crazine.goo2tool.util.VersionNumber;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;

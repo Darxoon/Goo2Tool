@@ -1,4 +1,4 @@
-package com.crazine.goo2tool.addinFile;
+package com.crazine.goo2tool.addinfile;
 
 import java.io.Closeable;
 import java.io.File;
