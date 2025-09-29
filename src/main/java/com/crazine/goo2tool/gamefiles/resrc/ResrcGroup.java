@@ -57,8 +57,11 @@ public class ResrcGroup {
                 continue;
             }
             
-            if (setDefaults == null)
-                throw new IllegalArgumentException("Resrc Group is missing a <SetDefaults>");
+            // TODO (priority): Make sure that addin resources.xml merges still start with a SetDefaults
+            if (setDefaults == null) {
+                logger.warn("Adding empty SetDefaults to ResrcGroup {}", id);
+                setDefaults = new SetDefaults("", "");
+            }
             
             String realId = setDefaults.idprefix() + resrc.id();
             this.resourceMap.put(realId, resrc);
@@ -87,8 +90,10 @@ public class ResrcGroup {
                 continue;
             }
             
-            if (setDefaults == null)
-                throw new IllegalArgumentException("Resrc Group is missing a <SetDefaults>");
+            if (setDefaults == null) {
+                logger.warn("Adding empty SetDefaults to ResrcGroup {} (while removing {})", this.id, id);
+                setDefaults = new SetDefaults("", "");
+            }
             
             String realId = setDefaults.idprefix() + resrc.id();
             

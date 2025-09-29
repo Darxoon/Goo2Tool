@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -158,13 +159,16 @@ public class ResrcLoader {
     }
     
     public static ResrcManifest loadManifest(Path filePath) throws IOException {
-        byte[] content = Files.readAllBytes(filePath);
-        
-        XmlMapper mapper = new XmlMapper();
-        return mapper.readValue(content, ResrcManifest.class);
+        return loadManifest(Files.readString(filePath));
     }
     
     public static ResrcManifest loadManifest(byte[] content) throws IOException {
+        return loadManifest(new String(content, StandardCharsets.UTF_8));
+    }
+    
+    public static ResrcManifest loadManifest(String content) throws IOException {
+        content = content.replace("<?xml version=\"0.5\" ?>", "<?xml version=\"1.0\" ?>");
+        
         XmlMapper mapper = new XmlMapper();
         return mapper.readValue(content, ResrcManifest.class);
     }

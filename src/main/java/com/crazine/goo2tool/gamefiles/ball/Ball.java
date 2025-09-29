@@ -48,6 +48,9 @@ public class Ball {
     // ...
     
     private ImageIdInfo laserOverrideImage;
+	
+	// Unique to FistyLoader
+    private ImageIdInfo editorButtonImage;
 
 	public String getName() {
 		return name;
@@ -131,6 +134,13 @@ public class Ball {
 	}
 	public void setLaserOverrideImage(ImageIdInfo laserOverrideImage) {
 		this.laserOverrideImage = laserOverrideImage;
+	}
+	
+	public ImageIdInfo getEditorButtonImage() {
+		return editorButtonImage;
+	}
+	public void setEditorButtonImage(ImageIdInfo editorButtonImage) {
+		this.editorButtonImage = editorButtonImage;
 	}
     
 }

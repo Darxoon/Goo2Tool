@@ -18,6 +18,9 @@ import org.slf4j.LoggerFactory;
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.addinfile.Goo2mod.ModType;
 import com.crazine.goo2tool.gamefiles.ResArchive;
+import com.crazine.goo2tool.gamefiles.ball.Ball;
+import com.crazine.goo2tool.gamefiles.ball.BallLoader;
+import com.crazine.goo2tool.gamefiles.ball.Ball.ImageIdInfo;
 import com.crazine.goo2tool.gamefiles.environment.*;
 import com.crazine.goo2tool.gamefiles.fistyini.*;
 import com.crazine.goo2tool.gamefiles.item.*;
@@ -46,6 +49,7 @@ class ExportTask extends Task<Void> {
         LEVEL,
         ENVIRONMENT,
         ITEM,
+        BALL,
         // PARTICLE_EFFECT,
         // PARTICLE_SYSTEM,
         // RES_OPTIONS, // ?
@@ -66,6 +70,8 @@ class ExportTask extends Task<Void> {
             new Resrc.SetDefaults("res/items/images/", "IMAGE_ITEM_")),
         ITEM_PREVIEW(null, null, Resrc.Image.class,
             new Resrc.SetDefaults("res/items/previews/", "")),
+        EDITOR_IMAGE("editor", "res/editor/resources.xml", Resrc.Image.class,
+            new Resrc.SetDefaults("", "")),
         // PARTICLES,
         // SOUND,
         // ANIMATION,
@@ -292,10 +298,10 @@ class ExportTask extends Task<Void> {
                 updateProgress(tracker++, maxProgress);
                 updateMessage("typeEnum " + typeEnum);
             
-                Optional<String> customBallId = analyzeGooBall(typeEnum, ballTable);
+                Optional<String> customBallId = analyzeGooBall(typeEnum, res, ballTable);
                 
                 if (customBallId.isPresent()) {
-                    logger.debug("Custom gooball {} {}", typeEnum, customBallId.get());
+                    logger.trace("Custom gooball {} {}", typeEnum, customBallId.get());
                     
                     int outTypeEnum = outBalls.addBallId(customBallId.get(), typeEnum);
                     assert outTypeEnum == typeEnum;
@@ -323,10 +329,10 @@ class ExportTask extends Task<Void> {
                         int typeEnum = (int) value.getValue();
                         
                         if (!ballTypeEnums.contains(typeEnum)) {
-                            Optional<String> customBallId = analyzeGooBall(typeEnum, ballTable);
+                            Optional<String> customBallId = analyzeGooBall(typeEnum, res, ballTable);
                             
                             if (customBallId.isPresent()) {
-                                logger.debug("Custom gooball (from item) {} {}", typeEnum, customBallId.get());
+                                logger.trace("Custom gooball (from item) {} {}", typeEnum, customBallId.get());
                     
                                 int outTypeEnum = outBalls.addBallId(customBallId.get(), typeEnum);
                                 assert outTypeEnum == typeEnum;
@@ -567,25 +573,46 @@ class ExportTask extends Task<Void> {
         
     }
     
-    private Optional<String> analyzeGooBall(int typeEnum, FistyIniFile ballTable) throws IOException {
-        Optional<String> ballId = ballTable.getBallName(typeEnum);
+    private Optional<String> analyzeGooBall(int typeEnum, ResArchive res, FistyIniFile ballTable) throws IOException {
+        String ballId = ballTable.getBallName(typeEnum).orElse(null);
         
-        if (ballId.isEmpty())
+        if (ballId == null)
             throw new IOException("Could not find gooball with typeEnum " + typeEnum);
         
         boolean ballIdIsCustom = DefaultFistyIni.BALL_TABLE.length <= typeEnum
-                || !DefaultFistyIni.BALL_TABLE[typeEnum].equals(ballId.get());
+                || !DefaultFistyIni.BALL_TABLE[typeEnum].equals(ballId);
         
         if (ballIdIsCustom) {
-            customGooballIds.add(ballId.get());
+            customGooballIds.add(ballId);
             
-            // TODO (priority): analyze editor image
-            // String itemFileText = Files.readString(Paths.get(customWog2, "game/res/balls", ballId, "ball.wog2"));
+            // Check for custom resources that are not in resources.xml
+            String ballText = Files.readString(Paths.get(customWog2, "game/res/balls", ballId, "ball.wog2"));
+            ObjectNode ballJson = (ObjectNode) jsonMapper.readTree(ballText);
+            Ball ball = BallLoader.loadBall(ballJson);
             
-            // JsonNode ballJson = jsonMapper.readTree(itemFileText);
-            // Ball ball = BallLoader.loadBall(ballJson);
+            Path resourcesPath = Paths.get(customWog2, "game/res/balls", ballId, "resources.xml");
+            ResrcManifest manifest = ResrcLoader.loadManifest(resourcesPath);
+            Optional<ResrcGroup> resrcGroup = manifest.getGroup("ball_" + ballId);
             
-            return Optional.of(ballId.get());
+            if (resrcGroup.isEmpty())
+                throw new IOException("Could not find resource group with ID 'ball_" + ballId + "'");
+            
+            if (ball.getEditorButtonImage() != null) {
+                Optional<Resrc> editorButtonImage = resrcGroup.get().getResource(ball.getEditorButtonImage().imageId());
+                
+                if (editorButtonImage.isEmpty()) {
+                    String newEditorButtonImage = analyzeAsset(res, ball.getEditorButtonImage().imageId(), AssetType.EDITOR_IMAGE);
+                    
+                    logger.trace("Ball {} has new editorButtonImage {}", ballId, newEditorButtonImage);
+                    ball.setEditorButtonImage(new ImageIdInfo(newEditorButtonImage));
+                }
+            }
+            
+            ballJson.set("editorButtonImage", jsonMapper.valueToTree(ball.getEditorButtonImage()));
+            String newBallText = BallLoader.saveBall(ballJson);
+            compiledResources.add(new CompiledResource(CompileType.BALL, ballId, newBallText));
+            
+            return Optional.of(ballId);
         } else {
             return Optional.empty();
         }
@@ -629,8 +656,12 @@ class ExportTask extends Task<Void> {
                     case ITEM:
                         entryPath = "compile/res/items/" + resource.name() + ".wog2";
                         break;
+                    case BALL:
+                        // Name actually specifies the folder name instead here
+                        entryPath = "compile/res/balls/" + resource.name() + "/ball.wog2";
+                        break;
                     default:
-                        throw new RuntimeException();
+                        throw new RuntimeException("CompileType " + resource.type() + " not implemented");
                 }
                 
                 zip.putNextEntry(new ZipEntry(entryPath));
@@ -647,20 +678,15 @@ class ExportTask extends Task<Void> {
                 resources.add(type.setDefaults);
                 
                 for (AssetResource asset : assetResources) {
-                    if (asset.type() == type) {
-                        switch (type) {
-                            case ENVIRONMENT:
-                            case ENVIRONMENT_LUT:
-                            case ITEM:
-                                resources.add(new Resrc.Image(asset.id(), asset.name()));
-                                break;
-                            case AMBIENCE:
-                            case MUSIC:
-                                resources.add(new Resrc.Sound(asset.id(), asset.name(), true, "Music"));
-                                break;
-                            default:
-                                break;
-                        }
+                    if (asset.type() != type)
+                        continue;
+                    
+                    if (type.resrcClass == Resrc.Image.class) {
+                        resources.add(new Resrc.Image(asset.id(), asset.name()));
+                    } else if (type.resrcClass == Resrc.Sound.class) {
+                        resources.add(new Resrc.Sound(asset.id(), asset.name(), true, "Music"));
+                    } else {
+                        throw new RuntimeException("Resource type " + type.resrcClass.getSimpleName() + " not implemented");
                     }
                 }
                 
@@ -703,7 +729,8 @@ class ExportTask extends Task<Void> {
                 
                 try {
                     for (Path filePath : allSubFiles) {
-                        if (!Files.isRegularFile(filePath))
+                        // ball.wog2 is handled as a regular compiled resource instead
+                        if (!Files.isRegularFile(filePath) || filePath.endsWith("ball.wog2"))
                             continue;
                         
                         byte[] content = Files.readAllBytes(filePath);

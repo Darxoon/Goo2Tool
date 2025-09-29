@@ -31,6 +31,7 @@ module com.crazine.goo2tool {
     exports com.crazine.goo2tool.gamefiles.resrc;
     exports com.crazine.goo2tool.gamefiles.translation;
     exports com.crazine.goo2tool.gamefiles.environment;
+    exports com.crazine.goo2tool.gamefiles.ball;
     
     exports fistyloader;
     
