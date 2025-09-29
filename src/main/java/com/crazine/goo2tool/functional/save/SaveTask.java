@@ -224,6 +224,7 @@ class SaveTask extends Task<Void> {
         if (ballTable != null) {
             Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
             
+            Files.createDirectories(ballTablePath.getParent());
             Files.writeString(ballTablePath, ballTable.getSourceFile(),
                     StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         }
