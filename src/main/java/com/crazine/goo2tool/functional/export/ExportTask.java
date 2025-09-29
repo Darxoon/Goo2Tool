@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.addinfile.Goo2mod.ModType;
+import com.crazine.goo2tool.functional.FistyInstaller;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ball.Ball;
 import com.crazine.goo2tool.gamefiles.ball.BallLoader;
@@ -342,7 +343,9 @@ class ExportTask extends Task<Void> {
                 }
             }
             
-            outBallsString = outBalls.getSourceFile();
+            if (!outBalls.getEntries().isEmpty()) {
+                outBallsString = outBalls.getSourceFile();
+            }
         }
         
         
@@ -369,6 +372,10 @@ class ExportTask extends Task<Void> {
                 addinInfo.version(), addinInfo.description(), addinInfo.author());
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
+        
+        if (outBallsString != null) {
+            mod.getDependencies().add(new Goo2mod.Depends("FistyLoader", FistyInstaller.FISTY_VERSION));
+        }
         
         XmlMapper mapper = new XmlMapper();
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);

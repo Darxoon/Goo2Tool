@@ -36,9 +36,9 @@ public class Goo2mod {
         
         @JacksonXmlText
         private String id;
-        @JsonProperty("min-version")
+        @JacksonXmlProperty(localName = "min-version", isAttribute = true)
         private VersionNumber minVersion;
-        @JsonProperty("max-version")
+        @JacksonXmlProperty(localName = "max-version", isAttribute = true)
         private VersionNumber maxVersion;
         
         @SuppressWarnings("unused")
@@ -48,6 +48,10 @@ public class Goo2mod {
             this.id = id;
             this.minVersion = minVersion;
             this.maxVersion = maxVersion;
+        }
+        
+        public Depends(String id, VersionNumber minVersion) {
+            this(id, minVersion, null);
         }
 
         public String getId() {
