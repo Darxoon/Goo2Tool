@@ -177,7 +177,7 @@ public class FX_Mods {
                     You are trying to uninstall "%s".
                     Uninstalling a mod cannot be undone.
                     Do you want to continue?
-                    """, selected.getName()), IconLoader.getConduit(), ButtonType.YES, ButtonType.NO);
+                    """, selected.getName()), ButtonType.YES, ButtonType.NO);
             
             if (result.isPresent() && result.get() == ButtonType.YES) {
                 PropertiesLoader.uninstallGoo2mod(selected);

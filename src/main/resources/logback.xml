@@ -6,6 +6,7 @@
   </appender>
   
   <logger name="org.freedesktop" level="INFO" />
+  <logger name="com.crazine" level="TRACE" />
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

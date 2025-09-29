@@ -2,7 +2,6 @@ package com.crazine.goo2tool.gui;
 
 import com.crazine.goo2tool.gui.export.FX_Levels;
 import com.crazine.goo2tool.gui.util.FX_Alert;
-import com.crazine.goo2tool.util.IconLoader;
 
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Menu;
@@ -50,7 +49,7 @@ public class FX_Menu {
                     World of Goo 2 mod loader
                     
                     Made by Crazine and Darxoon
-                    """, IconLoader.getConduit(), ButtonType.OK);
+                    """, ButtonType.OK);
         });
         
         helpMenu.getItems().addAll(openWebsite, about);

@@ -26,7 +26,6 @@ import com.crazine.goo2tool.util.VersionNumber;
 import javafx.application.Application;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
-import javafx.scene.image.Image;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
@@ -58,7 +57,7 @@ public class FX_Setup extends Application {
         // setup wizard
         if (!PropertiesLoader.isValidBaseWog2(properties.getBaseWorldOfGoo2Directory())) {
             try {
-                properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, IconLoader.getConduit(), located));
+                properties.setBaseWorldOfGoo2Directory(getBaseDirectory(stage, located));
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
@@ -68,7 +67,7 @@ public class FX_Setup extends Application {
         
         if (!PropertiesLoader.isValidDir(properties.getProfileDirectory())) {
             try {
-                properties.setProfileDirectory(getProfileDirectory(stage, IconLoader.getConduit(), located));
+                properties.setProfileDirectory(getProfileDirectory(stage, located));
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
@@ -78,7 +77,7 @@ public class FX_Setup extends Application {
         
         if (!PropertiesLoader.isValidDir(properties.getSaveFilePath())) {
             try {
-                properties.setSaveFilePath(getSaveFilePath(stage, IconLoader.getConduit(), located));
+                properties.setSaveFilePath(getSaveFilePath(stage, located));
                 PropertiesLoader.saveProperties();
             } catch (IOException e) {
                 FX_Alarm.error(e);
@@ -90,7 +89,7 @@ public class FX_Setup extends Application {
         new Main_Application().start(stage);
     }
     
-    private String getBaseDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+    private String getBaseDirectory(Stage stage, Optional<GooDir> gooDir) throws IOException {
         if (gooDir.isPresent()) {
             // ask if detected dir is okay
             String path = gooDir.get().path().toString();
@@ -103,7 +102,7 @@ public class FX_Setup extends Application {
                     '%s'.
                     Would you like to proceed?
                     """, path),
-                    icon, buttonNo, buttonYes);
+                    buttonNo, buttonYes);
             
             if (result.isPresent() && result.get() == buttonYes) {
                 boolean isSteam = gooDir.get().steamDir().isPresent();
@@ -132,12 +131,12 @@ public class FX_Setup extends Application {
                         Note: The Linux .AppImage is not supported yet.
                         Either use the Steam release or the Windows
                         DRM-free version.
-                        """, icon, buttonType);
+                        """, buttonType);
             } else {
                 FX_Alert.info("Goo2Tool Setup", """
                         Could not determine default World of Goo 2 installation.
                         Please pick one yourself.
-                        """, icon, buttonType);
+                        """, buttonType);
             }
         }
         
@@ -261,7 +260,7 @@ public class FX_Setup extends Application {
     private static final String STEAM_WINEPFX_PROFILE_DIR =
         "steamapps/compatdata/3385670/pfx/drive_c/users/steamuser/AppData/Local/2DBoy/WorldOfGoo2";
     
-    public static String getProfileDirectory(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+    public static String getProfileDirectory(Stage stage, Optional<GooDir> gooDir) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         
         // try auto detecting
@@ -290,7 +289,7 @@ public class FX_Setup extends Application {
             Optional<ButtonType> result = FX_Alert.info("Goo2Tool Setup", """
                     Could not determine World of Goo 2 profile folder.
                     If you have launched the game before, please pick it yourself.
-                    """, icon, ButtonType.OK, ButtonType.CANCEL);
+                    """, ButtonType.OK, ButtonType.CANCEL);
             
             if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
                 return "";
@@ -330,7 +329,7 @@ public class FX_Setup extends Application {
             && !fileName.equals("levels");
     }
     
-    public static String getSaveFilePath(Stage stage, Image icon, Optional<GooDir> gooDir) throws IOException {
+    public static String getSaveFilePath(Stage stage, Optional<GooDir> gooDir) throws IOException {
         if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
             Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
             

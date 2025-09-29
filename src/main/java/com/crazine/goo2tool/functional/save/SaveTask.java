@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -58,6 +60,7 @@ import com.crazine.goo2tool.gamefiles.translation.TextDB;
 import com.crazine.goo2tool.gamefiles.translation.TextLoader;
 import com.crazine.goo2tool.gamefiles.translation.GameString.LocaleText;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
+import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.AddinConfigEntry;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
@@ -73,6 +76,7 @@ import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.stage.Stage;
 
 class SaveTask extends Task<Void> {
@@ -139,7 +143,12 @@ class SaveTask extends Task<Void> {
         if (properties.isSteam()) {
             // the Steam version doesn't use a dedicated custom directory
             // so copying all of the meta files is unnecessary
-            extractRes(res, table, 0, res.fileCount());
+            boolean result = extractRes(res, table, 0, res.fileCount());
+            
+            if (!result) {
+                success = false;
+                return;
+            }
         } else if (Platform.getCurrent() == Platform.LINUX && baseWog2.endsWith(".AppImage")) {
             // The only important file in the AppImage's root is the WorldOfGoo2 executable
             // so this is the only file that will get extracted
@@ -150,9 +159,19 @@ class SaveTask extends Task<Void> {
                 Files.copy(executablePath, Paths.get(customWog2, "WorldOfGoo2"));
             } catch (FileAlreadyExistsException e) {}
             
-            extractRes(res, table, 0, res.fileCount());
+            boolean result = extractRes(res, table, 0, res.fileCount());
+            
+            if (!result) {
+                success = false;
+                return;
+            }
         } else {
-            copyMissingOriginalFiles(res, table);
+            boolean result = copyMissingOriginalFiles(res, table);
+            
+            if (!result) {
+                success = false;
+                return;
+            }
         }
         
         // Load ballTable
@@ -301,7 +320,7 @@ class SaveTask extends Task<Void> {
         // SaveFileLoader.writeSaveFile(toSaveFile, data);
     }
     
-    private void copyMissingOriginalFiles(ResArchive res, ResFileTable garbageFiles) throws IOException {
+    private boolean copyMissingOriginalFiles(ResArchive res, ResFileTable garbageFiles) throws IOException {
         String baseWOG2 = PropertiesLoader.getProperties().getBaseWorldOfGoo2Directory();
         String customWOG2 = PropertiesLoader.getProperties().getCustomWorldOfGoo2Directory();
         File baseFile = new File(baseWOG2);
@@ -364,13 +383,15 @@ class SaveTask extends Task<Void> {
         }
         
         // traverse res folder
-        extractRes(res, garbageFiles, tracker, fileCount);
+        return extractRes(res, garbageFiles, tracker, fileCount);
     }
     
-    private void extractRes(ResArchive res, ResFileTable garbageFiles, long tracker, long fileCount) throws IOException {
+    private boolean extractRes(ResArchive res, ResFileTable garbageFiles, long tracker, long fileCount) throws IOException {
         Properties properties = PropertiesLoader.getProperties();
         
         String customWog2 = properties.getTargetWog2Directory();
+        
+        logger.info("Extracting res archive ({} files)", res.fileCount());
         
         try {
             for (ResFile file : res.getAllFiles()) {
@@ -380,16 +401,60 @@ class SaveTask extends Task<Void> {
                 
                 Path customPath = Paths.get(customWog2, "game", file.path());
                 
-                // TODO (priority): Warn the user when a modId="*" is being wiped
-                if (garbageFiles.hasEntry(file.path())) {
+                Optional<OverriddenFileEntry> garbageFile = garbageFiles.getEntry(file.path());
+                
+                if (garbageFile.isPresent()) {
                     byte[] fileContent = file.readContent();
                     
                     garbageFiles.removeEntry(file.path());
-                    Files.createDirectories(customPath.getParent());
-                    Files.write(customPath, fileContent, StandardOpenOption.CREATE,
-                            StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                    
+                    try {
+                        byte[] customFileContent = Files.readAllBytes(customPath);
+                        String customFileHash = HashUtil.getMD5Hash(customFileContent);
+                        
+                        logger.debug("File {} hash {} vs {}",
+                            file.path(), garbageFile.get().getHash(), customFileHash);
+                        
+                        // Prompt the user about file being overwritten
+                        if (!customFileHash.equals(garbageFile.get().getHash())) {
+                            CountDownLatch latch = new CountDownLatch(1);
+                            AtomicBoolean isOk = new AtomicBoolean();
+                            
+                            runLater(() -> {
+                                ButtonType continueButton = new ButtonType("Continue", ButtonData.OK_DONE);
+                                
+                                Optional<ButtonType> result = FX_Alert.warn("Goo2Tool", 
+                                    "The file \"" + file.path() + "\" seems to have been modified by the user.\n\n"
+                                    + " If you click Continue, any modifications will be deleted.\n\n"
+                                    + "Should you not want to lose existing content, please back up the file"
+                                    + " before clicking Continue.",
+                                    Optional.of(ButtonType.CANCEL), continueButton, ButtonType.CANCEL);
+                                
+                                isOk.set(result.isPresent() && result.get() == continueButton);
+                                latch.countDown();
+                            });
+                            
+                            try {
+                                latch.await();
+                            } catch (InterruptedException e) {
+                                throw new IOException(e);
+                            }
+                            
+                            if (!isOk.get()) {
+                                return false;
+                            }
+                        }
+                        
+                        Files.write(customPath, fileContent, StandardOpenOption.CREATE,
+                                StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                    } catch (NoSuchFileException e) {
+                        Files.createDirectories(customPath.getParent());
+                        Files.write(customPath, fileContent, StandardOpenOption.CREATE_NEW);
+                    }
                 } else if (!Files.exists(customPath)) {
                     byte[] fileContent = file.readContent();
+                    
+                    logger.trace("File {} created", file.path());
                     
                     Files.createDirectories(customPath.getParent());
                     try {
@@ -400,6 +465,8 @@ class SaveTask extends Task<Void> {
         } catch (UncheckedIOException e) {
             throw e.getCause();
         }
+        
+        return true;
     }
     
     private void installGoo2mod(Goo2mod mod, ResFileTable table, MergeTable mergeTable, FistyIniFile ballTable) {
@@ -605,6 +672,7 @@ class SaveTask extends Task<Void> {
         Path localPath = customWog2.resolve("game/res/properties/translation-local.xml");
         Path intlPath = customWog2.resolve("game/res/properties/translation-tool-export.xml");
         
+        // TODO (priority): Make this use MergeTable too
         String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
             .replaceAll("& ", "&amp; ");
         TextDB originalIntl = TextLoader.loadText(originalIntlContent);

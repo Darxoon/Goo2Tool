@@ -9,7 +9,6 @@ import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.properties.Properties;
 import com.crazine.goo2tool.properties.PropertiesLoader;
-import com.crazine.goo2tool.util.IconLoader;
 import com.crazine.goo2tool.util.Platform;
 
 import javafx.beans.binding.BooleanExpression;
@@ -134,8 +133,8 @@ public class FileOptions {
                     if (!prevSteam || !prevProton) {
                         Optional<GooDir> located = LocateGooDir.locateWog2();
                         try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), located));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), located));
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, located));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, located));
                         } catch (IOException e) {
                             FX_Alarm.error(e);
                         }
@@ -153,8 +152,8 @@ public class FileOptions {
                     
                     if (prevSteam || prevProton) {
                         try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), Optional.empty()));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), Optional.empty()));
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, Optional.empty()));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, Optional.empty()));
                         } catch (IOException e) {
                             FX_Alarm.error(e);
                         }
@@ -172,8 +171,8 @@ public class FileOptions {
                     
                     if (!prevSteam || prevProton) {
                         try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, IconLoader.getConduit(), Optional.empty()));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, IconLoader.getConduit(), Optional.empty()));
+                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, Optional.empty()));
+                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, Optional.empty()));
                         } catch (IOException e) {
                             FX_Alarm.error(e);
                         }

@@ -45,7 +45,7 @@ public class SaveGui {
                     
                     Please create a new, empty folder in the next dialog or select
                     an existing Goo2Tool directory if you have done this before.
-                    """, IconLoader.getConduit(), ButtonType.OK, ButtonType.CANCEL);
+                    """, ButtonType.OK, ButtonType.CANCEL);
             
             if (result.isEmpty() || result.get() != ButtonType.OK)
                 return Optional.empty();
@@ -74,7 +74,7 @@ public class SaveGui {
                     Please note that there is some risk of existing \
                     modded content (custom assets in the res folder) \
                     getting lost. Do you consent to the risk?
-                    """, IconLoader.getConduit(), buttonConfirm, ButtonType.CANCEL);
+                    """, buttonConfirm, ButtonType.CANCEL);
             
             if (result.isEmpty() || result.get().getButtonData() != ButtonData.OK_DONE)
                 return Optional.empty();
@@ -99,7 +99,7 @@ public class SaveGui {
 
         stage.getIcons().add(IconLoader.getTerrain());
 
-        stage.setAlwaysOnTop(true);
+        // stage.setAlwaysOnTop(true);
 
         SaveTask task = new SaveTask(stage);
         
@@ -132,7 +132,6 @@ public class SaveGui {
         stage.setScene(scene);
 
         stage.show();
-        stage.setAlwaysOnTop(true);
 
         Property<Result> finished = new SimpleObjectProperty<>();
 
