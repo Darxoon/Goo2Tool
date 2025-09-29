@@ -8,8 +8,8 @@ public class ItemUserVariable {
     private float defaultValue;
     private float minValue;
     private float maxValue;
-    private int orderIndex;
-    private boolean enabled;
+    private int orderIndex = 0xffffffff;
+    private boolean enabled = true;
     private int type;
     private String stringValue;
     

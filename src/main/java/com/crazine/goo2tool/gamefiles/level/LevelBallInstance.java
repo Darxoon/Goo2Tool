@@ -9,25 +9,25 @@ public class LevelBallInstance {
     private Vector2 pos = Vector2.ZERO;
     private float angle;
     private int terrainGroup;
-    private boolean discovered;
+    private boolean discovered = true;
     private boolean floatingWhileAsleep;
-    private boolean interactive;
-    private boolean wakeWithLiquid;
-    private boolean exitPipeAlert;
-    private boolean affectsAutoBounds;
+    private boolean interactive = true;
+    private boolean wakeWithLiquid = true;
+    private boolean exitPipeAlert = true;
+    private boolean affectsAutoBounds = true;
     private float launcherLifespanMin;
     private float launcherLifespanMax;
-    private float launcherForceFactor;
-    private boolean launcherCanUseBalls;
-    private float launcherKnockbackFactor;
-    private int launcherMaxActive;
-    private int launcherBallTypeToGenerate;
-    private float thrustForce;
+    private float launcherForceFactor = 0.7f;
+    private boolean launcherCanUseBalls = true;
+    private float launcherKnockbackFactor = 1.0f;
+    private int launcherMaxActive = 0x32;
+    private int launcherBallTypeToGenerate = 8; // GooProduct
+    private float thrustForce = 25.0f;
     private float maxVelocity;
-    private float stiffness;
+    private float stiffness = 1.0f;
     private boolean filled;
-    private int detonationRadius;
-    private int detonationForce;
+    private float detonationRadius = -1.0f;
+    private float detonationForce = -1.0f;
     
     public int getTypeEnum() {
         return typeEnum;
@@ -161,16 +161,16 @@ public class LevelBallInstance {
     public void setFilled(boolean filled) {
         this.filled = filled;
     }
-    public int getDetonationRadius() {
+    public float getDetonationRadius() {
         return detonationRadius;
     }
-    public void setDetonationRadius(int detonationRadius) {
+    public void setDetonationRadius(float detonationRadius) {
         this.detonationRadius = detonationRadius;
     }
-    public int getDetonationForce() {
+    public float getDetonationForce() {
         return detonationForce;
     }
-    public void setDetonationForce(int detonationForce) {
+    public void setDetonationForce(float detonationForce) {
         this.detonationForce = detonationForce;
     }
     

@@ -13,12 +13,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Environment {
     
-    // TODO (priority): verify i didn't miss any fields and that their default values are correct
     @JsonInclude(Include.NON_NULL)
     public static class Layer {
         
         private String imageName;
-        private float scale;
+        private float scale = 1.0f;
         private float depth;
         private float depthYOverride;
         private boolean fill;
@@ -32,8 +31,8 @@ public class Environment {
         private Vector2 anchors;
         private boolean anchorsTakeDepthIntoAccount;
         private float bloom;
-        private long color;
-        private int blendingType;
+        private long color = 0xffffffff;
+        private int blendingType = 2;
         private String flashAnimationName;
         private boolean isFlashAnimation;
         private Vector2 animScroll;

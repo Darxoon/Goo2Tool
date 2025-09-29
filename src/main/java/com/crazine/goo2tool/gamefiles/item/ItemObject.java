@@ -12,21 +12,21 @@ public class ItemObject {
     private int randomizationGroup;
     private Vector2 position = Vector2.ZERO;
     private float rotation;
-    private Vector2 scale = Vector2.ZERO;
-    private long color;
+    private Vector2 scale = Vector2.ONE;
+    private long color = 0xffffffff;
     private int depthOffset;
     private int sortOffset;
-    private int imageBlendingType;
-    private Vector2 pivot = Vector2.ZERO;
+    private int imageBlendingType = 2;
+    private Vector2 pivot = new Vector2(0.5f, 0.5f);
     private float rotationSpeed;
     private boolean invisible;
     private boolean clickable;
-    private float stableFluidsDensityFactor;
+    private int stableFluidsDensityFactor;
     private float dynamicLightingFactor;
     private boolean flipHorizontal;
     private boolean flipVertical;
     private boolean ignoreScale;
-    private float shaderFactor;
+    private float shaderFactor = 1.0f;
     private boolean enableWind;
     private Vector2 windFactor = Vector2.ZERO;
     private int stencilMode;
@@ -120,10 +120,10 @@ public class ItemObject {
     public void setClickable(boolean clickable) {
         this.clickable = clickable;
     }
-    public float getStableFluidsDensityFactor() {
+    public int getStableFluidsDensityFactor() {
         return stableFluidsDensityFactor;
     }
-    public void setStableFluidsDensityFactor(float stableFluidsDensityFactor) {
+    public void setStableFluidsDensityFactor(int stableFluidsDensityFactor) {
         this.stableFluidsDensityFactor = stableFluidsDensityFactor;
     }
     public float getDynamicLightingFactor() {
