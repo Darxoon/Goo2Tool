@@ -77,7 +77,7 @@ public class Goo2mod {
     private String id;
     private String name;
     private ModType type;
-    private String version;
+    private VersionNumber version;
     private String description;
     private String author;
     
@@ -108,7 +108,7 @@ public class Goo2mod {
     }
     
     public Goo2mod(VersionNumber specVersion, String id, String name, ModType type,
-                String version, String description, String author) {
+                VersionNumber version, String description, String author) {
         this.specVersion = specVersion;
         this.id = id;
         this.name = name;
@@ -137,7 +137,7 @@ public class Goo2mod {
         return type;
     }
 
-    public String getVersion() {
+    public VersionNumber getVersion() {
         return version;
     }
 

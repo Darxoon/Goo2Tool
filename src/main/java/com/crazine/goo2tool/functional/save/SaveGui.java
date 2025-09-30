@@ -2,9 +2,12 @@ package com.crazine.goo2tool.functional.save;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 import com.crazine.goo2tool.gui.util.FX_Alert;
+import com.crazine.goo2tool.addinfile.AddinFileLoader;
+import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
@@ -38,6 +41,7 @@ public class SaveGui {
     public static Optional<Property<Result>> save(Stage originalStage) {
         Properties properties = PropertiesLoader.getProperties();
         
+        // Set up customWog2 dir if not already
         if (!properties.isSteam() && properties.getCustomWorldOfGoo2Directory().isEmpty()) {
             Optional<ButtonType> result = FX_Alert.info("Goo2Tool", """
                     Goo2Tool does not modify your existing World of Goo 2 installation.
@@ -63,6 +67,7 @@ public class SaveGui {
             }
         }
         
+        // Show warning that the Steam version might break existing modded content
         if (properties.isSteam() && !properties.isSteamWarningShown()) {
             ButtonType buttonConfirm = new ButtonType("Confirm", ButtonData.OK_DONE);
             
@@ -80,11 +85,35 @@ public class SaveGui {
                 return Optional.empty();
             
             properties.setSteamWarningShown(true);
-            
-            try {
-                PropertiesLoader.saveProperties();
-            } catch (IOException e) {
-                FX_Alarm.error(e);
+        }
+        
+        // Save properties
+        try {
+            PropertiesLoader.saveProperties();
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return Optional.empty();
+        }
+        
+        // Verify dependencies
+        List<Goo2mod> enabledGoo2mods;
+		try {
+			enabledGoo2mods = AddinFileLoader.loadEnabledAddins();
+		} catch (IOException e) {
+            FX_Alarm.error(e);
+            return Optional.empty();
+		}
+        
+        for (Goo2mod mod : enabledGoo2mods) {
+            for (Goo2mod.Depends dependency : mod.getDependencies()) {
+                // Special case: FistyLoader
+                if (dependency.getId().equals("FistyLoader")) {
+                    if (!checkFistyDependency(mod, dependency)) {
+                        return Optional.empty();
+                    }
+                } else if (!checkDependency(mod, dependency, enabledGoo2mods)) {
+                    return Optional.empty();
+                }
             }
         }
         
@@ -98,8 +127,6 @@ public class SaveGui {
         stage.setTitle("Building your World of Goo 2");
 
         stage.getIcons().add(IconLoader.getTerrain());
-
-        // stage.setAlwaysOnTop(true);
 
         SaveTask task = new SaveTask(stage);
         
@@ -158,4 +185,80 @@ public class SaveGui {
         return Optional.of(finished);
     }
 
+    private static boolean checkFistyDependency(Goo2mod mod, Goo2mod.Depends dependency) {
+        Properties properties = PropertiesLoader.getProperties();
+        
+        if (properties.getFistyVersion() == null) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires FistyLoader, which is not installed",
+                    mod.getId()), ButtonType.OK);
+            
+            return false;
+        }
+        
+        if (dependency.getMinVersion() != null && dependency.getMinVersion().compareTo(properties.getFistyVersion()) > 0) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires FistyLoader version %s, although"
+                    + " version %s is installed.",
+                    mod.getId(), dependency.getMinVersion(), properties.getFistyVersion()),
+                    ButtonType.OK);
+            
+            return false;
+        }
+        
+        if (dependency.getMaxVersion() != null && dependency.getMaxVersion().compareTo(properties.getFistyVersion()) < 0) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires Maximum FistyLoader version %s, although only"
+                    + " version %s is installed.",
+                    mod.getId(), dependency.getMaxVersion(), properties.getFistyVersion()),
+                    ButtonType.OK);
+            
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private static boolean checkDependency(Goo2mod mod, Goo2mod.Depends dependency, List<Goo2mod> enabledGoo2mods) {
+        Goo2mod dependedAddin = null;
+        
+        for (Goo2mod current : enabledGoo2mods) {
+            if (current.getId().equals(dependency.getId())) {
+                dependedAddin = current;
+                break;
+            }
+        }
+        
+        if (dependedAddin == null) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires addin \"%s\", which is not installed",
+                    mod.getId(), dependency.getId()),
+                    ButtonType.OK);
+            
+            return false;
+        }
+        
+        if (dependency.getMinVersion() != null && dependency.getMinVersion().compareTo(dependedAddin.getVersion()) > 0) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires addin \"%s\" version %s, although only"
+                    + " version %s is installed.",
+                    mod.getId(), dependency.getId(), dependency.getMinVersion(), dependedAddin.getVersion()),
+                    ButtonType.OK);
+            
+            return false;
+        }
+        
+        if (dependency.getMaxVersion() != null && dependency.getMaxVersion().compareTo(dependedAddin.getVersion()) < 0) {
+            FX_Alert.error("Dependecy Check", String.format(
+                    "Addin \"%s\" requires addin \"%s\" with Maximum version %s, although"
+                    + " version %s is installed.",
+                    mod.getId(), dependency.getId(), dependency.getMaxVersion(), dependedAddin.getVersion()),
+                    ButtonType.OK);
+            
+            return false;
+        }
+        
+        return true;
+    }
+    
 }

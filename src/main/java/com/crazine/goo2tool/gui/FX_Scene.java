@@ -149,7 +149,6 @@ public class FX_Scene {
     }
     
     public static void save() {
-        // TODO (priority): verify dependencies between mods (especially FistyLoader)
         SaveGui.save(stage);
     }
     

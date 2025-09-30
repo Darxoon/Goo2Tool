@@ -3,7 +3,9 @@ package com.crazine.goo2tool.gui.export;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.util.IconLoader;
+import com.crazine.goo2tool.util.VersionNumber;
 
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -16,6 +18,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -30,7 +33,9 @@ import javafx.stage.Stage;
 
 public class FX_ExportDialog {
     
-    public static record AddinInfo(String modId, String name, String version,
+    private static final VersionNumber DEFAULT_VERSION = new VersionNumber(1, 0);
+    
+    public static record AddinInfo(String modId, String name, VersionNumber version,
             String author, String description, boolean embedThumbnail) {}
     
     // Same as AddinInfo but consists of JavaFX Properties
@@ -42,8 +47,9 @@ public class FX_ExportDialog {
         public StringProperty description = new SimpleStringProperty("");
         public BooleanProperty embedThumbnail = new SimpleBooleanProperty(true);
         
-        public AddinInfo toAddinInfo() {
-            String version = this.version.get().isBlank() ? "1.0" : this.version.get();
+        public AddinInfo toAddinInfo() throws NumberFormatException {
+            VersionNumber version = this.version.get().isBlank()
+                    ? DEFAULT_VERSION : VersionNumber.fromString(this.version.get());
             
             return new AddinInfo(modId.get(), name.get(), version, author.get(),
                     description.get(), embedThumbnail.get());
@@ -55,8 +61,8 @@ public class FX_ExportDialog {
             result.modId.set(addinInfo.modId());
             result.name.set(addinInfo.name());
             
-            if (!"1.0".equals(addinInfo.version()))
-                result.version.set(addinInfo.version());
+            if (!DEFAULT_VERSION.equals(addinInfo.version()))
+                result.version.set(addinInfo.version().toString());
             
             result.author.set(addinInfo.author());
             result.description.set(addinInfo.description());
@@ -80,8 +86,6 @@ public class FX_ExportDialog {
         stage.setTitle("Package level as .goo2mod");
         
         stage.getIcons().add(IconLoader.getTerrain());
-        
-        stage.setAlwaysOnTop(true);
         
         // create UI
         BorderPane borderPane = new BorderPane();
@@ -132,9 +136,17 @@ public class FX_ExportDialog {
         
         Button okButton = new Button("Export");
         okButton.setOnAction(event -> {
-            stage.close();
+            try {
+                result.set(Optional.of(addinInfo.toAddinInfo()));
+            } catch (NumberFormatException e) {
+                FX_Alert.error("Goo2Tool",
+                        String.format("Invalid version number '%s'", addinInfo.version.get()),
+                        ButtonType.OK);
+                
+                return;
+            }
             
-            result.set(Optional.of(addinInfo.toAddinInfo()));
+            stage.close();
         });
         
         Button cancelButton = new Button("Cancel");

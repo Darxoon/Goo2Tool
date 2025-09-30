@@ -116,9 +116,6 @@ class SaveTask extends Task<Void> {
     private void save(ResArchive res) throws Exception {
         
         Properties properties = PropertiesLoader.getProperties();
-        
-        // Export properties
-        PropertiesLoader.saveProperties();
 
         // Figure out which files are owned by mods that have been disabled
         // so they can be overwritten with vanilla assets
@@ -195,24 +192,7 @@ class SaveTask extends Task<Void> {
         }
 
         // Retrieve mods
-        ArrayList<Goo2mod> goo2mods = new ArrayList<>();
-        File goo2modsDirectory = new File(PropertiesLoader.getGoo2ToolPath() + "/addins");
-        File[] files = goo2modsDirectory.listFiles();
-        if (files != null) for (File file : files) {
-            goo2mods.add(AddinFileLoader.loadGoo2mod(file));
-        }
-
-        ArrayList<Goo2mod> goo2modsSorted = new ArrayList<>();
-        for (int i = properties.getAddins().size() - 1; i >= 0; i--) {
-            AddinConfigEntry addin = properties.getAddins().get(i);
-            if (!addin.isLoaded()) continue;
-            for (Goo2mod goo2mod : goo2mods) {
-                if (goo2mod.getId().equals(addin.getId())) {
-                    goo2modsSorted.add(goo2mod);
-                    break;
-                }
-            }
-        }
+        List<Goo2mod> goo2modsSorted = AddinFileLoader.loadEnabledAddins();
 
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {

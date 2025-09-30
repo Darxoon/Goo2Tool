@@ -36,7 +36,7 @@ public final class VersionNumber implements Comparable<VersionNumber> {
         this.elements = elements;
     }
     
-    public static VersionNumber fromString(String string) {
+    public static VersionNumber fromString(String string) throws NumberFormatException {
         String[] segments = string.split("\\.");
         int[] intSegments = Arrays.stream(segments)
             .mapToInt(segment -> Integer.valueOf(segment))

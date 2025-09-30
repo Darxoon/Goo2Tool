@@ -30,6 +30,14 @@ public class FX_Alert {
         return show(title, content, IconLoader.getConduit(), "warning", Optional.empty(), buttonTypes);
     }
     
+    public static Optional<ButtonType> error(String title, String content, Optional<ButtonType> defaultButton, ButtonType... buttonTypes) {
+        return show(title, content, IconLoader.getConduit(), "error", defaultButton, buttonTypes);
+    }
+    
+    public static Optional<ButtonType> error(String title, String content, ButtonType... buttonTypes) {
+        return show(title, content, IconLoader.getConduit(), "error", Optional.empty(), buttonTypes);
+    }
+    
     private static Optional<ButtonType> show(String title, String content, Image icon, String styleClass,
             Optional<ButtonType> defaultButtonType, ButtonType... buttonTypes) {
         Dialog<ButtonType> dialog = new Dialog<>();
