@@ -37,8 +37,10 @@ import com.crazine.goo2tool.functional.save.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFileEntry;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTableLoader;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeEntry;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeFile;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeType;
+import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeValue;
 import com.crazine.goo2tool.gamefiles.AppImageResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
@@ -53,6 +55,7 @@ import com.crazine.goo2tool.gamefiles.level.LevelBallInstance;
 import com.crazine.goo2tool.gamefiles.level.LevelItem;
 import com.crazine.goo2tool.gamefiles.level.LevelLoader;
 import com.crazine.goo2tool.gamefiles.level.LevelStrand;
+import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 import com.crazine.goo2tool.gamefiles.translation.GameString;
@@ -128,7 +131,6 @@ class SaveTask extends Task<Void> {
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
         ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
         
-        // TODO (priority): Restore original values again for mods that were uninstalled
         Path mergeTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "mergeTable.xml");
         MergeTable mergeTable = MergeTableLoader.loadOrInit(mergeTablePath);
         
@@ -171,7 +173,48 @@ class SaveTask extends Task<Void> {
             }
         }
         
+        // Restore all original merge values of mods that are not installed
+        logger.debug("Restoring original merge values");
+        Set<String> enabledAddinIds = properties.getAddins().stream()
+                .filter(addin -> addin.isLoaded())
+                .map(addin -> addin.getId())
+                .collect(Collectors.toSet());
+        
+        for (MergeFile file : mergeTable.getFiles()) {
+            Path filePath = Paths.get(customWog2, "game", file.getPath());
+            ResrcManifest manifest = ResrcLoader.loadManifest(filePath);
+            
+            for (MergeEntry entry : file.getEntries()) {
+                if (enabledAddinIds.contains(entry.getModId()))
+                    continue;
+                
+                if (entry.getOriginalValue() == null)
+                    continue;
+                
+                MergeValue originalValue = entry.getOriginalValue();
+                
+                ResrcGroup group = manifest.getGroup(entry.getGroup()).orElse(null);
+                if (group == null) {
+                    logger.error("File '{}' does not contain the group '{}'", file.getPath(), entry.getGroup());
+                    FX_Alert.error("Goo2Tool",
+                            String.format("File '%s' does not contain the group '%s'",
+                            file.getPath(), entry.getGroup()),
+                            ButtonType.OK);
+                    
+                    continue;
+                }
+                
+                group.removeResource(entry.getId());
+                group.addResources(List.of(originalValue.getSetDefaults(), originalValue.getValue()));
+            }
+            
+            file.getEntries().removeIf(entry -> !enabledAddinIds.contains(entry.getModId()) && entry.getOriginalValue() != null);
+            ResrcLoader.saveManifest(manifest, filePath.toFile());
+        }
+        
         // Load ballTable
+        logger.debug("Loading ballTable");
+        
         FistyIniFile ballTable = null;
         if (properties.getFistyVersion() != null) {
             Path ballTablePath = Paths.get(customWog2, "game/fisty/ballTable.ini");
@@ -190,10 +233,10 @@ class SaveTask extends Task<Void> {
                 ballTable = DefaultFistyIni.generateBallTable();
             }
         }
-
+        
         // Retrieve mods
         List<Goo2mod> goo2modsSorted = AddinFileLoader.loadEnabledAddins();
-
+        
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {
             updateTitle("Installing addin " + goo2mod.getId());
@@ -849,6 +892,7 @@ class SaveTask extends Task<Void> {
     }
     
     private void mergeXml(ResFileTable table, MergeFile mergeFile, Resource resource, Path customPath, String modId) throws IOException {
+        // TODO: cache these
         ResrcManifest original = ResrcLoader.loadManifest(customPath);
         ResrcManifest patch = ResrcLoader.loadManifest(resource.content());
         
