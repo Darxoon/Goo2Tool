@@ -13,6 +13,16 @@ public class AddinInfoCache {
     private List<Entry> entries = new ArrayList<>();
     
     public void addEntry(String uuid, String title, AddinInfo info)  {
+        // Check if entry already exists and replace it in that case
+        for (int i = 0; i < entries.size(); i++) {
+            Entry entry = entries.get(i);
+            
+            if (entry.uuid().equals(uuid) && entry.title().equals(title)) {
+                entries.set(i, new Entry(uuid, title, info));
+                return;
+            }
+        }
+        
         entries.add(new Entry(uuid, title, info));
     }
     
