@@ -57,7 +57,6 @@ public class ResrcGroup {
                 continue;
             }
             
-            // TODO (priority): Make sure that addin resources.xml merges still start with a SetDefaults
             if (setDefaults == null) {
                 logger.warn("Adding empty SetDefaults to ResrcGroup {}", id);
                 setDefaults = new SetDefaults("", "");
