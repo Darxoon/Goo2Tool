@@ -144,7 +144,7 @@ public class FX_Scene {
         installFistyButton.setDisable(switch (Platform.getCurrent()) {
             case WINDOWS -> !properties.isSteam();
             case MAC -> true;
-            case LINUX -> !properties.isSteam() && !properties.isProton();
+            case LINUX -> !properties.isSteam() || !properties.isProton();
         });
     }
     
@@ -194,7 +194,7 @@ public class FX_Scene {
                 Main_Application.openUrl("steam://rungameid/3385670");
             }
         } else {
-            // TODO (priority): test this
+            // TODO (priority): test this on Windows
             Path customWog2 = Path.of(PropertiesLoader.getProperties().getTargetWog2Directory());
             
             // directly launch executable

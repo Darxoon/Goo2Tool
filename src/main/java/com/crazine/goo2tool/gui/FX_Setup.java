@@ -198,15 +198,16 @@ public class FX_Setup extends Application {
                     PropertiesLoader.getProperties().setProton(true);
                     
                     detectFistyVersion(file.get().getParent().toString());
+                } else if (file.get().endsWith("WorldOfGoo2")) {
+                    PropertiesLoader.getProperties().setSteam(true);
                 }
-                // TODO (priority): detect native Steam version
                 
                 String fileString = file.get().toString();
                 
-                if (fileString.endsWith(".exe")) {
-                    yield file.get().getParent().toString();
-                } else {
+                if (fileString.endsWith(".AppImage")) {
                     yield fileString;
+                } else {
+                    yield file.get().getParent().toString();
                 }
             }
         };
@@ -224,7 +225,6 @@ public class FX_Setup extends Application {
                 break;
             case MAC:
                 // FistyLoader is not supported on mac
-                properties.setFistyVersion(null);
                 return;
             case LINUX:
                 if (!properties.isSteam() || !properties.isProton())
@@ -269,9 +269,9 @@ public class FX_Setup extends Application {
             case MAC -> Paths.get(System.getProperty("user.home"), "Library/Application Support/WorldOfGoo2");
             case LINUX -> {
                 // try looking in wineprefix
-                if (properties.isSteam() && properties.isProton() && gooDir.isPresent()) {
-                    if (gooDir.get().steamDir().isEmpty())
-                        throw new RuntimeException("Could not find Steam directory");
+                if (properties.isSteam() && properties.isProton()) {
+                    if (gooDir.isEmpty() || gooDir.get().steamDir().isEmpty())
+                        throw new IOException("Could not find Steam directory");
                     
                     Path steamDir = gooDir.get().steamDir().get();
                     Path steamProfileDir = steamDir.resolve(STEAM_WINEPFX_PROFILE_DIR);
@@ -302,7 +302,7 @@ public class FX_Setup extends Application {
             return file.get().toString();
         }
         
-        if (properties.isSteam() && gooDir.isPresent()) {
+        if (properties.isSteam()) {
             // find steam user profile dir
             Optional<Path> steamProfileDir = Files.list(profileDir)
                 .filter(FX_Setup::isSteamProfileDir)
@@ -330,7 +330,12 @@ public class FX_Setup extends Application {
     }
     
     public static String getSaveFilePath(Stage stage, Optional<GooDir> gooDir) throws IOException {
-        if (gooDir.isPresent() && PropertiesLoader.getProperties().isSteam()) {
+        if (PropertiesLoader.getProperties().isSteam()) {
+            if (gooDir.isEmpty()) {
+                // TODO: Prompt the user to pick it themselves
+                throw new IOException("Could not find SteamLibrary, which contains the save file");
+            }
+            
             Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
             
             if (!steamProfile.isPresent()) {

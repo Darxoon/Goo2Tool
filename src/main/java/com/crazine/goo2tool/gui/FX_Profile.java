@@ -79,6 +79,7 @@ public class FX_Profile {
             profileSelectionBox.getItems().add("Profile " + i);
         }
         profileSelectionBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            // TODO: Update this when saveFilePath changes
             if (PropertiesLoader.getProperties().getSaveFilePath() == null)
                 return;
             

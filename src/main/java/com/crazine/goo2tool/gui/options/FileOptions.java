@@ -108,6 +108,7 @@ public class FileOptions {
             case WINDOWS: {
                 Path steamExePath = Path.of(baseWog2, "WorldOfGoo2.exe");
                 
+                // TODO (priority): Reinitialize profile and save file
                 if (Files.isRegularFile(steamExePath)) {
                     properties.setSteam(true);
                     FX_Setup.detectFistyVersion(baseWog2);
@@ -130,19 +131,7 @@ public class FileOptions {
                     properties.setSteam(true);
                     properties.setProton(true);
                     
-                    if (!prevSteam || !prevProton) {
-                        Optional<GooDir> located = LocateGooDir.locateWog2();
-                        try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, located));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, located));
-                        } catch (IOException e) {
-                            FX_Alarm.error(e);
-                        }
-                        
-                        FX_Alert.info("Goo2Tool",
-                                "Reinitialized other properties for Steam Windows version",
-                                ButtonType.OK);
-                    }
+                    updateProfileAndSaveFile(prevSteam, prevProton, "Windows Steam version");
                     
                     FX_Setup.detectFistyVersion(baseWog2);
                 } else if (baseWog2.endsWith(".AppImage")) {
@@ -150,18 +139,7 @@ public class FileOptions {
                     properties.setSteam(false);
                     properties.setProton(false);
                     
-                    if (prevSteam || prevProton) {
-                        try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, Optional.empty()));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, Optional.empty()));
-                        } catch (IOException e) {
-                            FX_Alarm.error(e);
-                        }
-                        
-                        FX_Alert.info("Goo2Tool",
-                                "Reinitialized other properties for Linux AppImage",
-                                ButtonType.OK);
-                    }
+                    updateProfileAndSaveFile(prevSteam, prevProton, "Linux AppImage");
                     
                     properties.setFistyVersion(null);
                 } else {
@@ -169,25 +147,39 @@ public class FileOptions {
                     properties.setSteam(true);
                     properties.setProton(false);
                     
-                    if (!prevSteam || prevProton) {
-                        try {
-                            properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, Optional.empty()));
-                            properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, Optional.empty()));
-                        } catch (IOException e) {
-                            FX_Alarm.error(e);
-                        }
-                        
-                        FX_Alert.info("Goo2Tool",
-                                "Reinitialized other properties for native Steam version",
-                                ButtonType.OK);
-                    }
+                    updateProfileAndSaveFile(prevSteam, prevProton, "native Steam version");
                     
                     properties.setFistyVersion(null);
                 }
-                // TODO (priority): test native Linux version
                 
                 break;
             }
+        }
+    }
+    
+    private void updateProfileAndSaveFile(boolean prevSteam, boolean prevProton, String platformName) {
+        Properties properties = PropertiesLoader.getProperties();
+        
+        if (prevSteam != properties.isSteam() || prevProton != properties.isProton()) {
+            Optional<GooDir> located = properties.isSteam()
+                    ? LocateGooDir.locateWog2() : Optional.empty();
+            
+            try {
+                properties.setProfileDirectory(FX_Setup.getProfileDirectory(stage, located));
+            } catch (IOException e) {
+                properties.setProfileDirectory("");
+                FX_Alarm.error(e);
+            }
+            try {
+                properties.setSaveFilePath(FX_Setup.getSaveFilePath(stage, located));
+            } catch (IOException e) {
+                properties.setSaveFilePath("");
+                FX_Alarm.error(e);
+            }
+            
+            FX_Alert.info("Goo2Tool",
+                    "Reinitialized other properties for " + platformName,
+                    ButtonType.OK);
         }
     }
     
