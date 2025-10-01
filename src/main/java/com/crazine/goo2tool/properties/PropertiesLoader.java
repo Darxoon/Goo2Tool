@@ -160,11 +160,10 @@ public class PropertiesLoader {
 
     public static String getGoo2ToolPath() {
         
-        // TODO (priority): Use .local/share on Linux
         return switch (Platform.getCurrent()) {
             case WINDOWS -> System.getenv("APPDATA").replaceAll("\\\\", "/") + "/Goo2Tool";
             case MAC -> System.getProperty("user.home") + "/Library/Application Support/Goo2Tool";
-            case LINUX -> System.getProperty("user.home") + "/.config/Goo2Tool";
+            case LINUX -> System.getProperty("user.home") + "/.local/share/Goo2Tool";
         };
 
     }
