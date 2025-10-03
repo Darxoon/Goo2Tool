@@ -462,6 +462,8 @@ class ExportTask extends Task<Void> {
         if (id == null || id.isEmpty())
             return id;
         
+        // TODO (priority): Implement DependencyType for assets
+        
         // get custom resource
         ResrcGroup group = customResrcs.get(type);
         PathResrc<? extends Resrc> resrc = getResrc(id, group, type.resrcClass);
@@ -531,6 +533,16 @@ class ExportTask extends Task<Void> {
     }
     
     private Optional<String> analyzeBackground(ResArchive res, String backgroundId) throws IOException {
+        // Check for dependency
+        Optional<OverriddenFileEntry> environmentEntry = resFileTable.getEntry("res/environments/" + backgroundId + ".wog2");
+        if (environmentEntry.isPresent() && !environmentEntry.get().getModId().equals(addinInfo.modId())) {
+            DependencyType dependencyType = getDependecyType(environmentEntry.get().getModId());
+            
+            if (dependencyType == DependencyType.REQUIRE)
+                return Optional.empty();
+        }
+        
+        // Read background
         String backgroundText = Files.readString(Paths.get(customWog2, "game/res/environments", backgroundId + ".wog2"));
         Optional<String> originalBackground = res.getFileText("res/environments/" + backgroundId + ".wog2");
         
@@ -580,6 +592,16 @@ class ExportTask extends Task<Void> {
     }
     
     private Optional<String> analyzeItem(ResArchive res, String itemId, Map<String, Item> allItems) throws IOException {
+        // Check for dependency
+        Optional<OverriddenFileEntry> itemEntry = resFileTable.getEntry("res/items/" + itemId + ".wog2");
+        if (itemEntry.isPresent() && !itemEntry.get().getModId().equals(addinInfo.modId())) {
+            DependencyType dependencyType = getDependecyType(itemEntry.get().getModId());
+            
+            if (dependencyType == DependencyType.REQUIRE)
+                return Optional.empty();
+        }
+        
+        // Read ball
         String itemFileText = Files.readString(Paths.get(customWog2, "game/res/items", itemId + ".wog2"));
         Optional<String> originalItemFileText = res.getFileText("res/items/" + itemId + ".wog2");
         
@@ -639,7 +661,6 @@ class ExportTask extends Task<Void> {
         }
         
         return Optional.empty();
-        
     }
     
     private Optional<String> analyzeGooBall(int typeEnum, ResArchive res, FistyIniFile ballTable) throws IOException {
