@@ -9,6 +9,9 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -18,6 +21,9 @@ import org.slf4j.LoggerFactory;
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.addinfile.Goo2mod.ModType;
 import com.crazine.goo2tool.functional.FistyInstaller;
+import com.crazine.goo2tool.functional.save.filetable.ResFileTable;
+import com.crazine.goo2tool.functional.save.filetable.ResFileTableLoader;
+import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFileEntry;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ball.Ball;
 import com.crazine.goo2tool.gamefiles.ball.BallLoader;
@@ -28,6 +34,8 @@ import com.crazine.goo2tool.gamefiles.item.*;
 import com.crazine.goo2tool.gamefiles.level.*;
 import com.crazine.goo2tool.gamefiles.resrc.*;
 import com.crazine.goo2tool.gamefiles.translation.*;
+import com.crazine.goo2tool.gui.export.FX_DependencyPrompt;
+import com.crazine.goo2tool.gui.export.FX_DependencyPrompt.DependencyType;
 import com.crazine.goo2tool.gui.export.FX_ExportDialog.AddinInfo;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
@@ -39,6 +47,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.concurrent.Task;
 import javafx.stage.Stage;
 
@@ -100,6 +109,8 @@ class ExportTask extends Task<Void> {
     
     private static record AssetResource(AssetType type, String id, String name, byte[] content) {}
     
+    private static class CancelException extends RuntimeException {}
+    
     private static Logger logger = LoggerFactory.getLogger(ExportTask.class);
     
     private final Stage stage;
@@ -112,6 +123,10 @@ class ExportTask extends Task<Void> {
     
     private String resrcPathPrefix = "";
     private String resrcIdPrefix = "";
+    
+    private ResFileTable resFileTable;
+    
+    private Map<String, DependencyType> modDependencyTypes = new HashMap<>();
     
     private Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
     private Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
@@ -134,6 +149,9 @@ class ExportTask extends Task<Void> {
     protected Void call() {
         try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
             export(res);
+        } catch (CancelException e) {
+            logger.info("Export task canceled");
+            success = false;
         } catch (Exception e) {
             success = false;
             
@@ -158,6 +176,9 @@ class ExportTask extends Task<Void> {
         
         customWog2 = properties.getTargetWog2Directory();
         jsonMapper = new JsonMapper();
+        
+        Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
+        resFileTable = ResFileTableLoader.loadOrInit(fileTablePath);
         
         String levelContent = Files.readString(levelPath);
         ObjectNode levelJson = (ObjectNode) jsonMapper.readTree(levelContent);
@@ -373,8 +394,18 @@ class ExportTask extends Task<Void> {
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
         
+        // TODO (priority): Make sure transitive FistyLoader dependencies are handled correctly
         if (outBallsString != null) {
             mod.getDependencies().add(new Goo2mod.Depends("FistyLoader", FistyInstaller.FISTY_VERSION));
+        }
+        
+        for (Entry<String, DependencyType> entry : modDependencyTypes.entrySet()) {
+            String modId = entry.getKey();
+            DependencyType dependecyType = entry.getValue();
+            
+            if (dependecyType == DependencyType.REQUIRE) {
+                mod.getDependencies().add(new Goo2mod.Depends(modId));
+            }
         }
         
         XmlMapper mapper = new XmlMapper();
@@ -466,6 +497,37 @@ class ExportTask extends Task<Void> {
         }
         
         return id;
+    }
+    
+    private DependencyType getDependecyType(String modId) throws CancelException, IOException {
+        if (modDependencyTypes.containsKey(modId))
+            return modDependencyTypes.get(modId);
+        
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Optional<DependencyType>> result = new AtomicReference<>(Optional.empty());
+        
+        runLater(() -> {
+            ObjectProperty<Optional<DependencyType>> resultProperty = FX_DependencyPrompt.show(stage, modId);
+            
+            resultProperty.addListener((observable, oldValue, newValue) -> {
+                result.set(newValue);
+                latch.countDown();
+            });
+        });
+        
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new IOException(e);
+        }
+        
+        if (result.get().isEmpty())
+            throw new CancelException();
+        else {
+            DependencyType type = result.get().get();
+            modDependencyTypes.put(modId, type);
+            return type;
+        }
     }
     
     private Optional<String> analyzeBackground(ResArchive res, String backgroundId) throws IOException {
@@ -590,6 +652,14 @@ class ExportTask extends Task<Void> {
                 || !DefaultFistyIni.BALL_TABLE[typeEnum].equals(ballId);
         
         if (ballIdIsCustom) {
+            Optional<OverriddenFileEntry> ballEntry = resFileTable.getEntry("res/balls/" + ballId + "/ball.wog2");
+            if (ballEntry.isPresent() && !ballEntry.get().getModId().equals(addinInfo.modId())) {
+                DependencyType dependencyType = getDependecyType(ballEntry.get().getModId());
+                
+                if (dependencyType == DependencyType.REQUIRE)
+                    return Optional.empty();
+            }
+            
             customGooballIds.add(ballId);
             
             // Check for custom resources that are not in resources.xml
@@ -604,6 +674,7 @@ class ExportTask extends Task<Void> {
             if (resrcGroup.isEmpty())
                 throw new IOException("Could not find resource group with ID 'ball_" + ballId + "'");
             
+            // editorButtonImage (in res/editor/resources.xml)
             if (ball.getEditorButtonImage() != null) {
                 Optional<Resrc> editorButtonImage = resrcGroup.get().getResource(ball.getEditorButtonImage().imageId());
                 

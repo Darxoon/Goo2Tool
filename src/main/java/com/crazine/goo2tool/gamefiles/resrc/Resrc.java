@@ -20,6 +20,10 @@ public interface Resrc {
             return null;
         }
         
+        public boolean isEmpty() {
+            return path.isEmpty() && idprefix.isEmpty();
+        }
+        
     }
     
     @ResrcType(fileExtension = "image")

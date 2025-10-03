@@ -205,7 +205,7 @@ class SaveTask extends Task<Void> {
                 }
                 
                 group.removeResource(entry.getId());
-                group.addResources(List.of(originalValue.getSetDefaults(), originalValue.getValue()));
+                group.addResources(List.of(originalValue.getSetDefaults(), originalValue.getValue()), true);
             }
             
             file.getEntries().removeIf(entry -> !enabledAddinIds.contains(entry.getModId()) && entry.getOriginalValue() != null);
@@ -477,8 +477,6 @@ class SaveTask extends Task<Void> {
                     }
                 } else if (!Files.exists(customPath)) {
                     byte[] fileContent = file.readContent();
-                    
-                    logger.trace("File {} created", file.path());
                     
                     Files.createDirectories(customPath.getParent());
                     try {

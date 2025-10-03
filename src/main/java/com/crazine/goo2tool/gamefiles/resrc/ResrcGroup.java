@@ -32,7 +32,7 @@ public class ResrcGroup {
     
     public ResrcGroup(String id, List<Resrc> resources) {
         this.id = id;
-        addResources(resources);
+        addResources(resources, false);
     }
     
     public ResrcGroup copy() {
@@ -46,14 +46,22 @@ public class ResrcGroup {
         this.id = id;
     }
     
-    public void addResources(List<Resrc> resources) {
+    public void addResources(List<Resrc> resources, boolean removeEmpty) {
         this.resources.addAll(resources);
+        if (removeEmpty) {
+            this.resources.removeIf(resrc -> resrc instanceof Resrc.SetDefaults setDefaults
+                    && setDefaults.isEmpty());
+        }
         
         Resrc.SetDefaults setDefaults = null;
         
         for (Resrc resrc : resources) {
-            if (resrc instanceof SetDefaults) {
-                setDefaults = (SetDefaults) resrc;
+            if (resrc instanceof SetDefaults newSetDefaults) {
+                if (removeEmpty && setDefaults != null && newSetDefaults.isEmpty() && !setDefaults.isEmpty()){
+                    throw new IllegalArgumentException("Failed to add <SetDefaults path=\"\" idprefix=\"\"/>");
+                }
+                
+                setDefaults = newSetDefaults;
                 continue;
             }
             

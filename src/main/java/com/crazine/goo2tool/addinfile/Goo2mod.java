@@ -53,6 +53,10 @@ public class Goo2mod {
         public Depends(String id, VersionNumber minVersion) {
             this(id, minVersion, null);
         }
+        
+        public Depends(String id) {
+            this(id, null, null);
+        }
 
         public String getId() {
             return id;

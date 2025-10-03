@@ -80,7 +80,7 @@ public class ResourceXmlMerge {
             entry.setModValue(new MergeValue(setDefaults, resrc));
         }
         
-        out.addResources(patch.getResources());
+        out.addResources(patch.getResources(), true);
         return out;
     }
     
