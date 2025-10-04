@@ -68,6 +68,12 @@ public interface ResArchive extends Closeable {
             } else {
                 resGooFile = baseFile.toFile();
             }
+        } else if (Files.exists(Path.of(baseWOG2, "game/res.goo_backup"))) {
+            resGooFile = Path.of(baseWOG2, "game/res.goo_backup").toFile();
+            
+            if (properties.isSteam()) {
+                properties.setResGooPath(resGooFile.toString());
+            }
         } else {
             // Prompt the user to pick a custom res.goo file
             Alert alert = new Alert(AlertType.CONFIRMATION);
