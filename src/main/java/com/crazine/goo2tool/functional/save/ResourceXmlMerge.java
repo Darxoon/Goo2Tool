@@ -14,7 +14,7 @@ import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 
 public class ResourceXmlMerge {
     
-    public static ResrcManifest transformResources(ResrcManifest original, ResrcManifest patch, MergeFile mergeFile, String modId) {
+    public static ResrcManifest transformResources(ResrcManifest original, ResrcManifest patch, MergeFile<MergeValue> mergeFile, String modId) {
         List<ResrcGroup> groups = new ArrayList<>();
         groups.addAll(original.getGroups());
         
@@ -49,7 +49,7 @@ public class ResourceXmlMerge {
         return new ResrcManifest(groups);
     }
     
-    private static ResrcGroup transformGroup(ResrcGroup original, ResrcGroup patch, MergeFile mergeFile, String modId) {
+    private static ResrcGroup transformGroup(ResrcGroup original, ResrcGroup patch, MergeFile<MergeValue> mergeFile, String modId) {
         if (patch == null || patch.getResources().isEmpty())
             return original;
         
@@ -72,7 +72,7 @@ public class ResourceXmlMerge {
                 throw new IllegalArgumentException("Resrc Group is missing a <SetDefaults>");
             
             String realId = setDefaults.idprefix() + resrc.id();
-            MergeEntry entry = mergeFile.getOrAddEntry(patch.getId(), realId, modId);
+            MergeEntry<MergeValue> entry = mergeFile.getOrAddEntry(patch.getId(), realId, modId);
             
             detectManualModification(entry, realId, out);
             
@@ -84,7 +84,7 @@ public class ResourceXmlMerge {
         return out;
     }
     
-    private static void detectManualModification(MergeEntry entry, String realId, ResrcGroup outGroup) {
+    private static void detectManualModification(MergeEntry<MergeValue> entry, String realId, ResrcGroup outGroup) {
         if (entry.getModValue() == null) {
             // Merging this entry for the first time ever, so save its current value
             Optional<Resrc> originalResrc = outGroup.getResource(realId);

@@ -72,19 +72,19 @@ public class MergeTableLoader {
         }
     }
     
-    public static MergeTable loadOrInit(Path resFile) throws IOException {
+    public static ResrcMergeTable loadOrInit(Path resFile) throws IOException {
         try {
             
             byte[] content = Files.readAllBytes(resFile);
             
             if (content.length == 0)
-                return new MergeTable();
+                return new ResrcMergeTable();
             
             XmlMapper xmlMapper = new XmlMapper();
-            return xmlMapper.readValue(content, MergeTable.class);
+            return xmlMapper.readValue(content, ResrcMergeTable.class);
             
         } catch (FileNotFoundException | NoSuchFileException e) {
-            return new MergeTable();
+            return new ResrcMergeTable();
         }
     }
     
@@ -96,7 +96,7 @@ public class MergeTableLoader {
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
-        xmlMapper.writeValue(outFile.toFile(), table);
+        xmlMapper.writer().withRootName("MergeTable").writeValue(outFile.toFile(), table);
         
     }
     

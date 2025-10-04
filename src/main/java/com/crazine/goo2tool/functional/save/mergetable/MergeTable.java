@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
-public class MergeTable {
+public abstract class MergeTable {
     
     public static enum MergeType {
         @JsonProperty("resource_xml")
@@ -44,17 +44,17 @@ public class MergeTable {
     }
     
     @JsonInclude(Include.NON_NULL)
-    public static class MergeEntry {
+    public static class MergeEntry<T> {
         
         @JacksonXmlProperty(isAttribute = true) private String group;
         @JacksonXmlProperty(isAttribute = true) private String id;
         @JacksonXmlProperty(isAttribute = true) private String modId;
         
         @JacksonXmlProperty(localName = "OriginalValue")
-        private MergeValue originalValue;
+        private T originalValue;
         
         @JacksonXmlProperty(localName = "Value")
-        private MergeValue modValue;
+        private T modValue;
         
         public MergeEntry(@JsonProperty("group") String group,
                 @JsonProperty("id") String id, @JsonProperty("modId") String modId) {
@@ -77,42 +77,39 @@ public class MergeTable {
             return modId;
         }
         
-        public MergeValue getOriginalValue() {
+        public T getOriginalValue() {
             return originalValue;
         }
-        public void setOriginalValue(MergeValue originalValue) {
+        public void setOriginalValue(T originalValue) {
             this.originalValue = originalValue;
         }
         
-        public MergeValue getModValue() {
+        public T getModValue() {
             return modValue;
         }
-        public void setModValue(MergeValue modValue) {
+        public void setModValue(T modValue) {
             this.modValue = modValue;
         }
         
     }
     
-    public static class MergeFile {
+    public static class MergeFile<T> {
         
         @JacksonXmlProperty(isAttribute = true)
         private String path;
-        @JacksonXmlProperty(isAttribute = true)
-        private MergeType type;
         
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "ModOverride")
-        private List<MergeEntry> entries = new ArrayList<>();
+        private List<MergeEntry<T>> entries = new ArrayList<>();
         
-        public MergeFile(@JsonProperty("path") String path, @JsonProperty("type") MergeType type) {
+        public MergeFile(@JsonProperty("path") String path) {
             this.path = path;
-            this.type = type;
         }
         
-        public MergeEntry getOrAddEntry(String group, String id, String modId) {
-            MergeEntry entry = null;
+        public MergeEntry<T> getOrAddEntry(String group, String id, String modId) {
+            MergeEntry<T> entry = null;
             
-            for (MergeEntry currentEntry : entries) {
+            for (MergeEntry<T> currentEntry : entries) {
                 if (currentEntry.getGroup().equals(group) && currentEntry.getId().equals(id)) {
                     entry = currentEntry;
                     break;
@@ -120,7 +117,7 @@ public class MergeTable {
             }
             
             if (entry == null) {
-                entry = new MergeEntry(group, id, modId);
+                entry = new MergeEntry<T>(group, id, modId);
                 entries.add(entry);
             }
             
@@ -130,14 +127,11 @@ public class MergeTable {
         public String getPath() {
             return path;
         }
-        public MergeType getType() {
-            return type;
-        }
         
-        public List<MergeEntry> getEntries() {
+        public List<MergeEntry<T>> getEntries() {
             return entries;
         }
-        public void setEntries(List<MergeEntry> resrcs) {
+        public void setEntries(List<MergeEntry<T>> resrcs) {
             this.entries = resrcs;
         }
         
@@ -145,10 +139,10 @@ public class MergeTable {
     
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "File")
-    private List<MergeFile> files = new ArrayList<>();
+    private List<MergeFile<MergeValue>> files = new ArrayList<>();
     
-    public Optional<MergeFile> getFile(String path) {
-        for (MergeFile file : files) {
+    public Optional<MergeFile<MergeValue>> getFile(String path) {
+        for (MergeFile<MergeValue> file : files) {
             if (file.getPath().equals(path))
                 return Optional.of(file);
         }
@@ -156,27 +150,30 @@ public class MergeTable {
         return Optional.empty();
     }
     
-    public MergeFile getOrAddFile(String path, Supplier<MergeFile> factory) {
-        for (MergeFile file : files) {
+    public MergeFile<MergeValue> getOrAddFile(String path, Supplier<MergeFile<MergeValue>> factory) {
+        for (MergeFile<MergeValue> file : files) {
             if (file.getPath().equals(path))
                 return file;
         }
         
-        MergeFile newFile = factory.get();
+        MergeFile<MergeValue> newFile = factory.get();
         files.add(newFile);
         return newFile;
     }
     
-    public MergeFile addFile(MergeFile file) {
+    public MergeFile<MergeValue> addFile(MergeFile<MergeValue> file) {
         files.add(file);
         return file;
     }
-
-    public List<MergeFile> getFiles() {
+    
+    @JacksonXmlProperty(isAttribute = true)
+    public abstract MergeType getType();
+    
+    public List<MergeFile<MergeValue>> getFiles() {
         return files;
     }
 
-    public void setFiles(List<MergeFile> files) {
+    public void setFiles(List<MergeFile<MergeValue>> files) {
         this.files = files;
     }
     
