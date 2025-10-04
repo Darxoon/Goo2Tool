@@ -36,10 +36,11 @@ import com.crazine.goo2tool.functional.save.filetable.ResFileTable;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTableLoader;
 import com.crazine.goo2tool.functional.save.filetable.ResFileTable.OverriddenFileEntry;
 import com.crazine.goo2tool.functional.save.mergetable.ResrcMergeTable;
+import com.crazine.goo2tool.functional.save.mergetable.TranslationMergeTable;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTableLoader;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeEntry;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeFile;
-import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeValue;
+import com.crazine.goo2tool.functional.save.mergetable.ResrcMergeTable.ResrcValue;
 import com.crazine.goo2tool.gamefiles.AppImageResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gamefiles.ResArchive.ResFile;
@@ -130,8 +131,13 @@ class SaveTask extends Task<Void> {
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
         ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
         
-        Path mergeTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "resrcMergeTable.xml");
-        ResrcMergeTable mergeTable = MergeTableLoader.loadOrInit(mergeTablePath);
+        Path resrcMergeTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "resrcMergeTable.xml");
+        ResrcMergeTable resrcMergeTable = MergeTableLoader.load(resrcMergeTablePath, ResrcMergeTable.class)
+                .orElseGet(ResrcMergeTable::new);
+        
+        Path translationMergeTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "translationMergeTable.xml");
+        TranslationMergeTable translationMergeTable = MergeTableLoader.load(translationMergeTablePath, TranslationMergeTable.class)
+                .orElseGet(TranslationMergeTable::new);
         
         // Merge original res folder
         updateTitle("Validating original WoG2");
@@ -173,24 +179,25 @@ class SaveTask extends Task<Void> {
         }
         
         // Restore all original merge values of mods that are not installed
+        // TODO (priority): also do this for TranslationMergeTable
         logger.debug("Restoring original merge values");
         Set<String> enabledAddinIds = properties.getAddins().stream()
                 .filter(addin -> addin.isLoaded())
                 .map(addin -> addin.getId())
                 .collect(Collectors.toSet());
         
-        for (MergeFile<MergeValue> file : mergeTable.getFiles()) {
+        for (MergeFile<ResrcValue> file : resrcMergeTable.getFiles()) {
             Path filePath = Paths.get(customWog2, "game", file.getPath());
             ResrcManifest manifest = ResrcLoader.loadManifest(filePath);
             
-            for (MergeEntry<MergeValue> entry : file.getEntries()) {
+            for (MergeEntry<ResrcValue> entry : file.getEntries()) {
                 if (enabledAddinIds.contains(entry.getModId()))
                     continue;
                 
                 if (entry.getOriginalValue() == null)
                     continue;
                 
-                MergeValue originalValue = entry.getOriginalValue();
+                ResrcValue originalValue = entry.getOriginalValue();
                 
                 ResrcGroup group = manifest.getGroup(entry.getGroup()).orElse(null);
                 if (group == null) {
@@ -239,7 +246,7 @@ class SaveTask extends Task<Void> {
         // Install mods
         for (Goo2mod goo2mod : goo2modsSorted) {
             updateTitle("Installing addin " + goo2mod.getId());
-            installGoo2mod(goo2mod, table, mergeTable, ballTable);
+            installGoo2mod(goo2mod, table, resrcMergeTable, translationMergeTable, ballTable);
         }
         
         // Save ballTable
@@ -301,7 +308,8 @@ class SaveTask extends Task<Void> {
         }
         
         ResFileTableLoader.save(table, fileTablePath);
-        MergeTableLoader.save(mergeTable, mergeTablePath);
+        MergeTableLoader.save(resrcMergeTable, resrcMergeTablePath);
+        MergeTableLoader.save(translationMergeTable, translationMergeTablePath);
         
         // Backup save file just for good measure
         Path saveFile = Paths.get(properties.getSaveFilePath());
@@ -490,7 +498,8 @@ class SaveTask extends Task<Void> {
         return true;
     }
     
-    private void installGoo2mod(Goo2mod mod, ResFileTable table, ResrcMergeTable mergeTable, FistyIniFile ballTable) {
+    private void installGoo2mod(Goo2mod mod, ResFileTable table, ResrcMergeTable resrcMergeTable,
+            TranslationMergeTable translationMergeTable, FistyIniFile ballTable) {
         logger.info("Installing mod {}", mod.getId());
         
         Properties properties = PropertiesLoader.getProperties();
@@ -549,7 +558,7 @@ class SaveTask extends Task<Void> {
                         updateProgress(++i, count);
                         
                         if (resource.path().equals("translation.xml"))
-                            writeTranslation(table, resource);
+                            writeTranslation(table, resource, translationMergeTable, mod.getId());
                         
                         if (resource.path().equals("balls.ini") && fistyDepends.isEmpty()) {
                             throw new Exception("Mod contains 'balls.ini' file even though "
@@ -565,12 +574,12 @@ class SaveTask extends Task<Void> {
                                 throw new IllegalArgumentException("Cannot override compiled file that has been merged before!");
                         }
                         
-                        Optional<MergeFile<MergeValue>> mergeFile = mergeTable.getFile(resource.path());
+                        Optional<MergeFile<ResrcValue>> mergeFile = resrcMergeTable.getFile(resource.path());
                         if (mergeFile.isPresent()) {
                             if (!mergeFile.get().getEntries().isEmpty())
                                 throw new IllegalArgumentException("Cannot override compiled file that has been merged before!");
                             else
-                                mergeTable.getFiles().remove(mergeFile.get());
+                                resrcMergeTable.getFiles().remove(mergeFile.get());
                         }
                         
                         // Levels are handled after this loop
@@ -617,7 +626,7 @@ class SaveTask extends Task<Void> {
                                 throw new IllegalArgumentException("fx.xml merge not supported yet"
                                         + " (you should probably use res/particles anyway)");
                             
-                            MergeFile<MergeValue> file = mergeTable.getOrAddFile(resource.path(),
+                            MergeFile<ResrcValue> file = resrcMergeTable.getOrAddFile(resource.path(),
                                     () -> new MergeFile<>(resource.path()));
                             
                             mergeXml(table, file, resource, customPath, mod.getId());
@@ -687,30 +696,40 @@ class SaveTask extends Task<Void> {
         }
     }
     
-    private void writeTranslation(ResFileTable table, Resource resource) throws IOException {
-        Path customWog2 = Paths.get(PropertiesLoader.getProperties().getTargetWog2Directory());
+    private void writeTranslation(ResFileTable table, Resource resource, TranslationMergeTable mergeTable, String modId) throws IOException {
+        String customWog2 = PropertiesLoader.getProperties().getTargetWog2Directory();
         
-        Path localPath = customWog2.resolve("game/res/properties/translation-local.xml");
-        Path intlPath = customWog2.resolve("game/res/properties/translation-tool-export.xml");
+        String localPath = "res/properties/translation-local.xml";
+        String intlPath = "res/properties/translation-tool-export.xml";
         
-        // TODO (priority): Make this use MergeTable too
-        String originalIntlContent = new String(Files.readAllBytes(intlPath), StandardCharsets.UTF_8)
+        String originalIntlContent = new String(Files.readAllBytes(Paths.get(customWog2, "game", intlPath)), StandardCharsets.UTF_8)
             .replaceAll("& ", "&amp; ");
         TextDB originalIntl = TextLoader.loadText(originalIntlContent);
-        TextDB originalLocal = TextLoader.loadText(localPath);
+        TextDB originalLocal = TextLoader.loadText(Paths.get(customWog2, "game", localPath));
         
         TextDB patch = TextLoader.loadText(resource.content());
         
+        MergeFile<GameString> localMergeFile = mergeTable.getOrAddFile(localPath, () -> new MergeFile<>(localPath));
+        MergeFile<GameString> intlMergeFile = mergeTable.getOrAddFile(intlPath, () -> new MergeFile<>(intlPath));
+                            
         for (GameString string : patch.getStrings()) {
             Optional<LocaleText> local = string.getLocal();
             
             if (local.isPresent()) {
-                originalLocal.putString(new GameString(string.getId(), local.get()));
+                MergeEntry<GameString> entry = localMergeFile.getOrAddEntry(null, string.getId(), modId);
+                detectManualTextModification(entry, string.getId(), originalLocal);
+                
+                GameString modString = new GameString(string.getId(), local.get());
+                entry.setModValue(modString);
+                originalLocal.putString(modString);
             } else {
                 originalLocal.removeString(string.getId());
             }
             
             if (string.hasIntl()) {
+                MergeEntry<GameString> entry = intlMergeFile.getOrAddEntry(null, string.getId(), modId);
+                detectManualTextModification(entry, string.getId(), originalIntl);
+                
                 originalIntl.putString(new GameString(string.getId(), string.getTexts()));
             } else {
                 // TODO: make this use the english text as a fallback
@@ -719,10 +738,31 @@ class SaveTask extends Task<Void> {
             }
         }
         
-        table.addEntry("*", "", "res/properties/translation-local.xml");
-        table.addEntry("*", "", "res/properties/translation-tool-export.xml");
-        TextLoader.saveText(originalLocal, localPath.toFile());
-        TextLoader.saveText(originalIntl, intlPath.toFile());
+        TextLoader.saveText(originalLocal, Paths.get(customWog2, "game", localPath));
+        TextLoader.saveText(originalIntl, Paths.get(customWog2, "game", intlPath));
+    }
+    
+    private static void detectManualTextModification(MergeEntry<GameString> outEntry, String realId, TextDB originalText) {
+        if (outEntry.getModValue() == null) {
+            // Merging this entry for the first time ever, so save its current value
+            Optional<GameString> originalString = originalText.getString(realId);
+            
+            if (originalString.isPresent()) {
+                outEntry.setOriginalValue(originalString.get());
+            }
+            return;
+        }
+        
+        // Detect if original value in resources.xml is different from modValue
+        // (i.e. it was modified by the user), so the user-modified value can be saved
+        GameString savedString = outEntry.getModValue();
+        
+        // This is the (original) value loaded from the customWog2 directory
+        Optional<GameString> originalString = originalText.getString(realId);
+        
+        if (originalString.isPresent() && !originalString.get().equals(savedString)) {
+            outEntry.setOriginalValue(originalString.get());
+        }
     }
     
     private void writeCompiledFile(ResFileTable table, Goo2mod mod, Resource resource) throws IOException {
@@ -888,7 +928,7 @@ class SaveTask extends Task<Void> {
         
     }
     
-    private void mergeXml(ResFileTable table, MergeFile<MergeValue> mergeFile, Resource resource, Path customPath, String modId) throws IOException {
+    private void mergeXml(ResFileTable table, MergeFile<ResrcValue> mergeFile, Resource resource, Path customPath, String modId) throws IOException {
         // TODO: cache these
         ResrcManifest original = ResrcLoader.loadManifest(customPath);
         ResrcManifest patch = ResrcLoader.loadManifest(resource.content());

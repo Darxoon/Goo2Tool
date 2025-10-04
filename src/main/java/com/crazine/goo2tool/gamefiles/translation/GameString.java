@@ -1,6 +1,7 @@
 package com.crazine.goo2tool.gamefiles.translation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,16 +29,41 @@ public class GameString {
         public String getLanguage() {
             return language;
         }
-        public void setLanguage(String language) {
-            this.language = language;
-        }
-        
         public String getText() {
             return text;
         }
-        public void setText(String text) {
-            this.text = text;
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((language == null) ? 0 : language.hashCode());
+            result = prime * result + ((text == null) ? 0 : text.hashCode());
+            return result;
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            LocaleText other = (LocaleText) obj;
+            if (language == null) {
+                if (other.language != null)
+                    return false;
+            } else if (!language.equals(other.language))
+                return false;
+            if (text == null) {
+                if (other.text != null)
+                    return false;
+            } else if (!text.equals(other.text))
+                return false;
+            return true;
+        }
+        
     }
     
     private String id;
@@ -65,15 +91,8 @@ public class GameString {
     public String getId() {
         return id;
     }
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public List<LocaleText> getTexts() {
-        return texts;
-    }
-    public void setTexts(List<LocaleText> texts) {
-        this.texts = texts;
+        return Collections.unmodifiableList(texts);
     }
     
     @JsonIgnore
@@ -96,6 +115,37 @@ public class GameString {
         }
         
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + ((texts == null) ? 0 : texts.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        GameString other = (GameString) obj;
+        if (id == null) {
+            if (other.id != null)
+                return false;
+        } else if (!id.equals(other.id))
+            return false;
+        if (texts == null) {
+            if (other.texts != null)
+                return false;
+        } else if (!texts.equals(other.texts))
+            return false;
+        return true;
     }
     
 }

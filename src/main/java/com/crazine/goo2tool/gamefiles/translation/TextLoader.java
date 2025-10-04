@@ -36,12 +36,12 @@ public class TextLoader {
         return mapper.writeValueAsBytes(text);
     }
     
-    public static void saveText(TextDB text, File outFile) throws IOException {
+    public static void saveText(TextDB text, Path outFile) throws IOException {
         XmlMapper mapper = new XmlMapper();
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         mapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
         
-        mapper.writeValue(outFile, text);
+        mapper.writeValue(outFile.toFile(), text);
     }
     
 }

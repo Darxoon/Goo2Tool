@@ -5,10 +5,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import javax.xml.stream.XMLStreamReader;
 
-import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeValue;
+import com.crazine.goo2tool.functional.save.mergetable.ResrcMergeTable.ResrcValue;
 import com.crazine.goo2tool.gamefiles.resrc.Resrc;
 import com.crazine.goo2tool.gamefiles.resrc.Resrc.SetDefaults;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcLoader.ResrcGroupDeserializer;
@@ -27,15 +28,15 @@ import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 
 public class MergeTableLoader {
     
-    public static class MergeValueDeserializer extends StdDeserializer<MergeValue> {
-        public MergeValueDeserializer() {
+    public static class ResrcValueDeserializer extends StdDeserializer<ResrcValue> {
+        public ResrcValueDeserializer() {
             this(null);
         }
-        public MergeValueDeserializer(Class<MergeValue> vc) {
+        public ResrcValueDeserializer(Class<ResrcValue> vc) {
             super(vc);
         }
         @Override
-        public MergeValue deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
+        public ResrcValue deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
             FromXmlParser parser = (FromXmlParser) p;
             XMLStreamReader stax = parser.getStaxReader();
             
@@ -49,19 +50,19 @@ public class MergeTableLoader {
             if (parser.getCurrentToken().isStructStart())
                 throw new IOException("Expected end of Entry element");
             
-            return new MergeValue(setDefaults, value);
+            return new ResrcValue(setDefaults, value);
         }
     }
     
-    public static class MergeValueSerializer extends StdSerializer<MergeValue> {
-        public MergeValueSerializer() {
+    public static class ResrcValueSerializer extends StdSerializer<ResrcValue> {
+        public ResrcValueSerializer() {
             this(null);
         }
-        public MergeValueSerializer(Class<MergeValue> t) {
+        public ResrcValueSerializer(Class<ResrcValue> t) {
             super(t);
         }
         @Override
-        public void serialize(MergeValue value, JsonGenerator g, SerializerProvider provider) throws IOException {
+        public void serialize(ResrcValue value, JsonGenerator g, SerializerProvider provider) throws IOException {
             ToXmlGenerator gen = (ToXmlGenerator) g;
             gen.writeStartObject();
             
@@ -72,23 +73,23 @@ public class MergeTableLoader {
         }
     }
     
-    public static ResrcMergeTable loadOrInit(Path resFile) throws IOException {
+    public static <T extends MergeTable<?>> Optional<T> load(Path resFile, Class<T> class1) throws IOException {
         try {
             
             byte[] content = Files.readAllBytes(resFile);
             
             if (content.length == 0)
-                return new ResrcMergeTable();
+                return Optional.empty();
             
             XmlMapper xmlMapper = new XmlMapper();
-            return xmlMapper.readValue(content, ResrcMergeTable.class);
+            return Optional.of(xmlMapper.readValue(content, class1));
             
         } catch (FileNotFoundException | NoSuchFileException e) {
-            return new ResrcMergeTable();
+            return Optional.empty();
         }
     }
     
-    public static void save(MergeTable table, Path outFile) throws IOException {
+    public static void save(MergeTable<?> table, Path outFile) throws IOException {
         
         if (!Files.exists(outFile))
             Files.createFile(outFile);

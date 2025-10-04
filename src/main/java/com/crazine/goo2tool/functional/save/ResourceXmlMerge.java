@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeEntry;
 import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeFile;
-import com.crazine.goo2tool.functional.save.mergetable.MergeTable.MergeValue;
+import com.crazine.goo2tool.functional.save.mergetable.ResrcMergeTable.ResrcValue;
 import com.crazine.goo2tool.gamefiles.resrc.Resrc;
 import com.crazine.goo2tool.gamefiles.resrc.Resrc.SetDefaults;
 import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
@@ -14,7 +14,7 @@ import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 
 public class ResourceXmlMerge {
     
-    public static ResrcManifest transformResources(ResrcManifest original, ResrcManifest patch, MergeFile<MergeValue> mergeFile, String modId) {
+    public static ResrcManifest transformResources(ResrcManifest original, ResrcManifest patch, MergeFile<ResrcValue> mergeFile, String modId) {
         List<ResrcGroup> groups = new ArrayList<>();
         groups.addAll(original.getGroups());
         
@@ -49,7 +49,7 @@ public class ResourceXmlMerge {
         return new ResrcManifest(groups);
     }
     
-    private static ResrcGroup transformGroup(ResrcGroup original, ResrcGroup patch, MergeFile<MergeValue> mergeFile, String modId) {
+    private static ResrcGroup transformGroup(ResrcGroup original, ResrcGroup patch, MergeFile<ResrcValue> mergeFile, String modId) {
         if (patch == null || patch.getResources().isEmpty())
             return original;
         
@@ -72,44 +72,46 @@ public class ResourceXmlMerge {
                 throw new IllegalArgumentException("Resrc Group is missing a <SetDefaults>");
             
             String realId = setDefaults.idprefix() + resrc.id();
-            MergeEntry<MergeValue> entry = mergeFile.getOrAddEntry(patch.getId(), realId, modId);
+            MergeEntry<ResrcValue> entry = mergeFile.getOrAddEntry(patch.getId(), realId, modId);
             
             detectManualModification(entry, realId, out);
             
             out.removeResource(realId);
-            entry.setModValue(new MergeValue(setDefaults, resrc));
+            entry.setModValue(new ResrcValue(setDefaults, resrc));
         }
         
         out.addResources(patch.getResources(), true);
         return out;
     }
     
-    private static void detectManualModification(MergeEntry<MergeValue> entry, String realId, ResrcGroup outGroup) {
-        if (entry.getModValue() == null) {
+    private static void detectManualModification(MergeEntry<ResrcValue> outEntry, String realId, ResrcGroup originalGroup) {
+        if (outEntry.getModValue() == null) {
             // Merging this entry for the first time ever, so save its current value
-            Optional<Resrc> originalResrc = outGroup.getResource(realId);
-            Optional<Resrc.SetDefaults> originalSetDefaults = outGroup.getResourceSetDefaults(realId);
+            Optional<Resrc> originalResrc = originalGroup.getResource(realId);
+            Optional<Resrc.SetDefaults> originalSetDefaults = originalGroup.getResourceSetDefaults(realId);
             
             if (originalResrc.isPresent() && originalSetDefaults.isPresent()) {
-                entry.setOriginalValue(new MergeValue(originalSetDefaults.get(), originalResrc.get()));
+                outEntry.setOriginalValue(new ResrcValue(originalSetDefaults.get(), originalResrc.get()));
             }
             return;
         }
         
         // Detect if value in resources.xml is different from modValue
         // (i.e. it was modified by the user), so the user-modified value can be saved
-        MergeValue modValue = entry.getModValue();
+        ResrcValue modValue = outEntry.getModValue();
         
-        String originalPath = modValue.getSetDefaults().path() + modValue.getValue().path();
+        // This is the value that was saved in the MergeTable
+        String savedPath = modValue.getSetDefaults().path() + modValue.getValue().path();
         
-        Optional<Resrc> originalResrc = outGroup.getResource(realId);
-        Optional<Resrc.SetDefaults> originalSetDefaults = outGroup.getResourceSetDefaults(realId);
-        Optional<String> originalResrcPath = outGroup.getResourcePath(realId);
+        // These are the values loaded from the customWog2 directory
+        Optional<Resrc> customResrc = originalGroup.getResource(realId);
+        Optional<Resrc.SetDefaults> customSetDefaults = originalGroup.getResourceSetDefaults(realId);
+        Optional<String> customResrcPath = originalGroup.getResourcePath(realId);
         
-        if (originalResrcPath.isPresent() && !originalResrcPath.get().equals(originalPath)) {
-            assert originalResrc.isPresent() && originalSetDefaults.isPresent();
+        if (customResrcPath.isPresent() && !customResrcPath.get().equals(savedPath)) {
+            assert customResrc.isPresent() && customSetDefaults.isPresent();
             
-            entry.setOriginalValue(new MergeValue(originalSetDefaults.get(), originalResrc.get()));
+            outEntry.setOriginalValue(new ResrcValue(customSetDefaults.get(), customResrc.get()));
         }
     }
     

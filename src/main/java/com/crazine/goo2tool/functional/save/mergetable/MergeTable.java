@@ -2,45 +2,23 @@ package com.crazine.goo2tool.functional.save.mergetable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import com.crazine.goo2tool.gamefiles.resrc.Resrc;
-import com.crazine.goo2tool.gamefiles.resrc.Resrc.SetDefaults;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
-public abstract class MergeTable {
+public abstract class MergeTable<T> {
     
     public static enum MergeType {
         @JsonProperty("resource_xml")
         RESOURCE_XML,
-    }
-    
-    @JsonDeserialize(using = MergeTableLoader.MergeValueDeserializer.class)
-    @JsonSerialize(using = MergeTableLoader.MergeValueSerializer.class)
-    public static class MergeValue {
-        
-        private Resrc.SetDefaults setDefaults;
-        private Resrc value;
-        
-        public MergeValue(SetDefaults setDefaults, Resrc value) {
-            this.setDefaults = setDefaults;
-            this.value = value;
-        }
-        
-        public Resrc.SetDefaults getSetDefaults() {
-            return setDefaults;
-        }
-        public Resrc getValue() {
-            return value;
-        }
-        
+        @JsonProperty("translation_xml")
+        TRANSLATION_XML,
     }
     
     @JsonInclude(Include.NON_NULL)
@@ -110,7 +88,7 @@ public abstract class MergeTable {
             MergeEntry<T> entry = null;
             
             for (MergeEntry<T> currentEntry : entries) {
-                if (currentEntry.getGroup().equals(group) && currentEntry.getId().equals(id)) {
+                if (Objects.equals(currentEntry.getGroup(), group) && currentEntry.getId().equals(id)) {
                     entry = currentEntry;
                     break;
                 }
@@ -139,10 +117,10 @@ public abstract class MergeTable {
     
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "File")
-    private List<MergeFile<MergeValue>> files = new ArrayList<>();
+    private List<MergeFile<T>> files = new ArrayList<>();
     
-    public Optional<MergeFile<MergeValue>> getFile(String path) {
-        for (MergeFile<MergeValue> file : files) {
+    public Optional<MergeFile<T>> getFile(String path) {
+        for (MergeFile<T> file : files) {
             if (file.getPath().equals(path))
                 return Optional.of(file);
         }
@@ -150,18 +128,18 @@ public abstract class MergeTable {
         return Optional.empty();
     }
     
-    public MergeFile<MergeValue> getOrAddFile(String path, Supplier<MergeFile<MergeValue>> factory) {
-        for (MergeFile<MergeValue> file : files) {
+    public MergeFile<T> getOrAddFile(String path, Supplier<MergeFile<T>> factory) {
+        for (MergeFile<T> file : files) {
             if (file.getPath().equals(path))
                 return file;
         }
         
-        MergeFile<MergeValue> newFile = factory.get();
+        MergeFile<T> newFile = factory.get();
         files.add(newFile);
         return newFile;
     }
     
-    public MergeFile<MergeValue> addFile(MergeFile<MergeValue> file) {
+    public MergeFile<T> addFile(MergeFile<T> file) {
         files.add(file);
         return file;
     }
@@ -169,11 +147,11 @@ public abstract class MergeTable {
     @JacksonXmlProperty(isAttribute = true)
     public abstract MergeType getType();
     
-    public List<MergeFile<MergeValue>> getFiles() {
+    public List<MergeFile<T>> getFiles() {
         return files;
     }
 
-    public void setFiles(List<MergeFile<MergeValue>> files) {
+    public void setFiles(List<MergeFile<T>> files) {
         this.files = files;
     }
     
