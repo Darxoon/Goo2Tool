@@ -462,11 +462,20 @@ class ExportTask extends Task<Void> {
         if (id == null || id.isEmpty())
             return id;
         
-        // TODO (priority): Implement DependencyType for assets
-        
         // get custom resource
         ResrcGroup group = customResrcs.get(type);
         PathResrc<? extends Resrc> resrc = getResrc(id, group, type.resrcClass);
+        
+        // Check for dependency
+        String resrcActualPath = resrc.fullPath() + "." + resrc.resrc().fileExtension();
+        
+        Optional<OverriddenFileEntry> environmentEntry = resFileTable.getEntry(resrcActualPath);
+        if (environmentEntry.isPresent() && !environmentEntry.get().getModId().equals(addinInfo.modId())) {
+            DependencyType dependencyType = getDependecyType(environmentEntry.get().getModId());
+            
+            if (dependencyType == DependencyType.REQUIRE)
+                return id;
+        }
         
         // get original resource
         ResrcGroup originalGroup = originalResrcs.get(type);
@@ -474,7 +483,7 @@ class ExportTask extends Task<Void> {
         Optional<String> originalResrcPath = originalGroup.getResourcePath(id);
         
         // if original resource is non existant or different, add the asset to output
-        Path contentPath = Paths.get(customWog2, "game", resrc.fullPath() + "." + resrc.resrc().fileExtension());
+        Path contentPath = Paths.get(customWog2, "game", resrcActualPath);
         byte[] content = Files.readAllBytes(contentPath);
         
         if (originalResrc.isPresent() && originalResrcPath.isPresent()) {
