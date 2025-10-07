@@ -18,6 +18,8 @@ import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.crazine.goo2tool.addinfile.AddinFileLoader;
+import com.crazine.goo2tool.addinfile.AddinReader;
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.addinfile.Goo2mod.ModType;
 import com.crazine.goo2tool.functional.FistyInstaller;
@@ -388,14 +390,52 @@ class ExportTask extends Task<Void> {
         String newLevelContent = LevelLoader.saveLevel(levelJson);
         compiledResources.add(new CompiledResource(CompileType.LEVEL, level.getUuid(), newLevelContent));
         
+        // Check dependencies that use FistyLoader
+        List<Goo2mod> enabledAddins = AddinFileLoader.loadEnabledAddins();
+        
+        boolean transitivelyRequiresFistyLoader = false;
+        
+        for (Entry<String, DependencyType> entry : modDependencyTypes.entrySet()) {
+            String modId = entry.getKey();
+            DependencyType dependecyType = entry.getValue();
+            
+            if (dependecyType != DependencyType.REQUIRE)
+                continue;
+            
+            Optional<Goo2mod> goo2mod = enabledAddins.stream()
+                    .filter(curAddin -> curAddin.getId().equals(modId))
+                    .findAny();
+            
+            if (goo2mod.isEmpty())
+                throw new IOException("Unknown mod with ID " + modId);
+            if (goo2mod.get().getDependency("FistyLoader").isEmpty())
+                continue;
+            
+            try (AddinReader addin = new AddinReader(goo2mod.get().getFile())) {
+                String depBalls = addin.getFileText("balls.ini").orElse(null);
+                
+                if (depBalls == null)
+                    continue;
+                
+                if (depBalls.startsWith("; Mod-specific custom gooballs\n"))
+                    depBalls = depBalls.substring(31);
+                
+                if (outBallsString != null)
+                    outBallsString += "\n; From dependency "  + modId + "\n" + depBalls;
+                else
+                    outBallsString = "; From dependency "  + modId + "\n" + depBalls;
+            } catch (IOException e) {
+                throw new IOException("Failed loading goo2mod " + modId + ": " + e.getMessage(), e);
+            }
+        }
+        
         // Create addin.xml
         Goo2mod mod = new Goo2mod(new VersionNumber(2, 2), addinInfo.modId(), addinInfo.name(), ModType.LEVEL,
                 addinInfo.version(), addinInfo.description(), addinInfo.author());
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
         
-        // TODO (priority): Make sure transitive FistyLoader dependencies are handled correctly
-        if (outBallsString != null) {
+        if (outBallsString != null || transitivelyRequiresFistyLoader) {
             mod.getDependencies().add(new Goo2mod.Depends("FistyLoader", FistyInstaller.FISTY_VERSION));
         }
         
