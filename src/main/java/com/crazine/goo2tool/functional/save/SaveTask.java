@@ -179,7 +179,7 @@ class SaveTask extends Task<Void> {
         }
         
         // Restore all original merge values of mods that are not installed
-        // TODO (priority): also do this for TranslationMergeTable
+        // TODO: try to share code between these?
         logger.debug("Restoring original merge values");
         Set<String> enabledAddinIds = properties.getAddins().stream()
                 .filter(addin -> addin.isLoaded())
@@ -190,6 +190,7 @@ class SaveTask extends Task<Void> {
             Path filePath = Paths.get(customWog2, "game", file.getPath());
             ResrcManifest manifest = ResrcLoader.loadManifest(filePath);
             
+            // restore original values
             for (MergeEntry<ResrcValue> entry : file.getEntries()) {
                 if (enabledAddinIds.contains(entry.getModId()))
                     continue;
@@ -214,8 +215,29 @@ class SaveTask extends Task<Void> {
                 group.addResources(List.of(originalValue.getSetDefaults(), originalValue.getValue()), true);
             }
             
+            // remove old values from MergeTable
             file.getEntries().removeIf(entry -> !enabledAddinIds.contains(entry.getModId()) && entry.getOriginalValue() != null);
             ResrcLoader.saveManifest(manifest, filePath.toFile());
+        }
+        
+        for (MergeFile<GameString> file : translationMergeTable.getFiles()) {
+            Path filePath = Paths.get(customWog2, "game", file.getPath());
+            TextDB text = TextLoader.loadText(filePath);
+            
+            // restore original values
+            for (MergeEntry<GameString> entry : file.getEntries()) {
+                if (enabledAddinIds.contains(entry.getModId()))
+                    continue;
+                
+                if (entry.getOriginalValue() == null)
+                    continue;
+                
+                text.putString(entry.getOriginalValue());
+            }
+            
+            // remove old values from MergeTable
+            file.getEntries().removeIf(entry -> !enabledAddinIds.contains(entry.getModId()) && entry.getOriginalValue() != null);
+            TextLoader.saveText(text, filePath);
         }
         
         // Load ballTable
