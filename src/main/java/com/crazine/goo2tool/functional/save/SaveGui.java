@@ -8,6 +8,7 @@ import java.util.Optional;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.addinfile.AddinFileLoader;
 import com.crazine.goo2tool.addinfile.Goo2mod;
+import com.crazine.goo2tool.gamefiles.ResArchive;
 import com.crazine.goo2tool.gui.util.CustomFileChooser;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.properties.Properties;
@@ -95,6 +96,14 @@ public class SaveGui {
             return Optional.empty();
         }
         
+        ResArchive res;
+        try {
+            res = ResArchive.loadOrSetupVanilla(originalStage);
+        } catch (IOException e) {
+            FX_Alarm.error(e);
+            return Optional.empty();
+        }
+        
         // Verify dependencies
         List<Goo2mod> enabledGoo2mods;
 		try {
@@ -128,7 +137,7 @@ public class SaveGui {
 
         stage.getIcons().add(IconLoader.getTerrain());
 
-        SaveTask task = new SaveTask(stage);
+        SaveTask task = new SaveTask(res);
         
         Label contentLabel = new Label();
         contentLabel.textProperty().bind(task.messageProperty());

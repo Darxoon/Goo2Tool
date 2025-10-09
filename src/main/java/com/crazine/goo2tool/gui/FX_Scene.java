@@ -176,14 +176,17 @@ public class FX_Scene {
         
         if (!customLaunchCommand.isEmpty()) {
             switch (Platform.getCurrent()) {
-                case WINDOWS:
-                    // TODO (priority): use cmd.exe for this probably
+                case WINDOWS: {
+                    ProcessBuilder processBuilder = new ProcessBuilder("cmd.exe", "/c", customLaunchCommand);
+                    process = processBuilder.start();
                     break;
+                }
                 case MAC:
-                case LINUX:
+                case LINUX: {
                     ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", customLaunchCommand);
                     process = processBuilder.start();
                     break;
+                }
             }
         } else if (PropertiesLoader.getProperties().isSteam()) {
             if (Platform.getCurrent() == Platform.LINUX) {
@@ -194,7 +197,6 @@ public class FX_Scene {
                 Main_Application.openUrl("steam://rungameid/3385670");
             }
         } else {
-            // TODO (priority): test this on Windows
             Path customWog2 = Path.of(PropertiesLoader.getProperties().getTargetWog2Directory());
             
             // directly launch executable

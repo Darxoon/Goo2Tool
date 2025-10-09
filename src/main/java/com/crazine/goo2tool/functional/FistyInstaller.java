@@ -11,6 +11,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -41,12 +42,17 @@ public class FistyInstaller {
     
     public static final VersionNumber FISTY_VERSION = new VersionNumber(1, 1);
     
-    public static final String BASE_WOG2_STEAM_HASH = "0b39f56b47d6947640ca5c8fba0b91af";
+    // TODO (priority): check Linux exe hashes again
+    public static final String[] BASE_WOG2_STEAM_HASHES = new String[] {
+        "0b39f56b47d6947640ca5c8fba0b91af",
+        "15A7003708E092BA32E7CC2201AF15F8",
+    };
     public static final Map<String, VersionNumber> FISTY_WOG2_STEAM_HASHES;
     
     static {
         Map<String, VersionNumber> fistyHashes = new HashMap<>();
         fistyHashes.put("ca31b42aa49d5eff6ec42e6267602620", new VersionNumber(1, 1));
+        fistyHashes.put("0B39F56B47D6947640CA5C8FBA0B91AF", new VersionNumber(1, 1));
         
         FISTY_WOG2_STEAM_HASHES = Collections.unmodifiableMap(fistyHashes);
     }
@@ -165,7 +171,7 @@ public class FistyInstaller {
         // Check file hash
         String hash = HashUtil.getMD5Hash(originalExe);
         
-        if (hash.equals(BASE_WOG2_STEAM_HASH)) {
+        if (List.of(BASE_WOG2_STEAM_HASHES).contains(hash)) {
             // Backup game
             Path backupPath = originalExePath.resolveSibling("WorldOfGoo2_backup.exe");
             
@@ -208,7 +214,7 @@ public class FistyInstaller {
         byte[] backupExe = Files.readAllBytes(backupExePath);
         String hash = HashUtil.getMD5Hash(backupExe);
         
-        if (hash.equals(BASE_WOG2_STEAM_HASH)) {
+        if (List.of(BASE_WOG2_STEAM_HASHES).contains(hash)) {
             return Optional.of(backupExe);
         } else {
             return Optional.empty();

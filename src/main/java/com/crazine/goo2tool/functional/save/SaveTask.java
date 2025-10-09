@@ -80,23 +80,23 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.stage.Stage;
 
 class SaveTask extends Task<Void> {
     
     private static Logger logger = LoggerFactory.getLogger(SaveTask.class);
     
-    private final Stage stage;
+    private final ResArchive res;
     
     private boolean success = true;
 
-    SaveTask(Stage stage) {
-        this.stage = stage;
+
+    SaveTask(ResArchive res) {
+        this.res = res;
     }
 
     @Override
     protected Void call() {
-        try (ResArchive res = ResArchive.loadOrSetupVanilla(stage)) {
+        try (ResArchive res = this.res) {
             save(res);
         } catch (Exception e) {
             success = false;

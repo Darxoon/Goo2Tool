@@ -73,7 +73,7 @@ public class FileOptions {
         contents.getColumnConstraints().addAll(column1, column2, column3, column4);
         
         ExtensionFilter exeFilter = switch (Platform.getCurrent()) {
-            case WINDOWS -> new ExtensionFilter("World of Goo 2 executable", "World Of Goo 2.exe");
+            case WINDOWS -> new ExtensionFilter("World of Goo 2 executable", "*.exe");
             case LINUX -> new ExtensionFilter("World of Goo 2 executable (WorldOfGoo2, *.exe, *.AppImage)",
                     "*.exe", "WorldOfGoo2", "*.AppImage");
             case MAC -> null;
@@ -106,14 +106,22 @@ public class FileOptions {
         
         switch (Platform.getCurrent()) {
             case WINDOWS: {
+                boolean prevSteam = properties.isSteam();
                 Path steamExePath = Path.of(baseWog2, "WorldOfGoo2.exe");
                 
-                // TODO (priority): Reinitialize profile and save file
                 if (Files.isRegularFile(steamExePath)) {
+                    // Steam
                     properties.setSteam(true);
+                    
+                    updateProfileAndSaveFile(prevSteam, false, "Steam version");
+                    
                     FX_Setup.detectFistyVersion(baseWog2);
                 } else {
+                    // Standalone windows version
                     properties.setSteam(false);
+                    
+                    updateProfileAndSaveFile(prevSteam, false, "Standalone version");
+                    
                     properties.setFistyVersion(null);
                 }
                 break;
@@ -175,6 +183,10 @@ public class FileOptions {
             } catch (IOException e) {
                 properties.setSaveFilePath("");
                 FX_Alarm.error(e);
+            }
+            
+            if (Platform.getCurrent() != Platform.LINUX || !prevSteam || !properties.isSteam()) {
+                properties.setResGooPath("");
             }
             
             FX_Alert.info("Goo2Tool",
