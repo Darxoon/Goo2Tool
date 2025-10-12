@@ -42,7 +42,7 @@ public class FistyInstaller {
     
     public static final VersionNumber FISTY_VERSION = new VersionNumber(1, 1);
     
-    // TODO (priority): check Linux exe hashes again
+    // TODO (priority): check Windows exe hashes again
     public static final String[] BASE_WOG2_STEAM_HASHES = new String[] {
         "0b39f56b47d6947640ca5c8fba0b91af",
         "15A7003708E092BA32E7CC2201AF15F8",
@@ -52,7 +52,6 @@ public class FistyInstaller {
     static {
         Map<String, VersionNumber> fistyHashes = new HashMap<>();
         fistyHashes.put("ca31b42aa49d5eff6ec42e6267602620", new VersionNumber(1, 1));
-        fistyHashes.put("0B39F56B47D6947640CA5C8FBA0B91AF", new VersionNumber(1, 1));
         
         FISTY_WOG2_STEAM_HASHES = Collections.unmodifiableMap(fistyHashes);
     }
