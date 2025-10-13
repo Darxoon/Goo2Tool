@@ -42,11 +42,7 @@ public class FistyInstaller {
     
     public static final VersionNumber FISTY_VERSION = new VersionNumber(1, 1);
     
-    // TODO (priority): check Windows exe hashes again
-    public static final String[] BASE_WOG2_STEAM_HASHES = new String[] {
-        "0b39f56b47d6947640ca5c8fba0b91af",
-        "15A7003708E092BA32E7CC2201AF15F8",
-    };
+    public static final String BASE_WOG2_STEAM_HASH = "0b39f56b47d6947640ca5c8fba0b91af";
     public static final Map<String, VersionNumber> FISTY_WOG2_STEAM_HASHES;
     
     static {
@@ -170,7 +166,7 @@ public class FistyInstaller {
         // Check file hash
         String hash = HashUtil.getMD5Hash(originalExe);
         
-        if (List.of(BASE_WOG2_STEAM_HASHES).contains(hash)) {
+        if (BASE_WOG2_STEAM_HASH.equals(hash)) {
             // Backup game
             Path backupPath = originalExePath.resolveSibling("WorldOfGoo2_backup.exe");
             
@@ -213,7 +209,7 @@ public class FistyInstaller {
         byte[] backupExe = Files.readAllBytes(backupExePath);
         String hash = HashUtil.getMD5Hash(backupExe);
         
-        if (List.of(BASE_WOG2_STEAM_HASHES).contains(hash)) {
+        if (BASE_WOG2_STEAM_HASH.equals(hash)) {
             return Optional.of(backupExe);
         } else {
             return Optional.empty();
