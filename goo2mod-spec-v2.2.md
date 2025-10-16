@@ -120,7 +120,7 @@ Special care also has to be applied to arrays (`[ ... ]` in JSON). Instead of al
 
     For example, to change the typeEnum of a gooball in an existing level, you could do this:
     
-    ```JSON
+    ```JSONc
     ...
     "balls": {
         "__propertyType__": "array",
@@ -140,7 +140,7 @@ Special care also has to be applied to arrays (`[ ... ]` in JSON). Instead of al
 
     For example, if you wanted to add your own custom material to `res/properties/materials.wog2`, you could something like this file at `merge/res/properties/materials.wog2`:
     
-    ```JSON
+    ```JSONc
     {
         "__type__": "jsonMerge",
         "materials": {
