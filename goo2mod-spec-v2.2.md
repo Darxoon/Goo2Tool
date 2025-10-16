@@ -90,7 +90,7 @@ Note that unlike the original game's resource.xml files, here, all `Resources` e
 
 In the rare case that you actually do not want to prefix resource ID's and paths with anything (such as in `res/editor/resources.xml` for example), you can leave both the idprefix and path attributes of the SetDefaults blank, like this: `<SetDefaults idprefix="" path="" />`
 
-Also note that at the time of writing this at least, you probably should not use any custom SetDefaults values that are not present in the vanilla version of the file, as Goo2Tool might not handle them correctly and cause your file to break.
+>Note:  at the time of writing this at least, you probably should not use any custom SetDefaults values that are not present in the vanilla version of the file, as Goo2Tool might not handle them correctly and cause your file to break.
 
 ### .wog2
 
