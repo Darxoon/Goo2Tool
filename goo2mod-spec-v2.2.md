@@ -2,6 +2,10 @@
 
 Goo2Tool implements the (unofficial) version 2.2 of the goo2mod spec, which will be detailed in the following.
 
+> Note: Goo2Tool's "package level as .goo2mod" feature already does most of this automatically for you if all you need to export is a level and the custom resources it depends on.
+> 
+> However, in case you need to do manual edits to the resulting goo2mod or create anything more complex than this, it is still a good idea to properly learn the goo2mod format.
+
 ## Overview
 
 A .goo2mod file is essentially just a zip file renamed to .goo2mod. It consists of two files and three directories in the root level. Note that the zip root may contain more than that, for example, due to [the FistyLoader spec extension](goo2mod-fistyloader.md). However, all items defined are are as follows:
@@ -38,7 +42,7 @@ The addin.xml file contains one root xml element, called addin, which must have 
 
 * `author` *(required)*: Your name/username.
 
-* `dependencies`: This can contain a list of other addins that your addin depends on, e.g., because your addin uses resources that are included in the depended on mod. Whenever someone tries to install your mod and doesn't have all dependencies installed and enabled, Goo2Tool will tell them and force them to install them too.
+* `dependencies`: This can contain a list of other addins that your addin depends on, e.g., because your addin uses resources that are included in the depended on mod. Whenever someone tries to install your mod and doesn't have all dependencies installed and enabled, Goo2Tool will tell them and force them to install the dependencies too.
 
     Each item in this list of dependencies should be an xml tag with the name `depends`, which can have the attributes `min-version` and `max-version`. The content of the tag is the ID of the addin you are depending on.
 
@@ -79,6 +83,7 @@ All in all, your addin.xml could, for example, look something like this:
 The only currently supported files to be put in the `merge/` folder are any .wog2 file and any resources.xml / _resources.xml / .resrc file, although more file types may come in the future.
 
 ### resources.xml
+
 Resource merges work almost the same as the original game's resources.xml files. At the root, they contain an xml element named `ResourceManifest`. This element can contain any number of `Resources` elements, all of which have to have an `id` attribute and can contain any number of `SetDefaults`, `Image`, `Sound`, etc. tags.
 
 Note that unlike the original game's resource.xml files, here, all `Resources` elements must start with a `SetDefaults`. This is to ensure that any resources that come after it do not get prefixed with some unexpected idprefix or path from another mod, which will probably break things.
