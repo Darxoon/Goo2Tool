@@ -2,7 +2,7 @@
 
 A mod loader for World of Goo 2 which allows you to publish and install custom mods in the .goo2mod format.
 
-Make sure you have Java 17 or above installed.
+Make sure you have Java 21 or above installed.
 
 ## Usage
 
@@ -24,6 +24,6 @@ Note that Flavor Extractor requires FistyLoader (which might also make it a good
 
 ## Building
 
-Make sure you have the JDK 17+ and Maven installed.
+Make sure you have the JDK 21+ and Maven installed.
 
 Open the Goo2Tool folder in the command line and run `mvn install`. This should install all necessary dependencies and compile the program into `Goo2Tool.jar` in the root of the project  folder.
