@@ -88,7 +88,7 @@ public class JsonMerge {
             
             
             for (Map.Entry<String, JsonNode> field : toMerge.properties()) {
-                int index = Integer.valueOf(field.getKey());
+                int index = Integer.parseInt(field.getKey());
                 JsonNode valuePatch = field.getValue();
                 
                 if (!valuePatch.isObject())

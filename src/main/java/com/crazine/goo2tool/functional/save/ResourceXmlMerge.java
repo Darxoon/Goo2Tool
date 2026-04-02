@@ -15,11 +15,10 @@ import com.crazine.goo2tool.gamefiles.resrc.ResrcManifest;
 public class ResourceXmlMerge {
     
     public static ResrcManifest transformResources(ResrcManifest original, ResrcManifest patch, MergeFile<ResrcValue> mergeFile, String modId) {
-        List<ResrcGroup> groups = new ArrayList<>();
-        groups.addAll(original.getGroups());
+        List<ResrcGroup> groups = new ArrayList<>(original.getGroups());
         
         for (ResrcGroup patchGroup : patch.getGroups()) {
-            // try find original group belonging to patch
+            // try to find original group belonging to patch
             ResrcGroup originalGroup = null;
             int originalGroupIndex = -1;
             
@@ -55,7 +54,7 @@ public class ResourceXmlMerge {
         
         ResrcGroup out = original.copy();
         
-        if (!(patch.getResources().get(0) instanceof Resrc.SetDefaults)) {
+        if (!(patch.getResources().getFirst() instanceof Resrc.SetDefaults)) {
             throw new IllegalArgumentException("Resources \""
                 + original.getId() + "\" has to start with a SetDefaults element (to avoid compatibility issues)!");
         }

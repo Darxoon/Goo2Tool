@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -113,7 +114,7 @@ class ExportTask extends Task<Void> {
     
     private static class CancelException extends RuntimeException {}
     
-    private static Logger logger = LoggerFactory.getLogger(ExportTask.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExportTask.class);
     
     private final Stage stage;
     private final AddinInfo addinInfo;
@@ -128,15 +129,15 @@ class ExportTask extends Task<Void> {
     
     private ResFileTable resFileTable;
     
-    private Map<String, DependencyType> modDependencyTypes = new HashMap<>();
+    private final Map<String, DependencyType> modDependencyTypes = new HashMap<>();
     
-    private Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
-    private Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
+    private final Map<AssetType, ResrcGroup> customResrcs = new HashMap<>();
+    private final Map<AssetType, ResrcGroup> originalResrcs = new HashMap<>();
     
-    private List<CompiledResource> compiledResources = new ArrayList<>();
-    private List<AssetResource> assetResources = new ArrayList<>();
+    private final List<CompiledResource> compiledResources = new ArrayList<>();
+    private final List<AssetResource> assetResources = new ArrayList<>();
     
-    private Set<String> customGooballIds = new HashSet<>();
+    private final Set<String> customGooballIds = new HashSet<>();
     
     private boolean success = true;
 
@@ -211,6 +212,9 @@ class ExportTask extends Task<Void> {
         
         // translation-local.xml
         Optional<byte[]> translationLocalBytes = res.getFileContent("res/properties/translation-local.xml");
+        if (translationLocalBytes.isEmpty())
+            throw new IOException("Missing file in game res: res/properties/translation-local.xml");
+
         TextDB translationLocal = TextLoader.loadText(translationLocalBytes.get());
         TextDB customTranslationLocal = TextLoader.loadText(Paths.get(customWog2, "game/res/properties/translation-local.xml"));
         
@@ -260,7 +264,7 @@ class ExportTask extends Task<Void> {
                 
                 assetResources.add(new AssetResource(AssetType.THUMBNAIL, null, level.getUuid(), thumbnailContent));
                 addinThumbnailPath = "res/thumbnails/" + level.getUuid() + ".jpg";
-            } catch (NoSuchFileException e) {}
+            } catch (NoSuchFileException ignored) {}
         }
         
         // Load resrc files
@@ -280,9 +284,7 @@ class ExportTask extends Task<Void> {
         updateMessage(level.getBackgroundId());
         
         Optional<String> newBackgroundId = analyzeBackground(res, level.getBackgroundId());
-        
-        if (newBackgroundId.isPresent())
-            levelJson.put("backgroundId", newBackgroundId.get());
+        newBackgroundId.ifPresent(s -> levelJson.put("backgroundId", s));
         
         // Items
         Map<String, Item> allItems = new HashMap<>();
@@ -293,9 +295,7 @@ class ExportTask extends Task<Void> {
             updateMessage("Item " + itemId);
             
             Optional<String> newItemId = analyzeItem(res, itemId, allItems);
-            
-            if (newItemId.isPresent())
-                modifiedItemIds.put(itemId, newItemId.get());
+            newItemId.ifPresent(s -> modifiedItemIds.put(itemId, s));
         }
         
         for (LevelItem item : level.getItems()) {
@@ -305,7 +305,7 @@ class ExportTask extends Task<Void> {
         levelJson.set("items", jsonMapper.valueToTree(level.getItems()));
         
         // Balls
-        String outBallsString = null;
+        StringBuilder outBallsStringBuilder = null;
         
         if (ballTableExists) {
             updateProgress(tracker++, maxProgress);
@@ -367,7 +367,7 @@ class ExportTask extends Task<Void> {
             }
             
             if (!outBalls.getEntries().isEmpty()) {
-                outBallsString = outBalls.getSourceFile();
+                outBallsStringBuilder = new StringBuilder(outBalls.getSourceFile());
             }
         }
         
@@ -420,10 +420,10 @@ class ExportTask extends Task<Void> {
                 if (depBalls.startsWith("; Mod-specific custom gooballs\n"))
                     depBalls = depBalls.substring(31);
                 
-                if (outBallsString != null)
-                    outBallsString += "\n; From dependency "  + modId + "\n" + depBalls;
+                if (outBallsStringBuilder != null)
+                    outBallsStringBuilder.append("\n; From dependency ").append(modId).append("\n").append(depBalls);
                 else
-                    outBallsString = "; From dependency "  + modId + "\n" + depBalls;
+                    outBallsStringBuilder = new StringBuilder("; From dependency ").append(modId).append("\n").append(depBalls);
             } catch (IOException e) {
                 throw new IOException("Failed loading goo2mod " + modId + ": " + e.getMessage(), e);
             }
@@ -434,16 +434,17 @@ class ExportTask extends Task<Void> {
                 addinInfo.version(), addinInfo.description(), addinInfo.author());
         
         mod.getLevels().add(new Goo2mod.Level(level.getUuid(), addinThumbnailPath));
-        
-        if (outBallsString != null || transitivelyRequiresFistyLoader) {
+
+        // TODO: why is transitivelyRequiresFistyLoader never set?
+        if (outBallsStringBuilder != null || transitivelyRequiresFistyLoader) {
             mod.getDependencies().add(new Goo2mod.Depends("FistyLoader", FistyInstaller.FISTY_VERSION));
         }
         
         for (Entry<String, DependencyType> entry : modDependencyTypes.entrySet()) {
             String modId = entry.getKey();
-            DependencyType dependecyType = entry.getValue();
+            DependencyType dependencyType = entry.getValue();
             
-            if (dependecyType == DependencyType.REQUIRE) {
+            if (dependencyType == DependencyType.REQUIRE) {
                 mod.getDependencies().add(new Goo2mod.Depends(modId));
             }
         }
@@ -452,7 +453,8 @@ class ExportTask extends Task<Void> {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         
         String addinXml = mapper.writer().withRootName("addin").writeValueAsString(mod);
-        
+        String outBallsString = outBallsStringBuilder != null ? outBallsStringBuilder.toString() : null;
+
         // Write zip file
         writeZipFile(outputPath, addinXml, textPatch, outBallsString);
     }
@@ -659,7 +661,7 @@ class ExportTask extends Task<Void> {
         if (itemFile.getItems().size() != 1)
             throw new IOException("Expected " + itemId + ".wog2 file to contain 1 item, not " + itemFile.getItems().size());
         
-        JsonNode itemJson = itemFile.getItems().get(0);
+        JsonNode itemJson = itemFile.getItems().getFirst();
         Item item = ItemLoader.loadItem(itemJson);
         
         allItems.put(itemId, item);
@@ -792,26 +794,14 @@ class ExportTask extends Task<Void> {
             
             // compile directory
             for (CompiledResource resource : compiledResources) {
-                String entryPath;
-                
-                switch (resource.type()) {
-                    case LEVEL:
-                        entryPath = "compile/res/levels/" + resource.name() + ".wog2";
-                        break;
-                    case ENVIRONMENT:
-                        entryPath = "compile/res/environments/" + resource.name() + ".wog2";
-                        break;
-                    case ITEM:
-                        entryPath = "compile/res/items/" + resource.name() + ".wog2";
-                        break;
-                    case BALL:
-                        // Name actually specifies the folder name instead here
-                        entryPath = "compile/res/balls/" + resource.name() + "/ball.wog2";
-                        break;
-                    default:
-                        throw new RuntimeException("CompileType " + resource.type() + " not implemented");
-                }
-                
+                String entryPath = switch (resource.type()) {
+                    case LEVEL -> "compile/res/levels/" + resource.name() + ".wog2";
+                    case ENVIRONMENT -> "compile/res/environments/" + resource.name() + ".wog2";
+                    case ITEM -> "compile/res/items/" + resource.name() + ".wog2";
+                    // Name actually specifies the folder name instead in the case of balls
+                    case BALL -> "compile/res/balls/" + resource.name() + "/ball.wog2";
+                };
+
                 zip.putNextEntry(new ZipEntry(entryPath));
                 zip.write(resource.content().getBytes());
                 zip.closeEntry();
@@ -838,7 +828,7 @@ class ExportTask extends Task<Void> {
                     }
                 }
                 
-                if (resources.stream().noneMatch(resrc -> !(resrc instanceof Resrc.SetDefaults)))
+                if (resources.stream().allMatch(resrc -> resrc instanceof Resrc.SetDefaults))
                     continue;
                 
                 ResrcGroup group = new ResrcGroup(type.groupId, resources);
@@ -866,17 +856,10 @@ class ExportTask extends Task<Void> {
             for (String gooBallId : customGooballIds) {
                 Path gooBallDir = Paths.get(customWog2, "game/res/balls", gooBallId);
                 logger.trace("Saving custom goo ball at directory {}", gooBallDir);
-                
-                Iterable<Path> allSubFiles = () -> {
-                    try {
-                        return Files.walk(gooBallDir).iterator();
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
-                };
-                
-                try {
-                    for (Path filePath : allSubFiles) {
+
+                try (Stream<Path> allSubFiles = Files.walk(gooBallDir)) {
+
+                    for (Path filePath : (Iterable<Path>) allSubFiles::iterator) {
                         // ball.wog2 is handled as a regular compiled resource instead
                         if (!Files.isRegularFile(filePath) || filePath.endsWith("ball.wog2"))
                             continue;
@@ -893,6 +876,7 @@ class ExportTask extends Task<Void> {
                         zip.write(content);
                         zip.closeEntry();
                     }
+
                 } catch (UncheckedIOException e) {
                     throw e.getCause();
                 }

@@ -98,12 +98,10 @@ public class LocateGooDir {
                 return steamPath.toRealPath();
             }
             
-        } catch (IOException e) {
-            FX_Alarm.error(e);
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             FX_Alarm.error(e);
         }
-        
+
         for (String candidate : STEAM_WINDOWS_CANDIDATES) {
             Path path = Paths.get(candidate);
             

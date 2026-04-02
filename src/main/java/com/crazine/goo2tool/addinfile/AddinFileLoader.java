@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AddinFileLoader {
     
@@ -23,11 +24,11 @@ public class AddinFileLoader {
         Path goo2modDirectory = Path.of(PropertiesLoader.getGoo2ToolPath(), "addins");
         
         Map<String, Goo2mod> allGoo2mods;
-        try {
-            allGoo2mods = Files.list(goo2modDirectory)
+        try (Stream<Path> paths = Files.list(goo2modDirectory)) {
+            allGoo2mods = paths
                 .parallel()
                 .map(filePath -> loadGoo2modUnchecked(filePath.toFile()))
-                .collect(Collectors.toMap(mod -> mod.getId(), mod -> mod));
+                .collect(Collectors.toMap(Goo2mod::getId, mod -> mod));
         } catch (UncheckedIOException e) {
             throw e.getCause();
         }
@@ -61,7 +62,9 @@ public class AddinFileLoader {
         try (AddinReader reader = new AddinReader(goo2modFile)) {
             
             Optional<String> addinXmlFile = reader.getFileText("addin.xml");
-            
+            if (addinXmlFile.isEmpty())
+                throw new IOException("Goo2mod " + goo2modFile.getName() + " does not have an addin.xml");
+
             XmlMapper xmlMapper = new XmlMapper();
             Goo2mod goo2mod;
             try {
@@ -84,7 +87,7 @@ public class AddinFileLoader {
                     }
                     break;
                 case MOD:
-                    if (goo2mod.getLevels().size() != 0) {
+                    if (!goo2mod.getLevels().isEmpty()) {
                         throw new IOException("Goo2mods of type 'mod' are not allowed to have any <level> entries.");
                     }
                     break;

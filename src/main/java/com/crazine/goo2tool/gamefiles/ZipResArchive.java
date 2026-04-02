@@ -34,7 +34,7 @@ public class ZipResArchive implements ResArchive {
         
     }
     
-    private ZipFile zipFile;
+    private final ZipFile zipFile;
     
     public ZipResArchive(File inputFile) throws IOException {
         zipFile = new ZipFile(inputFile);

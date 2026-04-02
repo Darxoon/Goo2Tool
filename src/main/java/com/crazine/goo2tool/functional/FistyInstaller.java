@@ -9,9 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -46,10 +43,7 @@ public class FistyInstaller {
     public static final Map<String, VersionNumber> FISTY_WOG2_STEAM_HASHES;
     
     static {
-        Map<String, VersionNumber> fistyHashes = new HashMap<>();
-        fistyHashes.put("ca31b42aa49d5eff6ec42e6267602620", new VersionNumber(1, 1));
-        
-        FISTY_WOG2_STEAM_HASHES = Collections.unmodifiableMap(fistyHashes);
+        FISTY_WOG2_STEAM_HASHES = Map.of("ca31b42aa49d5eff6ec42e6267602620", new VersionNumber(1, 1));
     }
     
     private static final byte[] BALLFACTORY_LOAD_PATCH = new byte[] {
@@ -69,16 +63,25 @@ public class FistyInstaller {
         
         // Load resources from classpath
         ClassLoader classLoader = FistyInstaller.class.getClassLoader();
-        
-        InputStream customCodeStream = classLoader.getResourceAsStream("fistyloader/custom_code.bin");
-        byte[] sectionContent = customCodeStream.readAllBytes();
-        
-        InputStream customCodeSymbolsStream = classLoader.getResourceAsStream("fistyloader/custom_code_symbols.o");
-        byte[] customCodeSymbols = customCodeSymbolsStream.readAllBytes();
-        
-        InputStream hooksStream = classLoader.getResourceAsStream("fistyloader/hooks.yaml");
-        String hooksString = new String(hooksStream.readAllBytes(), StandardCharsets.UTF_8);
-        
+
+        byte[] sectionContent;
+        try (InputStream customCodeStream = classLoader.getResourceAsStream("fistyloader/custom_code.bin")) {
+            assert customCodeStream != null : "Missing resource in jar: fistyloader/custom_code.bin";
+            sectionContent = customCodeStream.readAllBytes();
+        }
+
+        byte[] customCodeSymbols;
+        try (InputStream customCodeSymbolsStream = classLoader.getResourceAsStream("fistyloader/custom_code_symbols.o")) {
+            assert customCodeSymbolsStream != null : "Missing resource in jar: fistyloader/custom_code_symbols.o";
+            customCodeSymbols = customCodeSymbolsStream.readAllBytes();
+        }
+
+        String hooksString;
+        try (InputStream hooksStream = classLoader.getResourceAsStream("fistyloader/hooks.yaml")) {
+            assert hooksStream != null : "Missing resource in jar: fistyloader/hooks.yaml";
+            hooksString = new String(hooksStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
         // Patch section table
         ByteBuffer buffer = ByteBuffer.wrap(originalExe.get());
         buffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -180,13 +183,14 @@ public class FistyInstaller {
             
             if (backupExe.isEmpty()) {
                 Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
-                dialog.setContentText(
-                        "Your WorldOfGoo2.exe file is either outdated or modified.\n"
-                        + "If you have installed FistyLoader previously, please restore "
-                        + "the game's executable to the original version and try again.\n\n"
-                        + "If your game is outdated or otherwise of a wrong version, "
-                        + "please update or reinstall the game and try again.");
-                
+                dialog.setContentText("""
+                        Your WorldOfGoo2.exe file is either outdated or modified.
+                        If you have installed FistyLoader previously, please restore \
+                        the game's executable to the original version and try again.
+                        
+                        If your game is outdated or otherwise of a wrong version, \
+                        please update or reinstall the game and try again.""");
+
                 if (IconLoader.getConduit() != null) {
                     Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
                     dialogStage.getIcons().add(IconLoader.getConduit());

@@ -1,6 +1,5 @@
 package com.crazine.goo2tool.gamefiles.translation;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,10 +11,7 @@ import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 public class TextLoader {
     
     public static TextDB loadText(Path textFile) throws IOException {
-        byte[] content = Files.readAllBytes(textFile);
-        
-        XmlMapper mapper = new XmlMapper();
-        return mapper.readValue(content, TextDB.class);
+        return loadText(Files.readString(textFile));
     }
     
     public static TextDB loadText(byte[] content) throws IOException {
@@ -24,6 +20,8 @@ public class TextLoader {
     }
     
     public static TextDB loadText(String content) throws IOException {
+        content = content.replaceAll("& ", "&amp; ");
+
         XmlMapper mapper = new XmlMapper();
         return mapper.readValue(content, TextDB.class);
     }

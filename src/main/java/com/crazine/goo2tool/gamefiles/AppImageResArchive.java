@@ -9,6 +9,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class AppImageResArchive implements ResArchive {
 
@@ -34,8 +35,8 @@ public class AppImageResArchive implements ResArchive {
         
     }
     
-    private Process appImageProcess;
-    private Path gameDir;
+    private final Process appImageProcess;
+    private final Path gameDir;
     
     private int fileCount = -1;
     
@@ -77,25 +78,25 @@ public class AppImageResArchive implements ResArchive {
 
     @Override
     public Iterable<ResFile> getAllFiles() {
-        return new Iterable<ResArchive.ResFile>() {
+        return new Iterable<>() {
 
             @Override
             public Iterator<ResFile> iterator() {
-                try {
-                    return Files.walk(gameDir)
-                        .filter(path -> Files.isRegularFile(path))
-                        .map(path -> getFile(path))
-                        .iterator();
+                try (Stream<Path> paths = Files.walk(gameDir)) {
+                    return paths
+                            .filter(Files::isRegularFile)
+                            .map(this::getFile)
+                            .iterator();
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
             }
-            
+
             private ResFile getFile(Path path) {
                 Path relativePath = gameDir.relativize(path);
                 return new AppImageResFile(relativePath.toString(), path);
             }
-            
+
         };
     }
 
@@ -108,13 +109,13 @@ public class AppImageResArchive implements ResArchive {
     }
     
     private void calculateFileCount() throws IOException {
-        fileCount = (int) Files.walk(gameDir)
-            .filter(path -> Files.isRegularFile(path))
-            .count();
+        try (Stream<Path> paths = Files.walk(gameDir)) {
+            fileCount = (int) paths.filter(Files::isRegularFile).count();
+        }
     }
     
     @Override
-    public void close() throws IOException {
+    public void close() {
         assert appImageProcess.supportsNormalTermination();
         appImageProcess.destroy();
     }

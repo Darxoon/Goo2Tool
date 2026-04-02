@@ -52,25 +52,25 @@ public interface ResArchive extends Closeable {
         // Find and open res.goo file
         String resGooPath = properties.getResGooPath();
         File resGooFile;
-        
+
+        Path defaultResGooPath = Path.of(baseWOG2, "game/res.goo");
+        Path backupResGooPath = Path.of(baseWOG2, "game/res.goo_backup");
+
         if (!resGooPath.isEmpty() && Files.exists(Path.of(resGooPath))) {
             // Try resGooFile property if it exists
             resGooFile = new File(resGooPath);
-        } else if (Files.exists(Path.of(baseWOG2, "game/res.goo"))) {
+        } else if (Files.exists(defaultResGooPath)) {
             // Try base res.goo file if it exists
-            Path baseFile = Path.of(baseWOG2, "game/res.goo");
-            
             if (properties.isSteam()) {
-                Path newFile = Path.of(baseWOG2, "game/res.goo_backup");
-                Files.move(baseFile, newFile, StandardCopyOption.REPLACE_EXISTING);
-                properties.setResGooPath(newFile.toString());
-                resGooFile = newFile.toFile();
+                Files.move(defaultResGooPath, backupResGooPath, StandardCopyOption.REPLACE_EXISTING);
+                properties.setResGooPath(backupResGooPath.toString());
+                resGooFile = backupResGooPath.toFile();
             } else {
-                resGooFile = baseFile.toFile();
+                resGooFile = defaultResGooPath.toFile();
             }
-        } else if (Files.exists(Path.of(baseWOG2, "game/res.goo_backup"))) {
-            resGooFile = Path.of(baseWOG2, "game/res.goo_backup").toFile();
-            
+        } else if (Files.exists(backupResGooPath)) {
+            resGooFile = backupResGooPath.toFile();
+
             if (properties.isSteam()) {
                 properties.setResGooPath(resGooFile.toString());
             }
@@ -80,17 +80,17 @@ public interface ResArchive extends Closeable {
             alert.setContentText("Could not find res.goo file as it appears to have been renamed or moved.\n\n"
                     + "Please pick the new location of the file instead.");
             alert.showAndWait();
-            
+
             ExtensionFilter filter = new ExtensionFilter("res.goo Archive", "*.*");
             Path initialDir = Path.of(baseWOG2, "game");
-            
+
             Optional<Path> chosenFile = CustomFileChooser.openFile(stage,
                     "Please open res.goo archive", initialDir, filter);
-            
+
             // TODO: is this ok to do?
             if (chosenFile.isEmpty())
                 return null;
-            
+
             PropertiesLoader.getProperties().setResGooPath(chosenFile.get().toString());
             resGooFile = chosenFile.get().toFile();
         }

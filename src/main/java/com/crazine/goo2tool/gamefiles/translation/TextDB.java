@@ -18,10 +18,10 @@ public class TextDB {
     @JacksonXmlElementWrapper(localName = "strings")
     @JacksonXmlProperty(localName = "string")
     private List<GameString> strings = new ArrayList<>();
-    
+
     @JsonIgnore
-    private Map<String, Integer> indexMap = new HashMap<>();
-    
+    private final Map<String, GameString> idMap = new HashMap<>();
+
     public TextDB() {}
 
     public TextDB(List<GameString> strings) {
@@ -29,29 +29,25 @@ public class TextDB {
     }
     
     public void putString(GameString string) {
-        if (indexMap.containsKey(string.getId())) {
-            int index = indexMap.get(string.getId());
+        if (idMap.containsKey(string.getId())) {
+            int index = strings.indexOf(idMap.get(string.getId()));
             strings.set(index, string);
         } else {
-            indexMap.put(string.getId(), this.strings.size());
             strings.add(string);
         }
+
+        idMap.put(string.getId(), string);
     }
     
     public Optional<GameString> getString(String id) {
-        if (indexMap.containsKey(id)) {
-            int index = indexMap.get(id);
-            return Optional.ofNullable(strings.get(index));
-        } else {
-            return Optional.empty();
-        }
+        return Optional.ofNullable(idMap.get(id));
     }
     
     public void removeString(String id) {
-        if (indexMap.containsKey(id)) {
-            int index = indexMap.get(id);
-            strings.remove(index);
-            indexMap.remove(id);
+        if (idMap.containsKey(id)) {
+            GameString string = idMap.get(id);
+            strings.remove(string);
+            idMap.remove(id);
         }
     }
 
@@ -61,10 +57,10 @@ public class TextDB {
     
     public void setStrings(List<GameString> strings) {
         this.strings.clear();
-        this.indexMap.clear();
+        this.idMap.clear();
         
         for (GameString string : strings) {
-            indexMap.put(string.getId(), this.strings.size());
+            idMap.put(string.getId(), string);
             this.strings.add(string);
         }
     }

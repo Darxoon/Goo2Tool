@@ -3,7 +3,6 @@ package com.crazine.goo2tool.functional.save;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -11,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -83,12 +81,11 @@ import javafx.scene.control.ButtonBar.ButtonData;
 
 class SaveTask extends Task<Void> {
     
-    private static Logger logger = LoggerFactory.getLogger(SaveTask.class);
+    private static final Logger logger = LoggerFactory.getLogger(SaveTask.class);
     
     private final ResArchive res;
     
     private boolean success = true;
-
 
     SaveTask(ResArchive res) {
         this.res = res;
@@ -109,7 +106,7 @@ class SaveTask extends Task<Void> {
         if (!success)
             throw new RuntimeException("SaveTask failed");
         
-        return (Void) null;
+        return null;
     }
     
     private static void runLater(Runnable runnable) {
@@ -120,14 +117,6 @@ class SaveTask extends Task<Void> {
         
         Properties properties = PropertiesLoader.getProperties();
 
-        // Figure out which files are owned by mods that have been disabled
-        // so they can be overwritten with vanilla assets
-        List<String> disabledAddinIds = new ArrayList<>();
-        for (AddinConfigEntry addin : properties.getAddins()) {
-            if (!addin.isLoaded())
-                disabledAddinIds.add(addin.getId());
-        }
-        
         Path fileTablePath = Paths.get(PropertiesLoader.getGoo2ToolPath(), "fileTable.xml");
         ResFileTable table = ResFileTableLoader.loadOrInit(fileTablePath);
         
@@ -161,7 +150,7 @@ class SaveTask extends Task<Void> {
             
             try {
                 Files.copy(executablePath, Paths.get(customWog2, "WorldOfGoo2"));
-            } catch (FileAlreadyExistsException e) {}
+            } catch (FileAlreadyExistsException ignored) {}
             
             boolean result = extractRes(res, table, 0, res.fileCount());
             
@@ -182,8 +171,8 @@ class SaveTask extends Task<Void> {
         // TODO: try to share code between these?
         logger.debug("Restoring original merge values");
         Set<String> enabledAddinIds = properties.getAddins().stream()
-                .filter(addin -> addin.isLoaded())
-                .map(addin -> addin.getId())
+                .filter(AddinConfigEntry::isLoaded)
+                .map(AddinConfigEntry::getId)
                 .collect(Collectors.toSet());
         
         for (MergeFile<ResrcValue> file : resrcMergeTable.getFiles()) {
@@ -222,6 +211,7 @@ class SaveTask extends Task<Void> {
         
         for (MergeFile<GameString> file : translationMergeTable.getFiles()) {
             Path filePath = Paths.get(customWog2, "game", file.getPath());
+            logger.info("Loading text file {}", filePath);
             TextDB text = TextLoader.loadText(filePath);
             
             // restore original values
@@ -308,9 +298,9 @@ class SaveTask extends Task<Void> {
                         break;
                     }
                 }
-                
-                if (!isLoaded) {
-                    Path realPath = profilePath.resolve(path);
+
+                Path realPath = profilePath.resolve(path);
+                if (!isLoaded && Files.isRegularFile(realPath)) {
                     byte[] content = Files.readAllBytes(realPath);
                     String contentHash = HashUtil.getMD5Hash(content);
                     
@@ -318,7 +308,7 @@ class SaveTask extends Task<Void> {
                     if (entry.getHash().isEmpty() || entry.getHash().equals(contentHash)) {
                         try {
                             Files.delete(realPath);
-                        } catch (NoSuchFileException e) {}
+                        } catch (NoSuchFileException ignored) {}
                     } else {
                         logger.info("File '{}' has been manually modified, therefore not deleting",
                                 path);
@@ -457,66 +447,75 @@ class SaveTask extends Task<Void> {
                 Optional<OverriddenFileEntry> garbageFile = garbageFiles.getEntry(file.path());
                 
                 if (garbageFile.isPresent()) {
-                    byte[] fileContent = file.readContent();
-                    
                     garbageFiles.removeEntry(file.path());
-                    
-                    try {
-                        byte[] customFileContent = Files.readAllBytes(customPath);
-                        String customFileHash = HashUtil.getMD5Hash(customFileContent);
-                        
-                        logger.debug("File {} hash {} vs {}",
-                            file.path(), garbageFile.get().getHash(), customFileHash);
-                        
-                        // Prompt the user about file being overwritten
-                        if (!customFileHash.equals(garbageFile.get().getHash())) {
-                            CountDownLatch latch = new CountDownLatch(1);
-                            AtomicBoolean isOk = new AtomicBoolean();
-                            
-                            runLater(() -> {
-                                ButtonType continueButton = new ButtonType("Continue", ButtonData.OK_DONE);
-                                
-                                Optional<ButtonType> result = FX_Alert.warn("Goo2Tool", 
-                                    "The file \"" + file.path() + "\" seems to have been modified by the user.\n\n"
-                                    + " If you click Continue, any modifications will be deleted.\n\n"
-                                    + "Should you not want to lose existing content, please back up the file"
-                                    + " before clicking Continue.",
-                                    Optional.of(ButtonType.CANCEL), continueButton, ButtonType.CANCEL);
-                                
-                                isOk.set(result.isPresent() && result.get() == continueButton);
-                                latch.countDown();
-                            });
-                            
-                            try {
-                                latch.await();
-                            } catch (InterruptedException e) {
-                                throw new IOException(e);
-                            }
-                            
-                            if (!isOk.get()) {
-                                return false;
-                            }
-                        }
-                        
-                        Files.write(customPath, fileContent, StandardOpenOption.CREATE,
-                                StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-                    } catch (NoSuchFileException e) {
-                        Files.createDirectories(customPath.getParent());
-                        Files.write(customPath, fileContent, StandardOpenOption.CREATE_NEW);
-                    }
+
+                    if (!reextractGarbageFile(file, garbageFile.get(), customPath))
+                        return false;
                 } else if (!Files.exists(customPath)) {
                     byte[] fileContent = file.readContent();
                     
                     Files.createDirectories(customPath.getParent());
                     try {
                         Files.write(customPath, fileContent, StandardOpenOption.CREATE_NEW);
-                    } catch (FileAlreadyExistsException e) {}
+                    } catch (FileAlreadyExistsException ignored) {}
                 }
             }
         } catch (UncheckedIOException e) {
             throw e.getCause();
         }
         
+        return true;
+    }
+
+    private boolean reextractGarbageFile(ResFile file, OverriddenFileEntry garbageFile, Path customPath) throws IOException {
+        byte[] fileContent = file.readContent();
+
+        try {
+            byte[] customFileContent = Files.readAllBytes(customPath);
+            String customFileHash = HashUtil.getMD5Hash(customFileContent);
+
+            logger.debug("File {} hash {} vs {}",
+                    file.path(), garbageFile.getHash(), customFileHash);
+
+            // Prompt the user about file being overwritten
+            if (!customFileHash.equals(garbageFile.getHash())) {
+                CountDownLatch latch = new CountDownLatch(1);
+                AtomicBoolean isOk = new AtomicBoolean();
+
+                runLater(() -> {
+                    ButtonType continueButton = new ButtonType("Continue", ButtonData.OK_DONE);
+
+                    Optional<ButtonType> result = FX_Alert.warn("Goo2Tool", """
+                            The file "%s" seems to have been modified by the user.
+                            
+                             If you click Continue, any modifications will be deleted.
+                            
+                            Should you not want to lose existing content, please back up the file before clicking Continue.\
+                            """.formatted(file.path()),
+                            Optional.of(ButtonType.CANCEL), continueButton, ButtonType.CANCEL);
+
+                    isOk.set(result.isPresent() && result.get() == continueButton);
+                    latch.countDown();
+                });
+
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    throw new IOException(e);
+                }
+
+                if (!isOk.get()) {
+                    return false;
+                }
+            }
+
+            Files.write(customPath, fileContent,
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (NoSuchFileException e) {
+            Files.createDirectories(customPath.getParent());
+            Files.write(customPath, fileContent, StandardOpenOption.CREATE_NEW);
+        }
+
         return true;
     }
     
@@ -624,16 +623,14 @@ class SaveTask extends Task<Void> {
                     case MERGE: {
                         updateProgress(++i, count);
                         
-                        // merging files that have been overriden by previous mods could
+                        // merging files that have been overridden by previous mods could
                         // lead to weird conflicts, so it's not supported at all
-                        if (table.hasEntry(resource.path())) {
-                            OverriddenFileEntry entry = table.getEntry(resource.path()).get();
-                            
-                            if (!entry.getModId().equals("*")) {
-                                throw new IllegalArgumentException("Conflict: Trying to merge file "
-                                        + resource.path() + " even though it has been overridden by mod "
-                                        + entry.getModId() + "previously!");
-                            }
+                        Optional<OverriddenFileEntry> entry = table.getEntry(resource.path());
+
+                        if (entry.isPresent() && !entry.get().getModId().equals("*")) {
+                            throw new IllegalArgumentException("Conflict: Trying to merge file "
+                                    + resource.path() + " even though it has been overridden by mod "
+                                    + entry.get().getModId() + "previously!");
                         }
                         
                         if (resource.path().length() > 1)
@@ -705,8 +702,9 @@ class SaveTask extends Task<Void> {
                             StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
                 }
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Failed loading the mod \"{}\"", mod.getName(), e);
             
             success = false;
             
@@ -723,10 +721,8 @@ class SaveTask extends Task<Void> {
         
         String localPath = "res/properties/translation-local.xml";
         String intlPath = "res/properties/translation-tool-export.xml";
-        
-        String originalIntlContent = new String(Files.readAllBytes(Paths.get(customWog2, "game", intlPath)), StandardCharsets.UTF_8)
-            .replaceAll("& ", "&amp; ");
-        TextDB originalIntl = TextLoader.loadText(originalIntlContent);
+
+        TextDB originalIntl = TextLoader.loadText(Paths.get(customWog2, "game", intlPath));
         TextDB originalLocal = TextLoader.loadText(Paths.get(customWog2, "game", localPath));
         
         TextDB patch = TextLoader.loadText(resource.content());
@@ -768,10 +764,7 @@ class SaveTask extends Task<Void> {
         if (outEntry.getModValue() == null) {
             // Merging this entry for the first time ever, so save its current value
             Optional<GameString> originalString = originalText.getString(realId);
-            
-            if (originalString.isPresent()) {
-                outEntry.setOriginalValue(originalString.get());
-            }
+            originalString.ifPresent(originalValue -> outEntry.setOriginalValue(originalValue));
             return;
         }
         
