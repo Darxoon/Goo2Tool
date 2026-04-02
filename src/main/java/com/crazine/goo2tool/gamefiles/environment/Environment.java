@@ -31,7 +31,7 @@ public class Environment {
         private Vector2 anchors;
         private boolean anchorsTakeDepthIntoAccount;
         private float bloom;
-        private long color = 0xffffffff;
+        private long color = 0xffffffffL;
         private int blendingType = 2;
         private String flashAnimationName;
         private boolean isFlashAnimation;

@@ -12,7 +12,7 @@ import javafx.scene.layout.Region;
 
 public class LaunchOptions {
     
-    private GridPane contents;
+    private final GridPane contents;
     
     public GridPane getContents() {
         return contents;

@@ -27,7 +27,7 @@ public class FX_DependencyPrompt {
         REQUIRE,
     }
     
-    private static final double VERTIAL_GAP = 4;
+    private static final double VERTICAL_GAP = 4;
     
     public static ObjectProperty<Optional<DependencyType>> show(Stage originalStage, String dependencyModName) {
         
@@ -74,7 +74,7 @@ public class FX_DependencyPrompt {
         });
         
         VBox content = new VBox(reexport, require);
-        content.setSpacing(VERTIAL_GAP);
+        content.setSpacing(VERTICAL_GAP);
         
         // Buttons
         ObjectProperty<Optional<DependencyType>> result = new SimpleObjectProperty<>();
@@ -96,7 +96,7 @@ public class FX_DependencyPrompt {
         buttons.getButtons().addAll(okButton, cancelButton);
         borderPane.setBottom(buttons);
         
-        BorderPane.setMargin(content, new Insets(VERTIAL_GAP * 2, 0, VERTIAL_GAP, 0));
+        BorderPane.setMargin(content, new Insets(VERTICAL_GAP * 2, 0, VERTICAL_GAP, 0));
         borderPane.setCenter(content);
         borderPane.setCenterShape(true);
         

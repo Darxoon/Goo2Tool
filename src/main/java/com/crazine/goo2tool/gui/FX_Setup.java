@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ import javafx.stage.Stage;
 
 public class FX_Setup extends Application {
 
-    private static Logger logger = LoggerFactory.getLogger(FX_Setup.class);
+    private static final Logger logger = LoggerFactory.getLogger(FX_Setup.class);
     
     @Override
     public void start(Stage stage) {
@@ -285,7 +286,7 @@ public class FX_Setup extends Application {
         };
         
         // show manual prompt if that didn't work
-        if (profileDir == null || !Files.isDirectory(profileDir)) {
+        if (!Files.isDirectory(profileDir)) {
             Optional<ButtonType> result = FX_Alert.info("Goo2Tool Setup", """
                     Could not determine World of Goo 2 profile folder.
                     If you have launched the game before, please pick it yourself.
@@ -295,23 +296,19 @@ public class FX_Setup extends Application {
                 return "";
             
             Optional<Path> file = CustomFileChooser.chooseDirectory(stage, "Please choose World of Goo 2 profile");
-            
-            if (file.isEmpty())
-                return "";
-            
-            return file.get().toString();
+            return file.map(Path::toString).orElse("");
         }
         
         if (properties.isSteam()) {
             // find steam user profile dir
-            Optional<Path> steamProfileDir = Files.list(profileDir)
-                .filter(FX_Setup::isSteamProfileDir)
-                .findFirst();
-            
-            if (steamProfileDir.isPresent())
-                return steamProfileDir.get().toString();
-            else
-                return profileDir.toString();
+            Optional<Path> steamProfileDir;
+            try (Stream<Path> files = Files.list(profileDir)) {
+                steamProfileDir = files
+                        .filter(FX_Setup::isSteamProfileDir)
+                        .findFirst();
+            }
+
+            return steamProfileDir.map(Path::toString).orElseGet(profileDir::toString);
         } else {
             return profileDir.toString();
         }
@@ -335,13 +332,13 @@ public class FX_Setup extends Application {
                 // TODO: Prompt the user to pick it themselves
                 throw new IOException("Could not find SteamLibrary, which contains the save file");
             }
-            
-            Optional<String> steamProfile = getSteamProfileDirectory(gooDir);
-            
-            if (!steamProfile.isPresent()) {
-                Path steamDir = gooDir.get().steamDir().get();
-                throw new IOException("No Steam save file found in " + steamDir.resolve("userdata"));
-            }
+
+            Optional<Path> steamDir = gooDir.get().steamDir();
+            assert steamDir.isPresent() : "SteamDir is not set despite isSteam being true";
+
+            Optional<String> steamProfile = getSteamProfileDirectory(steamDir.get());
+            if (steamProfile.isEmpty())
+                throw new IOException("No Steam save file found in " + steamDir.get().resolve("userdata"));
             
             return steamProfile.get();
         } else {
@@ -350,14 +347,16 @@ public class FX_Setup extends Application {
         }
     }
     
-    private static Optional<String> getSteamProfileDirectory(Optional<GooDir> gooDir) throws IOException {
-        Path steamDir = gooDir.get().steamDir().get();
+    private static Optional<String> getSteamProfileDirectory(Path steamDir) throws IOException {
         Path steamUserdata = steamDir.resolve("userdata");
         
         if (!Files.isDirectory(steamUserdata))
             return Optional.empty();
         
-        Optional<Path> steamProfile = Files.list(steamUserdata).findFirst();
+        Optional<Path> steamProfile;
+        try (Stream<Path> files = Files.list(steamUserdata)) {
+            steamProfile = files.findFirst();
+        }
         logger.debug("steamProfile {}", steamProfile);
         
         if (steamProfile.isEmpty())

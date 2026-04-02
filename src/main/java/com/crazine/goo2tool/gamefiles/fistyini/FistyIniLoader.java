@@ -42,7 +42,7 @@ public class FistyIniLoader {
                 throw new IniParseException("Line '" + line + "' does not contain a '='", lineNumber);
             
             String lhsString = line.substring(0, equalsSignPos);
-            int lhs = Integer.valueOf(lhsString);
+            int lhs = Integer.parseInt(lhsString);
             
             String rhs = line.substring(equalsSignPos + 1).strip();
             if (rhs.contains(" "))

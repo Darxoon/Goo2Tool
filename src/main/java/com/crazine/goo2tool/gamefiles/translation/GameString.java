@@ -1,9 +1,6 @@
 package com.crazine.goo2tool.gamefiles.translation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
@@ -34,36 +31,19 @@ public class GameString {
         }
 
         @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((language == null) ? 0 : language.hashCode());
-            result = prime * result + ((text == null) ? 0 : text.hashCode());
-            return result;
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+
+            LocaleText that = (LocaleText) o;
+            return Objects.equals(language, that.language) && Objects.equals(text, that.text);
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            LocaleText other = (LocaleText) obj;
-            if (language == null) {
-                if (other.language != null)
-                    return false;
-            } else if (!language.equals(other.language))
-                return false;
-            if (text == null) {
-                if (other.text != null)
-                    return false;
-            } else if (!text.equals(other.text))
-                return false;
-            return true;
+        public int hashCode() {
+            int result = Objects.hashCode(language);
+            result = 31 * result + Objects.hashCode(text);
+            return result;
         }
-        
     }
     
     private String id;

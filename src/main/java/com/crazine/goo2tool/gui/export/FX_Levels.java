@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 
 public class FX_Levels {
     
-    private static Logger logger = LoggerFactory.getLogger(FX_Levels.class);
+    private static final Logger logger = LoggerFactory.getLogger(FX_Levels.class);
     
     private static record LevelFile(String id, String title, Path path) {}
     
@@ -61,12 +62,10 @@ public class FX_Levels {
         // collect all levels
         Path profileDir = Path.of(PropertiesLoader.getProperties().getProfileDirectory());
         List<LevelFile> customLevels;
-        try {
-            
-            customLevels = Files.list(profileDir.resolve("levels"))
-                .map(path -> getLevelFile(path))
+        try (Stream<Path> levelFiles = Files.list(profileDir.resolve("levels"))) {
+            customLevels = levelFiles
+                .map(FX_Levels::getLevelFile)
                 .toList();
-            
         } catch (IOException e) {
             FX_Alarm.error(e);
             return;
@@ -136,11 +135,12 @@ public class FX_Levels {
                     }
                 }
                 
-                Optional<ButtonType> result = FX_Alert.warn("Package level as .goo2mod",
-                        "Note that the following types of custom assets will NOT be automatically exported"
-                        + " and if you use one of these, you will have to edit the resulting goo2mod manually:\n\n"
-                        + "Particles, Sounds (except music and ambience), animations, terrains"
-                        + " and any other .wog2 merge (e.g. materials, environmentFxs, ...)",
+                Optional<ButtonType> result = FX_Alert.warn("Package level as .goo2mod", """
+                        Note that the following types of custom assets will NOT be automatically exported\
+                         and if you use one of these, you will have to edit the resulting goo2mod manually:
+                        
+                        Particles, Sounds (except music and ambience), animations, terrains\
+                         and any other .wog2 merge (e.g. materials, environmentFxs, ...)""",
                         ButtonType.OK, ButtonType.CANCEL);
                 
                 if (result.isEmpty() || result.get() != ButtonType.OK)

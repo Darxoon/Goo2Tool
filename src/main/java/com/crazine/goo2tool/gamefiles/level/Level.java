@@ -53,14 +53,14 @@ public class Level {
     @JsonIgnore
     public Set<String> allItemTypes() {
         return items.stream()
-                .map(item -> item.getType())
+                .map(LevelItem::getType)
                 .collect(Collectors.toSet());
     }
     
     @JsonIgnore
     public Set<Integer> allBallTypes() {
         return balls.stream()
-                .map(ball -> ball.getTypeEnum())
+                .map(LevelBallInstance::getTypeEnum)
                 .collect(Collectors.toSet());
     }
     

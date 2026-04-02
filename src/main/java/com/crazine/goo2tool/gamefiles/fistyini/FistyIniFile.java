@@ -10,8 +10,8 @@ import java.util.Optional;
 public class FistyIniFile {
     
     private String sourceFile;
-    private List<String> entries;
-    private Map<String, Integer> typeEnumMap = new HashMap<>();
+    private final List<String> entries;
+    private final Map<String, Integer> typeEnumMap = new HashMap<>();
     
     public FistyIniFile(String sourceFile, List<String> entries) {
         if (!sourceFile.endsWith("\n"))

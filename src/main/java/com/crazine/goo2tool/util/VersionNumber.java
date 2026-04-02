@@ -27,7 +27,7 @@ public final class VersionNumber implements Comparable<VersionNumber> {
         }
     }
     
-    private int[] elements;
+    private final int[] elements;
     
     public VersionNumber(int... elements) {
         if (elements.length > 4)
@@ -39,7 +39,7 @@ public final class VersionNumber implements Comparable<VersionNumber> {
     public static VersionNumber fromString(String string) throws NumberFormatException {
         String[] segments = string.split("\\.");
         int[] intSegments = Arrays.stream(segments)
-            .mapToInt(segment -> Integer.valueOf(segment))
+            .mapToInt(Integer::parseInt)
             .toArray();
         
         return new VersionNumber(intSegments);
@@ -78,23 +78,16 @@ public final class VersionNumber implements Comparable<VersionNumber> {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + Arrays.hashCode(elements);
-        return result;
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+
+        VersionNumber that = (VersionNumber) o;
+        return Arrays.equals(elements, that.elements);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        VersionNumber other = (VersionNumber) obj;
-        return Arrays.equals(elements, other.elements);
+    public int hashCode() {
+        return Arrays.hashCode(elements);
     }
-    
+
 }

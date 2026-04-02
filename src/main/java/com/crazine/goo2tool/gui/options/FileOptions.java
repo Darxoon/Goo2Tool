@@ -38,17 +38,18 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("FieldCanBeLocal")
 public class FileOptions {
     
-    private static Logger logger = LoggerFactory.getLogger(FileOptions.class);
+    private static final Logger logger = LoggerFactory.getLogger(FileOptions.class);
     
-    private Stage stage;
-    private boolean launchMainApplication;
-    private GridPane contents;
+    private final Stage stage;
+    private final boolean launchMainApplication;
+    private final GridPane contents;
     
     // These have to be defined here otherwise they will get garbage collected and break
-    private BooleanExpression notSteamProperty = PropertiesLoader.getProperties().steamProperty().not();
-    private BooleanExpression notAppImageProperty = Platform.getCurrent() == Platform.LINUX
+    private final BooleanExpression notSteamProperty = PropertiesLoader.getProperties().steamProperty().not();
+    private final BooleanExpression notAppImageProperty = Platform.getCurrent() == Platform.LINUX
             ? PropertiesLoader.getProperties().steamProperty()
             : new ReadOnlyBooleanWrapper(true);
     
@@ -82,9 +83,7 @@ public class FileOptions {
         Properties properties = PropertiesLoader.getProperties();
         
         StringProperty baseDir = properties.baseWorldOfGoo2DirectoryProperty();
-        createComplexSetting("Base WoG2 Installation", baseDir, exeFilter, true, path -> {
-            updateGameVersion(path);
-        });
+        createComplexSetting("Base WoG2 Installation", baseDir, exeFilter, true, this::updateGameVersion);
 
         StringProperty customDir = properties.customWorldOfGoo2DirectoryProperty();
         createConditionalSetting("Custom WoG2 Installation", customDir, null, notSteamProperty);
@@ -211,8 +210,9 @@ public class FileOptions {
         createSettingRaw(labelText, initialValue, filter, false, condition, null);
     }
     
+    @SuppressWarnings("LoggingSimilarMessage")
     private void createSettingRaw(String labelText, StringProperty initialValue, ExtensionFilter filter,
-            boolean useParent, BooleanExpression condition, Consumer<String> onChange) {
+                                  boolean useParent, BooleanExpression condition, Consumer<String> onChange) {
         Label label = new Label(labelText);
         // label.setPrefWidth(160);
         label.setPadding(new Insets(4, 0, 0, 0));
@@ -260,9 +260,7 @@ public class FileOptions {
                 FX_Alarm.error(e);
                 return;
             }
-            
-            if (chosenFile == null) return;
-            
+
             // Dirty hack to support AppImage
             if (useParent && !chosenFile.toString().endsWith(".AppImage")) {
                 chosenFile = chosenFile.getParentFile();
@@ -296,7 +294,7 @@ public class FileOptions {
         
         if (condition != null) {
             
-            logger.debug("Condition for {} is {}", labelText, condition.get());
+            logger.debug("Condition for {} is {} (initial)", labelText, condition.get());
             
             if (condition.get() == false) {
                 contents.getChildren().removeAll(rowChildren);
@@ -304,7 +302,7 @@ public class FileOptions {
             
             condition.addListener((observable, oldValue, newValue) -> {
                 logger.debug("Condition for {} changed from {} to {}", labelText, oldValue, newValue);
-                
+
                 if (oldValue == false && newValue == true) {
                     logger.debug("Condition for {} is {}", labelText, condition.get());
                     contents.getChildren().addAll(rowChildren);

@@ -1,5 +1,6 @@
 package com.crazine.goo2tool.gui;
 
+import com.crazine.goo2tool.gamefiles.resrc.ResrcGroup;
 import com.crazine.goo2tool.gui.util.FX_Alert;
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.addinfile.Goo2mod.ModType;
@@ -20,6 +21,8 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +31,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class FX_Mods {
+
+    private static final Logger logger = LoggerFactory.getLogger(FX_Mods.class);
 
     private static Stage stage;
     
@@ -71,7 +76,7 @@ public class FX_Mods {
                     try {
                         PropertiesLoader.loadGoo2mod(file);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logger.error("Failed loading mod \"{}\"", file.getName(), e);
                         
                         Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
                         dialog.setContentText("Failed loading mod \"" + file.getName() + "\":\n\n" + e.getMessage());
@@ -151,10 +156,8 @@ public class FX_Mods {
         enable.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
-            
-            if (addin.isPresent()) {
-                addin.get().setLoaded(true);
-            }
+
+            addin.ifPresent(addinConfigEntry -> addinConfigEntry.setLoaded(true));
         });
         
         Button disable = new Button("Disable");
@@ -162,10 +165,8 @@ public class FX_Mods {
         disable.setOnAction(event -> {
             Goo2mod selected = modTableView.getSelectionModel().getSelectedItem();
             Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(selected);
-            
-            if (addin.isPresent()) {
-                addin.get().setLoaded(false);
-            }
+
+            addin.ifPresent(addinConfigEntry -> addinConfigEntry.setLoaded(false));
         });
         
         Button uninstall = new Button("Uninstall");
@@ -205,10 +206,10 @@ public class FX_Mods {
                     
                     if (getTableRow().getItem() != null) {
                         Optional<AddinConfigEntry> addin = PropertiesLoader.getProperties().getAddin(getTableRow().getItem());
-                        
-                        if (addin.isPresent()) {
-                            checkBox.selectedProperty().bindBidirectional(addin.get().loadedProperty());
-                        }
+
+                        addin.ifPresent(addinConfigEntry -> {
+                            checkBox.selectedProperty().bindBidirectional(addinConfigEntry.loadedProperty());
+                        });
                     }
                 }
                 
@@ -323,7 +324,8 @@ public class FX_Mods {
         try {
             PropertiesLoader.loadGoo2mod(goomodFile.get().toFile());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to open addin {}", goomodFile.get().getFileName(), e);
+
             Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
             dialog.setContentText("Failed to open addin: " + e.getMessage());
             

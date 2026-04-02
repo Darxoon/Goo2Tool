@@ -17,8 +17,9 @@ public class IconLoader {
         terrain = loadImage("terrain.png");
     }
     
-    private static Image loadImage(String name) throws IOException {
+    private static Image loadImage(String name) {
         InputStream iconStream = IconLoader.class.getClassLoader().getResourceAsStream(name);
+        assert iconStream != null : "Icon " + name + " does not exist";
         return new Image(iconStream);
     }
     

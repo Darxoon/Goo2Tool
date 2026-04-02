@@ -35,7 +35,7 @@ public class ItemLoader {
         if (itemFile.getItems().size() != 1)
             throw new IOException("Expected item file to contain 1 item, got " + itemFile.getItems().size());
         
-        JsonNode itemJson = itemFile.getItems().get(0);
+        JsonNode itemJson = itemFile.getItems().getFirst();
         return jsonMapper.treeToValue(itemJson, Item.class);
 
     }

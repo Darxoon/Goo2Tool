@@ -26,7 +26,7 @@ public class FX_Profile {
     
     private static class CompletedLevelFactory implements Callback<CellDataFeatures<WOG2SaveFileLevel,String>, ObservableValue<String>> {
 
-        private String propertyName;
+        private final String propertyName;
         
         public CompletedLevelFactory(String propertyName) {
             this.propertyName = propertyName;

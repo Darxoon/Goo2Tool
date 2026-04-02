@@ -14,6 +14,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,6 +24,8 @@ import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 
 public class Main_Application extends Application {
+
+    private static final Logger logger = LoggerFactory.getLogger(Main_Application.class);
 
     private static Main_Application mainApplication;
     
@@ -80,26 +84,26 @@ public class Main_Application extends Application {
                 try {
                     goo2mod = AddinFileLoader.loadGoo2mod(goomodFile);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    // TODO: why is there so much duplication with this
+                    logger.error("Failed loading mod \"{}\"", goomodFile.getName(), e);
+
                     Dialog<ButtonType> dialog = new Alert(Alert.AlertType.ERROR);
                     dialog.setContentText("Failed loading the mod \"" + goomodFile.getName() + "\":\n\n" + e.toString());
                     dialog.show();
                     continue;
                 }
-                
-                if (goo2mod != null) {
-                    boolean modNotInConfig = PropertiesLoader.getProperties().getAddins().stream()
-                            .noneMatch(addin -> addin.getId().equals(goo2mod.getId()));
-                    if (modNotInConfig) {
-                        AddinConfigEntry addin2 = new AddinConfigEntry();
-                        addin2.setId(goo2mod.getId());
-                        addin2.setLoaded(false);
-                        PropertiesLoader.getProperties().getAddins().add(addin2);
-                    }
-                    
-                    FX_Mods.getModTableView().getItems().add(goo2mod);
+
+                boolean modNotInConfig = PropertiesLoader.getProperties().getAddins().stream()
+                        .noneMatch(addin -> addin.getId().equals(goo2mod.getId()));
+                if (modNotInConfig) {
+                    AddinConfigEntry addin2 = new AddinConfigEntry();
+                    addin2.setId(goo2mod.getId());
+                    addin2.setLoaded(false);
+                    PropertiesLoader.getProperties().getAddins().add(addin2);
                 }
-    
+
+                FX_Mods.getModTableView().getItems().add(goo2mod);
+
             }
         }
         

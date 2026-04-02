@@ -13,7 +13,7 @@ public class ItemObject {
     private Vector2 position = Vector2.ZERO;
     private float rotation;
     private Vector2 scale = Vector2.ONE;
-    private long color = 0xffffffff;
+    private long color = 0xffffffffL;
     private int depthOffset;
     private int sortOffset;
     private int imageBlendingType = 2;

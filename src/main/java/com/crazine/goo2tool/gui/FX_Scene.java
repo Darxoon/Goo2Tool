@@ -75,7 +75,7 @@ public class FX_Scene {
             updateInstallFistyButton(installFistyButton, properties);
             
             if (properties.getFistyVersion() == null || properties.getFistyVersion().compareTo(FistyInstaller.FISTY_VERSION) < 0) {
-                hBox.getChildren().add(0, installFistyButton);
+                hBox.getChildren().addFirst(installFistyButton);
             } else {
                 hBox.getChildren().remove(installFistyButton);
             }
@@ -113,10 +113,10 @@ public class FX_Scene {
         Button installFistyButton = new Button();
         
         installFistyButton.setOnAction(event -> {
-            Optional<ButtonType> result = FX_Alert.info("FistyLoader",
-                    "FistyLoader is an exe mod for World of Goo 2 which is necessary "
-                    + "to use custom goo balls. Some mods might require this.\n\n"
-                    + "Do you want to install?",
+            Optional<ButtonType> result = FX_Alert.info("FistyLoader", """
+                    FistyLoader is an exe mod for World of Goo 2 which is necessary to use custom goo balls. Some mods might require this.
+                    
+                    Do you want to install?""",
                     ButtonType.YES, ButtonType.NO);
             
             if (result.isEmpty() || result.get() == ButtonType.NO)

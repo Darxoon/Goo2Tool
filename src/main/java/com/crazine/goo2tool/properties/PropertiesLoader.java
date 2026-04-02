@@ -3,22 +3,24 @@ package com.crazine.goo2tool.properties;
 import com.crazine.goo2tool.addinfile.AddinFileLoader;
 import com.crazine.goo2tool.addinfile.Goo2mod;
 import com.crazine.goo2tool.gui.FX_Mods;
+import com.crazine.goo2tool.gui.Main_Application;
 import com.crazine.goo2tool.gui.util.FX_Alarm;
 import com.crazine.goo2tool.util.Platform;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 public class PropertiesLoader {
+
+    private static final Logger logger = LoggerFactory.getLogger(PropertiesLoader.class);
 
     private static Properties properties;
     public static Properties getProperties() {
@@ -73,8 +75,9 @@ public class PropertiesLoader {
         if (!Files.exists(propertiesFile.getParentFile().toPath())) {
             try {
                 Files.createDirectory(propertiesFile.getParentFile().toPath());
+            } catch (FileAlreadyExistsException ignored) {
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Failed creating goo2tool path", e);
             }
         }
 
@@ -82,7 +85,7 @@ public class PropertiesLoader {
             try {
                 properties = loadProperties(propertiesFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Failed loading properties", e);
                 properties = new Properties();
             }
         } else {
@@ -99,8 +102,12 @@ public class PropertiesLoader {
         for (File child : addinsDir.toFile().listFiles()) {
             Goo2mod currentMod = AddinFileLoader.loadGoo2mod(child);
             
-            if (currentMod.getId().equals(goo2mod.getId()))
-                child.delete();
+            if (currentMod.getId().equals(goo2mod.getId())) {
+                boolean successful = child.delete();
+                if (!successful) {
+                    logger.warn("Failed deleting file {}", child);
+                }
+            }
         }
         
         // install new mod
@@ -129,9 +136,7 @@ public class PropertiesLoader {
         FX_Mods.getModTableView().getItems().remove(mod);
         
         Optional<AddinConfigEntry> addin = getProperties().getAddin(mod);
-        if (addin.isPresent()) {
-            getProperties().getAddins().remove(addin.get());
-        }
+        addin.ifPresent(addinConfigEntry -> getProperties().getAddins().remove(addinConfigEntry));
         
         Path addinsDir = Paths.get(PropertiesLoader.getGoo2ToolPath(), "addins");
         

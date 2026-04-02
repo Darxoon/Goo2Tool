@@ -90,7 +90,7 @@ public class ResrcLoader {
                 case "Sound": {
                     String id = stax.getAttributeValue("", "id");
                     String path = stax.getAttributeValue("", "path");
-                    boolean streaming = Boolean.valueOf(stax.getAttributeValue("", "streaming"));
+                    boolean streaming = Boolean.parseBoolean(stax.getAttributeValue("", "streaming"));
                     String bus = stax.getAttributeValue("", "bus");
                     return new Resrc.Sound(id, path, streaming, bus);
                 }
